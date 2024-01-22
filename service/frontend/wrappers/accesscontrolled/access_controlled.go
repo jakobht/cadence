@@ -46,8 +46,8 @@ func (a *apiHandler) isAuthorized(
 	attr *authorization.Attributes,
 	scope metrics.Scope,
 ) (bool, error) {
-	sw := scope.StartTimer(metrics.CadenceAuthorizationLatency)
-	defer sw.Stop()
+	// sw := scope.StartTimer(metrics.CadenceAuthorizationLatency)
+	// defer sw.Stop()
 
 	result, err := a.authorizer.Authorize(ctx, attr)
 	if err != nil {
