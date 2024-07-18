@@ -29,7 +29,6 @@ import (
 	"time"
 
 	"github.com/pborman/uuid"
-	"go.uber.org/yarpc/yarpcerrors"
 	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
 
@@ -38,7 +37,6 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
@@ -52,7 +50,6 @@ import (
 	"github.com/uber/cadence/service/history/engine/engineimpl"
 	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/failover"
-	"github.com/uber/cadence/service/history/lookup"
 	"github.com/uber/cadence/service/history/queue"
 	"github.com/uber/cadence/service/history/replication"
 	"github.com/uber/cadence/service/history/resource"
@@ -249,7 +246,7 @@ func (h *handlerImpl) RecordActivityTaskHeartbeat(
 		return nil, h.error(constants.ErrHistoryHostThrottle, scope, domainID, "", "")
 	}
 
-	heartbeatRequest := wrappedRequest.HeartbeatRequest
+	heartbeatRequest := wrappedRequest.Request
 	token, err0 := h.tokenSerializer.Deserialize(heartbeatRequest.TaskToken)
 	if err0 != nil {
 		err0 = &types.BadRequestError{Message: fmt.Sprintf("Error deserializing task token. Error: %v", err0)}
@@ -400,7 +397,7 @@ func (h *handlerImpl) RespondActivityTaskCompleted(
 		return h.error(constants.ErrHistoryHostThrottle, scope, domainID, "", "")
 	}
 
-	completeRequest := wrappedRequest.CompleteRequest
+	completeRequest := wrappedRequest.Request
 	token, err0 := h.tokenSerializer.Deserialize(completeRequest.TaskToken)
 	if err0 != nil {
 		err0 = &types.BadRequestError{Message: fmt.Sprintf("Error deserializing task token. Error: %v", err0)}
@@ -448,7 +445,7 @@ func (h *handlerImpl) RespondActivityTaskFailed(
 		return h.error(constants.ErrHistoryHostThrottle, scope, domainID, "", "")
 	}
 
-	failRequest := wrappedRequest.FailedRequest
+	failRequest := wrappedRequest.Request
 	token, err0 := h.tokenSerializer.Deserialize(failRequest.TaskToken)
 	if err0 != nil {
 		err0 = &types.BadRequestError{Message: fmt.Sprintf("Error deserializing task token. Error: %v", err0)}
@@ -496,7 +493,7 @@ func (h *handlerImpl) RespondActivityTaskCanceled(
 		return h.error(constants.ErrHistoryHostThrottle, scope, domainID, "", "")
 	}
 
-	cancelRequest := wrappedRequest.CancelRequest
+	cancelRequest := wrappedRequest.Request
 	token, err0 := h.tokenSerializer.Deserialize(cancelRequest.TaskToken)
 	if err0 != nil {
 		err0 = &types.BadRequestError{Message: fmt.Sprintf("Error deserializing task token. Error: %v", err0)}
@@ -544,7 +541,7 @@ func (h *handlerImpl) RespondDecisionTaskCompleted(
 		return nil, h.error(constants.ErrHistoryHostThrottle, scope, domainID, "", "")
 	}
 
-	completeRequest := wrappedRequest.CompleteRequest
+	completeRequest := wrappedRequest.Request
 	if len(completeRequest.Decisions) == 0 {
 		scope.IncCounter(metrics.EmptyCompletionDecisionsCounter)
 	}
@@ -601,7 +598,7 @@ func (h *handlerImpl) RespondDecisionTaskFailed(
 		return h.error(constants.ErrHistoryHostThrottle, scope, domainID, "", "")
 	}
 
-	failedRequest := wrappedRequest.FailedRequest
+	failedRequest := wrappedRequest.Request
 	token, err0 := h.tokenSerializer.Deserialize(failedRequest.TaskToken)
 	if err0 != nil {
 		err0 = &types.BadRequestError{Message: fmt.Sprintf("Error deserializing task token. Error: %v", err0)}
@@ -837,7 +834,7 @@ func (h *handlerImpl) DescribeMutableState(
 		return nil, h.error(constants.ErrDomainNotSet, scope, domainID, "", "")
 	}
 
-	workflowExecution := request.Execution
+	workflowExecution := request.WorkflowExecution
 	workflowID := workflowExecution.GetWorkflowID()
 	runID := workflowExecution.GetRunID()
 	engine, err1 := h.controller.GetEngine(workflowID)
@@ -873,7 +870,7 @@ func (h *handlerImpl) GetMutableState(
 		return nil, h.error(constants.ErrHistoryHostThrottle, scope, domainID, "", "")
 	}
 
-	workflowExecution := getRequest.Execution
+	workflowExecution := getRequest.WorkflowExecution
 	workflowID := workflowExecution.GetWorkflowID()
 	runID := workflowExecution.GetWorkflowID()
 	engine, err1 := h.controller.GetEngine(workflowID)
@@ -909,7 +906,7 @@ func (h *handlerImpl) PollMutableState(
 		return nil, h.error(constants.ErrHistoryHostThrottle, scope, domainID, "", "")
 	}
 
-	workflowExecution := getRequest.Execution
+	workflowExecution := getRequest.WorkflowExecution
 	workflowID := workflowExecution.GetWorkflowID()
 	runID := workflowExecution.GetRunID()
 	engine, err1 := h.controller.GetEngine(workflowID)
@@ -945,7 +942,7 @@ func (h *handlerImpl) DescribeWorkflowExecution(
 		return nil, h.error(constants.ErrHistoryHostThrottle, scope, domainID, "", "")
 	}
 
-	workflowExecution := request.Request.Execution
+	workflowExecution := request.Request.WorkflowExecution
 	workflowID := workflowExecution.GetWorkflowID()
 	runID := workflowExecution.GetRunID()
 	engine, err1 := h.controller.GetEngine(workflowID)
@@ -977,7 +974,7 @@ func (h *handlerImpl) RequestCancelWorkflowExecution(
 	}
 
 	domainID := request.GetDomainUUID()
-	if domainID == "" || request.CancelRequest.GetDomain() == "" {
+	if domainID == "" || request.Request.GetDomain() == "" {
 		return h.error(constants.ErrDomainNotSet, scope, domainID, "", "")
 	}
 
@@ -985,7 +982,7 @@ func (h *handlerImpl) RequestCancelWorkflowExecution(
 		return h.error(constants.ErrHistoryHostThrottle, scope, domainID, "", "")
 	}
 
-	cancelRequest := request.CancelRequest
+	cancelRequest := request.Request
 	h.GetLogger().Debug(fmt.Sprintf("RequestCancelWorkflowExecution. DomainID: %v/%v, WorkflowID: %v, RunID: %v.",
 		cancelRequest.GetDomain(),
 		request.GetDomainUUID(),
@@ -1033,7 +1030,7 @@ func (h *handlerImpl) SignalWorkflowExecution(
 		return h.error(constants.ErrHistoryHostThrottle, scope, domainID, "", "")
 	}
 
-	workflowExecution := wrappedRequest.SignalRequest.WorkflowExecution
+	workflowExecution := wrappedRequest.Request.WorkflowExecution
 	workflowID := workflowExecution.GetWorkflowID()
 	runID := workflowExecution.GetRunID()
 	engine, err1 := h.controller.GetEngine(workflowID)
@@ -1177,7 +1174,7 @@ func (h *handlerImpl) TerminateWorkflowExecution(
 		return h.error(constants.ErrHistoryHostThrottle, scope, domainID, "", "")
 	}
 
-	workflowExecution := wrappedRequest.TerminateRequest.WorkflowExecution
+	workflowExecution := wrappedRequest.Request.WorkflowExecution
 	workflowID := workflowExecution.GetWorkflowID()
 	runID := workflowExecution.GetRunID()
 	engine, err1 := h.controller.GetEngine(workflowID)
@@ -1219,7 +1216,7 @@ func (h *handlerImpl) ResetWorkflowExecution(
 		return nil, h.error(constants.ErrHistoryHostThrottle, scope, domainID, "", "")
 	}
 
-	workflowExecution := wrappedRequest.ResetRequest.WorkflowExecution
+	workflowExecution := wrappedRequest.Request.WorkflowExecution
 	workflowID := workflowExecution.GetWorkflowID()
 	runID := workflowExecution.GetRunID()
 	engine, err1 := h.controller.GetEngine(workflowID)
@@ -1399,8 +1396,8 @@ func (h *handlerImpl) ResetStickyTaskList(
 		return nil, h.error(constants.ErrHistoryHostThrottle, scope, domainID, "", "")
 	}
 
-	workflowID := resetRequest.Execution.GetWorkflowID()
-	runID := resetRequest.Execution.GetRunID()
+	workflowID := resetRequest.WorkflowExecution.GetWorkflowID()
+	runID := resetRequest.WorkflowExecution.GetRunID()
 	engine, err := h.controller.GetEngine(workflowID)
 	if err != nil {
 		return nil, h.error(err, scope, domainID, workflowID, runID)
@@ -1994,134 +1991,6 @@ func (h *handlerImpl) RatelimitUpdate(
 	}, nil
 }
 
-// convertError is a helper method to convert ShardOwnershipLostError from persistence layer returned by various
-// HistoryEngine API calls to ShardOwnershipLost error return by HistoryService for client to be redirected to the
-// correct shard.
-func (h *handlerImpl) convertError(err error) error {
-	switch err := err.(type) {
-	case *persistence.ShardOwnershipLostError:
-		info, err2 := lookup.HistoryServerByShardID(h.GetMembershipResolver(), err.ShardID)
-		if err2 != nil {
-			return shard.CreateShardOwnershipLostError(h.GetHostInfo(), membership.HostInfo{})
-		}
-
-		return shard.CreateShardOwnershipLostError(h.GetHostInfo(), info)
-	case *persistence.WorkflowExecutionAlreadyStartedError:
-		return &types.InternalServiceError{Message: err.Msg}
-	case *persistence.CurrentWorkflowConditionFailedError:
-		return &types.InternalServiceError{Message: err.Msg}
-	case *persistence.TimeoutError:
-		return &types.InternalServiceError{Message: err.Msg}
-	case *persistence.TransactionSizeLimitError:
-		return &types.BadRequestError{Message: err.Msg}
-	}
-
-	return err
-}
-
-func (h *handlerImpl) updateErrorMetric(
-	scope metrics.Scope,
-	domainID string,
-	workflowID string,
-	runID string,
-	err error,
-) {
-
-	var yarpcE *yarpcerrors.Status
-
-	var shardOwnershipLostError *types.ShardOwnershipLostError
-	var eventAlreadyStartedError *types.EventAlreadyStartedError
-	var badRequestError *types.BadRequestError
-	var domainNotActiveError *types.DomainNotActiveError
-	var workflowExecutionAlreadyStartedError *types.WorkflowExecutionAlreadyStartedError
-	var entityNotExistsError *types.EntityNotExistsError
-	var workflowExecutionAlreadyCompletedError *types.WorkflowExecutionAlreadyCompletedError
-	var cancellationAlreadyRequestedError *types.CancellationAlreadyRequestedError
-	var limitExceededError *types.LimitExceededError
-	var retryTaskV2Error *types.RetryTaskV2Error
-	var serviceBusyError *types.ServiceBusyError
-	var internalServiceError *types.InternalServiceError
-	var queryFailedError *types.QueryFailedError
-
-	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
-		scope.IncCounter(metrics.CadenceErrContextTimeoutCounter)
-		return
-	}
-
-	if errors.As(err, &shardOwnershipLostError) {
-		scope.IncCounter(metrics.CadenceErrShardOwnershipLostCounter)
-
-	} else if errors.As(err, &eventAlreadyStartedError) {
-		scope.IncCounter(metrics.CadenceErrEventAlreadyStartedCounter)
-
-	} else if errors.As(err, &badRequestError) {
-		scope.IncCounter(metrics.CadenceErrBadRequestCounter)
-
-	} else if errors.As(err, &domainNotActiveError) {
-		scope.IncCounter(metrics.CadenceErrDomainNotActiveCounter)
-
-	} else if errors.As(err, &workflowExecutionAlreadyStartedError) {
-		scope.IncCounter(metrics.CadenceErrExecutionAlreadyStartedCounter)
-
-	} else if errors.As(err, &entityNotExistsError) {
-		scope.IncCounter(metrics.CadenceErrEntityNotExistsCounter)
-
-	} else if errors.As(err, &workflowExecutionAlreadyCompletedError) {
-		scope.IncCounter(metrics.CadenceErrWorkflowExecutionAlreadyCompletedCounter)
-
-	} else if errors.As(err, &cancellationAlreadyRequestedError) {
-		scope.IncCounter(metrics.CadenceErrCancellationAlreadyRequestedCounter)
-
-	} else if errors.As(err, &limitExceededError) {
-		scope.IncCounter(metrics.CadenceErrLimitExceededCounter)
-
-	} else if errors.As(err, &retryTaskV2Error) {
-		scope.IncCounter(metrics.CadenceErrRetryTaskCounter)
-
-	} else if errors.As(err, &serviceBusyError) {
-		scope.IncCounter(metrics.CadenceErrServiceBusyCounter)
-
-	} else if errors.As(err, &queryFailedError) {
-		scope.IncCounter(metrics.CadenceErrQueryFailedCounter)
-
-	} else if errors.As(err, &yarpcE) {
-		if yarpcE.Code() == yarpcerrors.CodeDeadlineExceeded {
-			scope.IncCounter(metrics.CadenceErrContextTimeoutCounter)
-		}
-		scope.IncCounter(metrics.CadenceFailures)
-
-	} else if errors.As(err, &internalServiceError) {
-		scope.IncCounter(metrics.CadenceFailures)
-		h.GetLogger().Error("Internal service error",
-			tag.Error(err),
-			tag.WorkflowID(workflowID),
-			tag.WorkflowRunID(runID),
-			tag.WorkflowDomainID(domainID))
-
-	} else {
-		// Default / unknown error fallback
-		scope.IncCounter(metrics.CadenceFailures)
-		h.GetLogger().Error("Uncategorized error",
-			tag.Error(err),
-			tag.WorkflowID(workflowID),
-			tag.WorkflowRunID(runID),
-			tag.WorkflowDomainID(domainID))
-	}
-}
-
-func (h *handlerImpl) error(
-	err error,
-	scope metrics.Scope,
-	domainID string,
-	workflowID string,
-	runID string,
-) error {
-	err = h.convertError(err)
-
-	h.updateErrorMetric(scope, domainID, workflowID, runID, err)
-	return err
-}
-
 func (h *handlerImpl) emitInfoOrDebugLog(
 	domainID string,
 	msg string,
@@ -2139,14 +2008,4 @@ func (h *handlerImpl) startRequestProfile(ctx context.Context, scope int) (metri
 	metricsScope.IncCounter(metrics.CadenceRequests)
 	sw := metricsScope.StartTimer(metrics.CadenceLatency)
 	return metricsScope, sw
-}
-
-func validateTaskToken(token *common.TaskToken) error {
-	if token.WorkflowID == "" {
-		return constants.ErrWorkflowIDNotSet
-	}
-	if token.RunID != "" && uuid.Parse(token.RunID) == nil {
-		return constants.ErrRunIDNotValid
-	}
-	return nil
 }

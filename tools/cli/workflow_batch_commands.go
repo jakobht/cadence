@@ -77,7 +77,7 @@ func DescribeBatchJob(c *cli.Context) {
 		tcCtx,
 		&types.DescribeWorkflowExecutionRequest{
 			Domain: common.BatcherLocalDomainName,
-			Execution: &types.WorkflowExecution{
+			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: jobID,
 				RunID:      "",
 			},

@@ -30,8 +30,8 @@ var (
 	HistoryDescribeHistoryHostRequest  = types.DescribeHistoryHostRequest{}
 	HistoryDescribeHistoryHostResponse = AdminDescribeHistoryHostResponse
 	HistoryDescribeMutableStateRequest = types.DescribeMutableStateRequest{
-		DomainUUID: DomainID,
-		Execution:  &WorkflowExecution,
+		DomainUUID:        DomainID,
+		WorkflowExecution: &WorkflowExecution,
 	}
 	HistoryDescribeMutableStateResponse = types.DescribeMutableStateResponse{
 		MutableStateInCache:    "MutableStateInCache",
@@ -48,7 +48,7 @@ var (
 	HistoryGetDLQReplicationMessagesResponse = AdminGetDLQReplicationMessagesResponse
 	HistoryGetMutableStateRequest            = types.GetMutableStateRequest{
 		DomainUUID:          DomainID,
-		Execution:           &WorkflowExecution,
+		WorkflowExecution:   &WorkflowExecution,
 		ExpectedNextEventID: EventID1,
 		CurrentBranchToken:  BranchToken,
 	}
@@ -84,7 +84,7 @@ var (
 	}
 	HistoryPollMutableStateRequest = types.PollMutableStateRequest{
 		DomainUUID:          DomainID,
-		Execution:           &WorkflowExecution,
+		WorkflowExecution:   &WorkflowExecution,
 		ExpectedNextEventID: EventID1,
 		CurrentBranchToken:  BranchToken,
 	}
@@ -120,8 +120,8 @@ var (
 		Request:    &AdminReapplyEventsRequest,
 	}
 	HistoryRecordActivityTaskHeartbeatRequest = types.HistoryRecordActivityTaskHeartbeatRequest{
-		DomainUUID:       DomainID,
-		HeartbeatRequest: &RecordActivityTaskHeartbeatRequest,
+		DomainUUID: DomainID,
+		Request:    &RecordActivityTaskHeartbeatRequest,
 	}
 	HistoryRecordActivityTaskHeartbeatResponse = RecordActivityTaskHeartbeatResponse
 	HistoryRecordActivityTaskStartedRequest    = types.RecordActivityTaskStartedRequest{
@@ -193,46 +193,46 @@ var (
 	}
 	HistoryRequestCancelWorkflowExecutionRequest = types.HistoryRequestCancelWorkflowExecutionRequest{
 		DomainUUID:                DomainID,
-		CancelRequest:             &RequestCancelWorkflowExecutionRequest,
+		Request:                   &RequestCancelWorkflowExecutionRequest,
 		ExternalInitiatedEventID:  common.Int64Ptr(EventID1),
 		ExternalWorkflowExecution: &WorkflowExecution,
 		ChildWorkflowOnly:         true,
 	}
 	HistoryResetQueueRequest          = AdminResetQueueRequest
 	HistoryResetStickyTaskListRequest = types.HistoryResetStickyTaskListRequest{
-		DomainUUID: DomainID,
-		Execution:  &WorkflowExecution,
+		DomainUUID:        DomainID,
+		WorkflowExecution: &WorkflowExecution,
 	}
 	HistoryResetWorkflowExecutionRequest = types.HistoryResetWorkflowExecutionRequest{
-		DomainUUID:   DomainID,
-		ResetRequest: &ResetWorkflowExecutionRequest,
+		DomainUUID: DomainID,
+		Request:    &ResetWorkflowExecutionRequest,
 	}
 	HistoryResetWorkflowExecutionResponse = types.ResetWorkflowExecutionResponse{
 		RunID: RunID,
 	}
 	HistoryRespondActivityTaskCanceledRequest = types.HistoryRespondActivityTaskCanceledRequest{
-		DomainUUID:    DomainID,
-		CancelRequest: &RespondActivityTaskCanceledRequest,
+		DomainUUID: DomainID,
+		Request:    &RespondActivityTaskCanceledRequest,
 	}
 	HistoryRespondActivityTaskCompletedRequest = types.HistoryRespondActivityTaskCompletedRequest{
-		DomainUUID:      DomainID,
-		CompleteRequest: &RespondActivityTaskCompletedRequest,
+		DomainUUID: DomainID,
+		Request:    &RespondActivityTaskCompletedRequest,
 	}
 	HistoryRespondActivityTaskFailedRequest = types.HistoryRespondActivityTaskFailedRequest{
-		DomainUUID:    DomainID,
-		FailedRequest: &RespondActivityTaskFailedRequest,
+		DomainUUID: DomainID,
+		Request:    &RespondActivityTaskFailedRequest,
 	}
 	HistoryRespondDecisionTaskCompletedRequest = types.HistoryRespondDecisionTaskCompletedRequest{
-		DomainUUID:      DomainID,
-		CompleteRequest: &RespondDecisionTaskCompletedRequest,
+		DomainUUID: DomainID,
+		Request:    &RespondDecisionTaskCompletedRequest,
 	}
 	HistoryRespondDecisionTaskCompletedResponse = types.HistoryRespondDecisionTaskCompletedResponse{
 		StartedResponse:             &HistoryRecordDecisionTaskStartedResponse,
 		ActivitiesToDispatchLocally: ActivityLocalDispatchInfoMap,
 	}
 	HistoryRespondDecisionTaskFailedRequest = types.HistoryRespondDecisionTaskFailedRequest{
-		DomainUUID:    DomainID,
-		FailedRequest: &RespondDecisionTaskFailedRequest,
+		DomainUUID: DomainID,
+		Request:    &RespondDecisionTaskFailedRequest,
 	}
 	HistoryScheduleDecisionTaskRequest = types.ScheduleDecisionTaskRequest{
 		DomainUUID:        DomainID,
@@ -249,7 +249,7 @@ var (
 	}
 	HistorySignalWorkflowExecutionRequest = types.HistorySignalWorkflowExecutionRequest{
 		DomainUUID:                DomainID,
-		SignalRequest:             &SignalWorkflowExecutionRequest,
+		Request:                   &SignalWorkflowExecutionRequest,
 		ExternalWorkflowExecution: &WorkflowExecution,
 		ChildWorkflowOnly:         true,
 	}
@@ -293,7 +293,7 @@ var (
 	}
 	HistoryTerminateWorkflowExecutionRequest = types.HistoryTerminateWorkflowExecutionRequest{
 		DomainUUID:                DomainID,
-		TerminateRequest:          &TerminateWorkflowExecutionRequest,
+		Request:                   &TerminateWorkflowExecutionRequest,
 		ExternalWorkflowExecution: &WorkflowExecution,
 		ChildWorkflowOnly:         true,
 	}

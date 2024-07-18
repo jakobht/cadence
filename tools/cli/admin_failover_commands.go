@@ -99,7 +99,7 @@ func AdminFailoverQuery(c *cli.Context) {
 	result := query(tcCtx, client, workflowID, runID)
 	request := &types.DescribeWorkflowExecutionRequest{
 		Domain: common.SystemLocalDomainName,
-		Execution: &types.WorkflowExecution{
+		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: workflowID,
 			RunID:      runID,
 		},
@@ -203,7 +203,7 @@ func query(
 
 	request := &types.QueryWorkflowRequest{
 		Domain: common.SystemLocalDomainName,
-		Execution: &types.WorkflowExecution{
+		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: workflowID,
 			RunID:      runID,
 		},

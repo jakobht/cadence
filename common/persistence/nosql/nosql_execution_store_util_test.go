@@ -1019,7 +1019,7 @@ func TestNosqlExecutionStoreUtilsExtended(t *testing.T) {
 			},
 		},
 		{
-			name: "PrepareChildWFInfosForWorkflowTxn - Nil Child Execution Info",
+			name: "PrepareChildWFInfosForWorkflowTxn - Nil Child WorkflowExecution Info",
 			setupStore: func(store *nosqlExecutionStore) (interface{}, error) {
 				return store.prepareChildWFInfosForWorkflowTxn(nil)
 			},

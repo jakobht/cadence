@@ -562,7 +562,7 @@ func AdminRefreshWorkflowTasks(c *cli.Context) {
 
 	err := adminClient.RefreshWorkflowTasks(ctx, &types.RefreshWorkflowTasksRequest{
 		Domain: domain,
-		Execution: &types.WorkflowExecution{
+		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: wid,
 			RunID:      rid,
 		},

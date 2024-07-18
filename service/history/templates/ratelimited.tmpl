@@ -24,7 +24,7 @@ import (
 {{ $ratelimitTypeMap := set $ratelimitTypeMap "SignalWorkflowExecution" (
     dict
         "ratelimit" "ratelimitTypeUserPerID"
-        "workflowID" "SignalRequest.GetWorkflowExecution().GetWorkflowID()"
+        "workflowID" "Request.GetWorkflowExecution().GetWorkflowID()"
     )
 }}
 {{ $ratelimitTypeMap := set $ratelimitTypeMap "DescribeWorkflowExecution" (

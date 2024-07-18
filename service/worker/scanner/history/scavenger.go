@@ -243,7 +243,7 @@ func (s *Scavenger) startTaskProcessor(
 			// if not then the history branch is garbage, we need to delete the history branch
 			_, err = s.client.DescribeMutableState(ctx, &types.DescribeMutableStateRequest{
 				DomainUUID: task.domainID,
-				Execution: &types.WorkflowExecution{
+				WorkflowExecution: &types.WorkflowExecution{
 					WorkflowID: task.workflowID,
 					RunID:      task.runID,
 				},

@@ -365,7 +365,7 @@ func TestHandleDecisionTaskFailed(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			request := &types.HistoryRespondDecisionTaskFailedRequest{
 				DomainUUID: test.domainID,
-				FailedRequest: &types.RespondDecisionTaskFailedRequest{
+				Request: &types.RespondDecisionTaskFailedRequest{
 					TaskToken: taskToken,
 					Cause:     nil,
 					Details:   nil,
@@ -744,7 +744,7 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 			expectGetWorkflowExecution: true,
 			request: &types.HistoryRespondDecisionTaskCompletedRequest{
 				DomainUUID: constants.TestDomainID,
-				CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
+				Request: &types.RespondDecisionTaskCompletedRequest{
 					TaskToken:                  serializedTestToken,
 					Decisions:                  []*types.Decision{},
 					ReturnNewDecisionTask:      true,
@@ -795,7 +795,7 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 			expectGetWorkflowExecution: true,
 			request: &types.HistoryRespondDecisionTaskCompletedRequest{
 				DomainUUID: constants.TestDomainID,
-				CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
+				Request: &types.RespondDecisionTaskCompletedRequest{
 					TaskToken: serializedTestToken,
 					Decisions: []*types.Decision{{
 						DecisionType: common.Ptr(types.DecisionTypeContinueAsNewWorkflowExecution),
@@ -838,7 +838,7 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 			expectGetWorkflowExecution: true,
 			request: &types.HistoryRespondDecisionTaskCompletedRequest{
 				DomainUUID: constants.TestDomainID,
-				CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
+				Request: &types.RespondDecisionTaskCompletedRequest{
 					TaskToken: serializedTestToken,
 					Decisions: []*types.Decision{{
 						DecisionType: common.Ptr(types.DecisionTypeCompleteWorkflowExecution),
@@ -877,7 +877,7 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 			expectedErr: errors.New("some error occurred when loading workflow execution"),
 			request: &types.HistoryRespondDecisionTaskCompletedRequest{
 				DomainUUID: constants.TestDomainID,
-				CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
+				Request: &types.RespondDecisionTaskCompletedRequest{
 					TaskToken: serializedTestToken,
 					Decisions: []*types.Decision{{
 						DecisionType: common.Ptr(types.DecisionTypeFailWorkflowExecution),
@@ -928,7 +928,7 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 			expectedErr: errors.New("some error updating workflow execution"),
 			request: &types.HistoryRespondDecisionTaskCompletedRequest{
 				DomainUUID: constants.TestDomainID,
-				CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
+				Request: &types.RespondDecisionTaskCompletedRequest{
 					TaskToken: serializedTestToken,
 					Decisions: []*types.Decision{{
 						DecisionType: common.Ptr(types.DecisionTypeFailWorkflowExecution),
@@ -1035,7 +1035,7 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 			},
 			request: &types.HistoryRespondDecisionTaskCompletedRequest{
 				DomainUUID: constants.TestDomainID,
-				CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
+				Request: &types.RespondDecisionTaskCompletedRequest{
 					TaskToken:                  serializedTestToken,
 					BinaryChecksum:             "test-binary-checksum",
 					ForceCreateNewDecisionTask: true,
@@ -1092,7 +1092,7 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 			},
 			request: &types.HistoryRespondDecisionTaskCompletedRequest{
 				DomainUUID: constants.TestDomainID,
-				CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
+				Request: &types.RespondDecisionTaskCompletedRequest{
 					TaskToken: serializedTestToken,
 					Decisions: []*types.Decision{{
 						DecisionType: common.Ptr(types.DecisionTypeCancelWorkflowExecution),
@@ -1124,7 +1124,7 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 			expectGetWorkflowExecution: true,
 			request: &types.HistoryRespondDecisionTaskCompletedRequest{
 				DomainUUID: constants.TestDomainID,
-				CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
+				Request: &types.RespondDecisionTaskCompletedRequest{
 					TaskToken:                  serializedTestToken,
 					Decisions:                  []*types.Decision{},
 					ReturnNewDecisionTask:      true,
@@ -1204,7 +1204,7 @@ func TestHandleDecisionTaskCompleted(t *testing.T) {
 
 			request := &types.HistoryRespondDecisionTaskCompletedRequest{
 				DomainUUID: test.domainID,
-				CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
+				Request: &types.RespondDecisionTaskCompletedRequest{
 					TaskToken: serializedTestToken,
 					Decisions: []*types.Decision{{
 						DecisionType: nil,

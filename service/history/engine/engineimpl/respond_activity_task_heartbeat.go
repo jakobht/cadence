@@ -48,7 +48,7 @@ func (e *historyEngineImpl) RecordActivityTaskHeartbeat(
 	}
 	domainID := domainEntry.GetInfo().ID
 
-	request := req.HeartbeatRequest
+	request := req.Request
 	token, err0 := e.tokenSerializer.Deserialize(request.TaskToken)
 	if err0 != nil {
 		return nil, workflow.ErrDeserializingToken

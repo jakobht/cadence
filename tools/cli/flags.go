@@ -385,7 +385,7 @@ func getFlagsForStart() []cli.Flag {
 		},
 		cli.IntFlag{
 			Name:  FlagExecutionTimeoutWithAlias,
-			Usage: "Execution start to close timeout in seconds",
+			Usage: "WorkflowExecution start to close timeout in seconds",
 		},
 		cli.IntFlag{
 			Name:  FlagDecisionTimeoutWithAlias,

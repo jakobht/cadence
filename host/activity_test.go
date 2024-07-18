@@ -282,7 +282,7 @@ func (s *IntegrationSuite) TestActivityHeartbeatDetailsDuringRetry() {
 		defer cancel()
 		return s.engine.DescribeWorkflowExecution(ctx, &types.DescribeWorkflowExecutionRequest{
 			Domain: s.domainName,
-			Execution: &types.WorkflowExecution{
+			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: id,
 				RunID:      we.RunID,
 			},
@@ -505,7 +505,7 @@ func (s *IntegrationSuite) TestActivityRetry() {
 		defer cancel()
 		return s.engine.DescribeWorkflowExecution(ctx, &types.DescribeWorkflowExecutionRequest{
 			Domain: s.domainName,
-			Execution: &types.WorkflowExecution{
+			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: id,
 				RunID:      we.RunID,
 			},

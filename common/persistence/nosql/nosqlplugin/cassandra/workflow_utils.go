@@ -1167,7 +1167,7 @@ func resetWorkflowExecutionAndMapsAndEventBuffer(
 	}
 
 	// This is another category of execution update where only the non-frozen column types in
-	// Cassandra are updated to a previous state in the Execution Update flow.
+	// Cassandra are updated to a previous state in the WorkflowExecution Update flow.
 	err = resetActivityInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.ActivityInfos)
 	if err != nil {
 		return err

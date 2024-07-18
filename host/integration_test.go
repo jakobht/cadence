@@ -184,7 +184,7 @@ func (s *IntegrationSuite) TestStartWorkflowExecution_StartTimestampMatch() {
 	defer cancel()
 	descResp, err := s.engine.DescribeWorkflowExecution(ctx, &types.DescribeWorkflowExecutionRequest{
 		Domain: s.domainName,
-		Execution: &types.WorkflowExecution{
+		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: id,
 			RunID:      we0.GetRunID(),
 		},
@@ -303,7 +303,7 @@ GetHistoryLoop:
 
 		lastEvent := history.Events[len(history.Events)-1]
 		if lastEvent.GetEventType() != types.EventTypeWorkflowExecutionTerminated {
-			s.Logger.Warn("Execution not terminated yet.")
+			s.Logger.Warn("WorkflowExecution not terminated yet.")
 			time.Sleep(100 * time.Millisecond)
 			continue GetHistoryLoop
 		}
@@ -528,7 +528,7 @@ GetHistoryLoop:
 
 		lastEvent := history.Events[len(history.Events)-1]
 		if *lastEvent.EventType != types.EventTypeWorkflowExecutionTerminated {
-			s.Logger.Warn("Execution not terminated yet.")
+			s.Logger.Warn("WorkflowExecution not terminated yet.")
 			time.Sleep(100 * time.Millisecond)
 			continue GetHistoryLoop
 		}
@@ -562,12 +562,12 @@ StartNewExecutionLoop:
 		newExecution, err := s.engine.StartWorkflowExecution(ctx, request)
 		cancel()
 		if err != nil {
-			s.Logger.Warn("Start New Execution failed. Error", tag.Error(err))
+			s.Logger.Warn("Start New WorkflowExecution failed. Error", tag.Error(err))
 			time.Sleep(100 * time.Millisecond)
 			continue StartNewExecutionLoop
 		}
 
-		s.Logger.Info("New Execution Started with the same ID", tag.WorkflowID(id),
+		s.Logger.Info("New WorkflowExecution Started with the same ID", tag.WorkflowID(id),
 			tag.WorkflowRunID(newExecution.RunID))
 		newExecutionStarted = true
 		break StartNewExecutionLoop
@@ -1023,8 +1023,8 @@ func (s *IntegrationSuite) TestWorkflowRetry() {
 		ctx, cancel := createContext()
 		defer cancel()
 		return s.engine.DescribeWorkflowExecution(ctx, &types.DescribeWorkflowExecutionRequest{
-			Domain:    s.domainName,
-			Execution: execution,
+			Domain:            s.domainName,
+			WorkflowExecution: execution,
 		})
 	}
 
@@ -1387,7 +1387,7 @@ func (s *IntegrationSuite) TestCronWorkflow() {
 	defer cancel()
 	dweResponse, err := s.engine.DescribeWorkflowExecution(ctx, &types.DescribeWorkflowExecutionRequest{
 		Domain: s.domainName,
-		Execution: &types.WorkflowExecution{
+		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: id,
 			RunID:      we.RunID,
 		},
@@ -1900,7 +1900,7 @@ func (s *IntegrationSuite) TestDescribeWorkflowExecution() {
 		defer cancel()
 		return s.engine.DescribeWorkflowExecution(ctx, &types.DescribeWorkflowExecutionRequest{
 			Domain: s.domainName,
-			Execution: &types.WorkflowExecution{
+			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: id,
 				RunID:      we.RunID,
 			},
@@ -2322,7 +2322,7 @@ func (s *IntegrationSuite) TestChildWorkflowExecution() {
 	s.Nil(err)
 	s.True(childExecutionStarted)
 
-	// Process ChildExecution Started event and Process Child Execution and complete it
+	// Process ChildExecution Started event and Process Child WorkflowExecution and complete it
 	_, err = pollerParent.PollAndProcessDecisionTask(false, false)
 	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(err)
@@ -2622,7 +2622,7 @@ GetHistoryLoop:
 
 		lastEvent := history.Events[len(history.Events)-1]
 		if *lastEvent.EventType != types.EventTypeWorkflowExecutionTimedOut {
-			s.Logger.Warn("Execution not timedout yet.")
+			s.Logger.Warn("WorkflowExecution not timedout yet.")
 			time.Sleep(200 * time.Millisecond)
 			continue GetHistoryLoop
 		}
@@ -4391,8 +4391,8 @@ func (s *IntegrationSuite) startWithMemoHelper(startFn startFunc, id string, tas
 
 	// verify DescribeWorkflowExecution result
 	descRequest := &types.DescribeWorkflowExecutionRequest{
-		Domain:    s.domainName,
-		Execution: execution,
+		Domain:            s.domainName,
+		WorkflowExecution: execution,
 	}
 	ctx, cancel = createContext()
 	defer cancel()

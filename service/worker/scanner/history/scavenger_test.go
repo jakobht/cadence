@@ -223,28 +223,28 @@ func (s *ScavengerTestSuite) TestNoGarbageTwoPages() {
 
 	client.EXPECT().DescribeMutableState(gomock.Any(), &types.DescribeMutableStateRequest{
 		DomainUUID: "domainID1",
-		Execution: &types.WorkflowExecution{
+		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: "workflowID1",
 			RunID:      "runID1",
 		},
 	}).Return(nil, nil)
 	client.EXPECT().DescribeMutableState(gomock.Any(), &types.DescribeMutableStateRequest{
 		DomainUUID: "domainID2",
-		Execution: &types.WorkflowExecution{
+		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: "workflowID2",
 			RunID:      "runID2",
 		},
 	}).Return(nil, nil)
 	client.EXPECT().DescribeMutableState(gomock.Any(), &types.DescribeMutableStateRequest{
 		DomainUUID: "domainID3",
-		Execution: &types.WorkflowExecution{
+		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: "workflowID3",
 			RunID:      "runID3",
 		},
 	}).Return(nil, nil)
 	client.EXPECT().DescribeMutableState(gomock.Any(), &types.DescribeMutableStateRequest{
 		DomainUUID: "domainID4",
-		Execution: &types.WorkflowExecution{
+		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: "workflowID4",
 			RunID:      "runID4",
 		},
@@ -304,28 +304,28 @@ func (s *ScavengerTestSuite) TestDeletingBranchesTwoPages() {
 
 	client.EXPECT().DescribeMutableState(gomock.Any(), &types.DescribeMutableStateRequest{
 		DomainUUID: "domainID1",
-		Execution: &types.WorkflowExecution{
+		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: "workflowID1",
 			RunID:      "runID1",
 		},
 	}).Return(nil, &types.EntityNotExistsError{})
 	client.EXPECT().DescribeMutableState(gomock.Any(), &types.DescribeMutableStateRequest{
 		DomainUUID: "domainID2",
-		Execution: &types.WorkflowExecution{
+		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: "workflowID2",
 			RunID:      "runID2",
 		},
 	}).Return(nil, &types.EntityNotExistsError{})
 	client.EXPECT().DescribeMutableState(gomock.Any(), &types.DescribeMutableStateRequest{
 		DomainUUID: "domainID3",
-		Execution: &types.WorkflowExecution{
+		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: "workflowID3",
 			RunID:      "runID3",
 		},
 	}).Return(nil, &types.EntityNotExistsError{})
 	client.EXPECT().DescribeMutableState(gomock.Any(), &types.DescribeMutableStateRequest{
 		DomainUUID: "domainID4",
-		Execution: &types.WorkflowExecution{
+		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: "workflowID4",
 			RunID:      "runID4",
 		},
@@ -426,7 +426,7 @@ func (s *ScavengerTestSuite) TestMixesTwoPages() {
 
 	client.EXPECT().DescribeMutableState(gomock.Any(), &types.DescribeMutableStateRequest{
 		DomainUUID: "domainID3",
-		Execution: &types.WorkflowExecution{
+		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: "workflowID3",
 			RunID:      "runID3",
 		},
@@ -434,14 +434,14 @@ func (s *ScavengerTestSuite) TestMixesTwoPages() {
 
 	client.EXPECT().DescribeMutableState(gomock.Any(), &types.DescribeMutableStateRequest{
 		DomainUUID: "domainID4",
-		Execution: &types.WorkflowExecution{
+		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: "workflowID4",
 			RunID:      "runID4",
 		},
 	}).Return(nil, &types.EntityNotExistsError{})
 	client.EXPECT().DescribeMutableState(gomock.Any(), &types.DescribeMutableStateRequest{
 		DomainUUID: "domainID5",
-		Execution: &types.WorkflowExecution{
+		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: "workflowID5",
 			RunID:      "runID5",
 		},

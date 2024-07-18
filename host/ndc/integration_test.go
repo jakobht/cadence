@@ -2212,7 +2212,7 @@ func (s *NDCIntegrationTestSuite) TestWorkflowStartTime() {
 		ctx,
 		&types.DescribeWorkflowExecutionRequest{
 			Domain: s.domainName,
-			Execution: &types.WorkflowExecution{
+			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: workflowID,
 				RunID:      runID,
 			},

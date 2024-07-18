@@ -112,7 +112,7 @@ func TestWriterIterator(t *testing.T) {
 					break // No more items
 				}
 				if i < len(outputs) {
-					// Compare the Execution field of ScanOutputEntity with the expected ConcreteExecution
+					// Compare the WorkflowExecution field of ScanOutputEntity with the expected ConcreteExecution
 					assertions.Equal(outputs[i].Execution, scanOutputEntity.Execution)
 				}
 				i++

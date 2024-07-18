@@ -47,7 +47,7 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(
 	domainID := domainEntry.GetInfo().ID
 	domainName := domainEntry.GetInfo().Name
 
-	request := req.FailedRequest
+	request := req.Request
 	token, err0 := e.tokenSerializer.Deserialize(request.TaskToken)
 	if err0 != nil {
 		return workflow.ErrDeserializingToken
@@ -109,7 +109,7 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(
 			}
 
 			postActions := &workflow.UpdateAction{}
-			ok, err := mutableState.RetryActivity(ai, req.FailedRequest.GetReason(), req.FailedRequest.GetDetails())
+			ok, err := mutableState.RetryActivity(ai, req.Request.GetReason(), req.Request.GetDetails())
 			if err != nil {
 				return nil, err
 			}

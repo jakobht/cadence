@@ -94,7 +94,7 @@ type (
 		updateTimerInfos        map[string]*persistence.TimerInfo // Modified timers from last update.
 		deleteTimerInfos        map[string]struct{}               // Deleted timers from last update.
 
-		pendingChildExecutionInfoIDs map[int64]*persistence.ChildExecutionInfo // Initiated Event ID -> Child Execution Info
+		pendingChildExecutionInfoIDs map[int64]*persistence.ChildExecutionInfo // Initiated Event ID -> Child WorkflowExecution Info
 		updateChildExecutionInfos    map[int64]*persistence.ChildExecutionInfo // Modified ChildExecution Infos since last update
 		deleteChildExecutionInfos    map[int64]struct{}                        // Deleted ChildExecution Infos since last update
 
@@ -114,7 +114,7 @@ type (
 		updateBufferedEvents []*types.HistoryEvent // buffered history events that needs to be persisted
 		clearBufferedEvents  bool                  // delete buffered events from persistence
 
-		// This section includes Workflow Execution Info parameters like StartTimestamp,
+		// This section includes Workflow WorkflowExecution Info parameters like StartTimestamp,
 		// which are only visible after the workflow has begun.
 		// However, there are other parameters such as LastEventTimestamp,
 		// which are updated as the execution progresses through various cycles.

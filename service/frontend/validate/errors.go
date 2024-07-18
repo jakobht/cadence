@@ -34,7 +34,7 @@ var (
 	ErrInvalidTaskToken                           = &types.BadRequestError{Message: "Invalid TaskToken."}
 	ErrTaskListNotSet                             = &types.BadRequestError{Message: "TaskList is not set on request."}
 	ErrTaskListTypeNotSet                         = &types.BadRequestError{Message: "TaskListType is not set on request."}
-	ErrExecutionNotSet                            = &types.BadRequestError{Message: "Execution is not set on request."}
+	ErrExecutionNotSet                            = &types.BadRequestError{Message: "WorkflowExecution is not set on request."}
 	ErrWorkflowIDNotSet                           = &types.BadRequestError{Message: "WorkflowId is not set on request."}
 	ErrActivityIDNotSet                           = &types.BadRequestError{Message: "ActivityID is not set on request."}
 	ErrSignalNameNotSet                           = &types.BadRequestError{Message: "SignalName is not set on request."}

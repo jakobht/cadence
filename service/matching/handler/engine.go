@@ -565,8 +565,8 @@ pollLoop:
 			// for query task, we don't need to update history to record decision task started. but we need to know
 			// the NextEventID so front end knows what are the history events to load for this decision task.
 			mutableStateResp, err := e.historyService.GetMutableState(hCtx.Context, &types.GetMutableStateRequest{
-				DomainUUID: req.DomainUUID,
-				Execution:  task.WorkflowExecution(),
+				DomainUUID:        req.DomainUUID,
+				WorkflowExecution: task.WorkflowExecution(),
 			})
 			if err != nil {
 				// will notify query client that the query task failed

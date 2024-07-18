@@ -94,7 +94,7 @@ const (
 	DomainReplicationQueueType QueueType = iota + 1
 )
 
-// Create Workflow Execution Mode
+// Create Workflow WorkflowExecution Mode
 const (
 	// Fail if current record exists
 	// Only applicable for CreateWorkflowExecution
@@ -113,7 +113,7 @@ const (
 // UpdateWorkflowMode update mode
 type UpdateWorkflowMode int
 
-// Update Workflow Execution Mode
+// Update Workflow WorkflowExecution Mode
 const (
 	// Update workflow, including current record
 	// NOTE: update on current record is a condition update

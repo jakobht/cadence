@@ -41,7 +41,7 @@ func (e *historyEngineImpl) GetMutableState(ctx context.Context, request *types.
 func (e *historyEngineImpl) PollMutableState(ctx context.Context, request *types.PollMutableStateRequest) (*types.PollMutableStateResponse, error) {
 	response, err := e.getMutableStateOrPolling(ctx, &types.GetMutableStateRequest{
 		DomainUUID:          request.DomainUUID,
-		Execution:           request.Execution,
+		WorkflowExecution:   request.WorkflowExecution,
 		ExpectedNextEventID: request.ExpectedNextEventID,
 		CurrentBranchToken:  request.CurrentBranchToken})
 
@@ -149,8 +149,8 @@ func (e *historyEngineImpl) getMutableStateOrPolling(
 	}
 	domainID := request.DomainUUID
 	execution := types.WorkflowExecution{
-		WorkflowID: request.Execution.WorkflowID,
-		RunID:      request.Execution.RunID,
+		WorkflowID: request.WorkflowExecution.WorkflowID,
+		RunID:      request.WorkflowExecution.RunID,
 	}
 	response, err := e.getMutableState(ctx, domainID, execution)
 	if err != nil {

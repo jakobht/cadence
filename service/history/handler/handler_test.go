@@ -129,7 +129,7 @@ func (s *handlerSuite) TestRecordActivityTaskHeartbeat() {
 			caseName: "valid input",
 			input: &types.HistoryRecordActivityTaskHeartbeatRequest{
 				DomainUUID: testDomainID,
-				HeartbeatRequest: &types.RecordActivityTaskHeartbeatRequest{
+				Request: &types.RecordActivityTaskHeartbeatRequest{
 					TaskToken: []byte("task-token"),
 				},
 			},
@@ -156,7 +156,7 @@ func (s *handlerSuite) TestRecordActivityTaskHeartbeat() {
 			caseName: "token deserialization error",
 			input: &types.HistoryRecordActivityTaskHeartbeatRequest{
 				DomainUUID: testDomainID,
-				HeartbeatRequest: &types.RecordActivityTaskHeartbeatRequest{
+				Request: &types.RecordActivityTaskHeartbeatRequest{
 					TaskToken: []byte("task-token"),
 				},
 			},
@@ -167,7 +167,7 @@ func (s *handlerSuite) TestRecordActivityTaskHeartbeat() {
 			caseName: "invalid task token",
 			input: &types.HistoryRecordActivityTaskHeartbeatRequest{
 				DomainUUID: testDomainID,
-				HeartbeatRequest: &types.RecordActivityTaskHeartbeatRequest{
+				Request: &types.RecordActivityTaskHeartbeatRequest{
 					TaskToken: []byte("task-token"),
 				},
 			},
@@ -178,7 +178,7 @@ func (s *handlerSuite) TestRecordActivityTaskHeartbeat() {
 			caseName: "get engine error",
 			input: &types.HistoryRecordActivityTaskHeartbeatRequest{
 				DomainUUID: testDomainID,
-				HeartbeatRequest: &types.RecordActivityTaskHeartbeatRequest{
+				Request: &types.RecordActivityTaskHeartbeatRequest{
 					TaskToken: []byte("task-token"),
 				},
 			},
@@ -189,7 +189,7 @@ func (s *handlerSuite) TestRecordActivityTaskHeartbeat() {
 			caseName: "engine error",
 			input: &types.HistoryRecordActivityTaskHeartbeatRequest{
 				DomainUUID: testDomainID,
-				HeartbeatRequest: &types.RecordActivityTaskHeartbeatRequest{
+				Request: &types.RecordActivityTaskHeartbeatRequest{
 					TaskToken: []byte("task-token"),
 				},
 			},
@@ -508,7 +508,7 @@ func (s *handlerSuite) TestRespondActivityTaskCompleted() {
 			caseName: "valid input",
 			input: &types.HistoryRespondActivityTaskCompletedRequest{
 				DomainUUID: testDomainID,
-				CompleteRequest: &types.RespondActivityTaskCompletedRequest{
+				Request: &types.RespondActivityTaskCompletedRequest{
 					TaskToken: []byte("task-token"),
 					Result:    []byte("result"),
 					Identity:  "identity",
@@ -527,7 +527,7 @@ func (s *handlerSuite) TestRespondActivityTaskCompleted() {
 			caseName: "ratelimit exceeded",
 			input: &types.HistoryRespondActivityTaskCompletedRequest{
 				DomainUUID: testDomainID,
-				CompleteRequest: &types.RespondActivityTaskCompletedRequest{
+				Request: &types.RespondActivityTaskCompletedRequest{
 					TaskToken: []byte("task-token"),
 					Result:    []byte("result"),
 					Identity:  "identity",
@@ -539,7 +539,7 @@ func (s *handlerSuite) TestRespondActivityTaskCompleted() {
 			caseName: "token deserialization error",
 			input: &types.HistoryRespondActivityTaskCompletedRequest{
 				DomainUUID: testDomainID,
-				CompleteRequest: &types.RespondActivityTaskCompletedRequest{
+				Request: &types.RespondActivityTaskCompletedRequest{
 					TaskToken: []byte("task-token"),
 					Result:    []byte("result"),
 					Identity:  "identity",
@@ -551,7 +551,7 @@ func (s *handlerSuite) TestRespondActivityTaskCompleted() {
 			caseName: "invalid task token",
 			input: &types.HistoryRespondActivityTaskCompletedRequest{
 				DomainUUID: testDomainID,
-				CompleteRequest: &types.RespondActivityTaskCompletedRequest{
+				Request: &types.RespondActivityTaskCompletedRequest{
 					TaskToken: []byte("task-token"),
 					Result:    []byte("result"),
 					Identity:  "identity",
@@ -563,7 +563,7 @@ func (s *handlerSuite) TestRespondActivityTaskCompleted() {
 			caseName: "get engine error",
 			input: &types.HistoryRespondActivityTaskCompletedRequest{
 				DomainUUID: testDomainID,
-				CompleteRequest: &types.RespondActivityTaskCompletedRequest{
+				Request: &types.RespondActivityTaskCompletedRequest{
 					TaskToken: []byte("task-token"),
 					Result:    []byte("result"),
 					Identity:  "identity",
@@ -575,7 +575,7 @@ func (s *handlerSuite) TestRespondActivityTaskCompleted() {
 			caseName: "engine error",
 			input: &types.HistoryRespondActivityTaskCompletedRequest{
 				DomainUUID: testDomainID,
-				CompleteRequest: &types.RespondActivityTaskCompletedRequest{
+				Request: &types.RespondActivityTaskCompletedRequest{
 					TaskToken: []byte("task-token"),
 					Result:    []byte("result"),
 					Identity:  "identity",
@@ -644,7 +644,7 @@ func (s *handlerSuite) TestRespondActivityTaskFailed() {
 			caseName: "valid input",
 			input: &types.HistoryRespondActivityTaskFailedRequest{
 				DomainUUID: testDomainID,
-				FailedRequest: &types.RespondActivityTaskFailedRequest{
+				Request: &types.RespondActivityTaskFailedRequest{
 					TaskToken: []byte("task-token"),
 					Details:   []byte("Details"),
 					Identity:  "identity",
@@ -663,7 +663,7 @@ func (s *handlerSuite) TestRespondActivityTaskFailed() {
 			caseName: "ratelimit exceeded",
 			input: &types.HistoryRespondActivityTaskFailedRequest{
 				DomainUUID: testDomainID,
-				FailedRequest: &types.RespondActivityTaskFailedRequest{
+				Request: &types.RespondActivityTaskFailedRequest{
 					TaskToken: []byte("task-token"),
 					Details:   []byte("Details"),
 					Identity:  "identity",
@@ -675,7 +675,7 @@ func (s *handlerSuite) TestRespondActivityTaskFailed() {
 			caseName: "token deserialization error",
 			input: &types.HistoryRespondActivityTaskFailedRequest{
 				DomainUUID: testDomainID,
-				FailedRequest: &types.RespondActivityTaskFailedRequest{
+				Request: &types.RespondActivityTaskFailedRequest{
 					TaskToken: []byte("task-token"),
 					Details:   []byte("Details"),
 					Identity:  "identity",
@@ -687,7 +687,7 @@ func (s *handlerSuite) TestRespondActivityTaskFailed() {
 			caseName: "invalid task token",
 			input: &types.HistoryRespondActivityTaskFailedRequest{
 				DomainUUID: testDomainID,
-				FailedRequest: &types.RespondActivityTaskFailedRequest{
+				Request: &types.RespondActivityTaskFailedRequest{
 					TaskToken: []byte("task-token"),
 					Details:   []byte("Details"),
 					Identity:  "identity",
@@ -699,7 +699,7 @@ func (s *handlerSuite) TestRespondActivityTaskFailed() {
 			caseName: "get engine error",
 			input: &types.HistoryRespondActivityTaskFailedRequest{
 				DomainUUID: testDomainID,
-				FailedRequest: &types.RespondActivityTaskFailedRequest{
+				Request: &types.RespondActivityTaskFailedRequest{
 					TaskToken: []byte("task-token"),
 					Details:   []byte("Details"),
 					Identity:  "identity",
@@ -711,7 +711,7 @@ func (s *handlerSuite) TestRespondActivityTaskFailed() {
 			caseName: "engine error",
 			input: &types.HistoryRespondActivityTaskFailedRequest{
 				DomainUUID: testDomainID,
-				FailedRequest: &types.RespondActivityTaskFailedRequest{
+				Request: &types.RespondActivityTaskFailedRequest{
 					TaskToken: []byte("task-token"),
 					Details:   []byte("Details"),
 					Identity:  "identity",
@@ -773,7 +773,7 @@ func (s *handlerSuite) TestRespondActivityTaskFailed() {
 func (s *handlerSuite) TestRespondActivityTaskCanceled() {
 	validInput := &types.HistoryRespondActivityTaskCanceledRequest{
 		DomainUUID: testDomainID,
-		CancelRequest: &types.RespondActivityTaskCanceledRequest{
+		Request: &types.RespondActivityTaskCanceledRequest{
 			TaskToken: []byte("task-token"),
 			Details:   []byte("Details"),
 			Identity:  "identity",
@@ -807,7 +807,7 @@ func (s *handlerSuite) TestRespondActivityTaskCanceled() {
 		"ratelimit exceeded": {
 			input: &types.HistoryRespondActivityTaskCanceledRequest{
 				DomainUUID: testDomainID,
-				CancelRequest: &types.RespondActivityTaskCanceledRequest{
+				Request: &types.RespondActivityTaskCanceledRequest{
 					TaskToken: []byte("task-token"),
 					Details:   []byte("Details"),
 					Identity:  "identity",
@@ -821,7 +821,7 @@ func (s *handlerSuite) TestRespondActivityTaskCanceled() {
 		"token deserialization error": {
 			input: &types.HistoryRespondActivityTaskCanceledRequest{
 				DomainUUID: testDomainID,
-				CancelRequest: &types.RespondActivityTaskCanceledRequest{
+				Request: &types.RespondActivityTaskCanceledRequest{
 					TaskToken: []byte("task-token"),
 					Details:   []byte("Details"),
 					Identity:  "identity",
@@ -836,7 +836,7 @@ func (s *handlerSuite) TestRespondActivityTaskCanceled() {
 		"invalid task token": {
 			input: &types.HistoryRespondActivityTaskCanceledRequest{
 				DomainUUID: testDomainID,
-				CancelRequest: &types.RespondActivityTaskCanceledRequest{
+				Request: &types.RespondActivityTaskCanceledRequest{
 					TaskToken: []byte("task-token"),
 					Details:   []byte("Details"),
 					Identity:  "identity",
@@ -854,7 +854,7 @@ func (s *handlerSuite) TestRespondActivityTaskCanceled() {
 		"get engine error": {
 			input: &types.HistoryRespondActivityTaskCanceledRequest{
 				DomainUUID: testDomainID,
-				CancelRequest: &types.RespondActivityTaskCanceledRequest{
+				Request: &types.RespondActivityTaskCanceledRequest{
 					TaskToken: []byte("task-token"),
 					Details:   []byte("Details"),
 					Identity:  "identity",
@@ -873,7 +873,7 @@ func (s *handlerSuite) TestRespondActivityTaskCanceled() {
 		"engine error": {
 			input: &types.HistoryRespondActivityTaskCanceledRequest{
 				DomainUUID: testDomainID,
-				CancelRequest: &types.RespondActivityTaskCanceledRequest{
+				Request: &types.RespondActivityTaskCanceledRequest{
 					TaskToken: []byte("task-token"),
 					Details:   []byte("Details"),
 					Identity:  "identity",
@@ -908,7 +908,7 @@ func (s *handlerSuite) TestRespondActivityTaskCanceled() {
 func (s *handlerSuite) TestRespondDecisionTaskCompleted() {
 	validReq := &types.HistoryRespondDecisionTaskCompletedRequest{
 		DomainUUID: testDomainID,
-		CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
+		Request: &types.RespondDecisionTaskCompletedRequest{
 			TaskToken: []byte("task-token"),
 			Decisions: []*types.Decision{
 				{
@@ -959,7 +959,7 @@ func (s *handlerSuite) TestRespondDecisionTaskCompleted() {
 		"token deserialization error": {
 			input: &types.HistoryRespondDecisionTaskCompletedRequest{
 				DomainUUID: testDomainID,
-				CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
+				Request: &types.RespondDecisionTaskCompletedRequest{
 					TaskToken: []byte("task-token"),
 					Decisions: []*types.Decision{},
 				},
@@ -973,7 +973,7 @@ func (s *handlerSuite) TestRespondDecisionTaskCompleted() {
 		"invalid task token": {
 			input: &types.HistoryRespondDecisionTaskCompletedRequest{
 				DomainUUID: testDomainID,
-				CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
+				Request: &types.RespondDecisionTaskCompletedRequest{
 					TaskToken: []byte("task-token"),
 					Decisions: []*types.Decision{},
 				},
@@ -990,7 +990,7 @@ func (s *handlerSuite) TestRespondDecisionTaskCompleted() {
 		"get engine error": {
 			input: &types.HistoryRespondDecisionTaskCompletedRequest{
 				DomainUUID: testDomainID,
-				CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
+				Request: &types.RespondDecisionTaskCompletedRequest{
 					TaskToken: []byte("task-token"),
 					Decisions: []*types.Decision{},
 				},
@@ -1039,7 +1039,7 @@ func (s *handlerSuite) TestRespondDecisionTaskCompleted() {
 func (s *handlerSuite) TestRespondDecisionTaskFailed() {
 	validInput := &types.HistoryRespondDecisionTaskFailedRequest{
 		DomainUUID: testDomainID,
-		FailedRequest: &types.RespondDecisionTaskFailedRequest{
+		Request: &types.RespondDecisionTaskFailedRequest{
 			TaskToken: []byte("task-token"),
 			Cause:     types.DecisionTaskFailedCauseBadBinary.Ptr(),
 			Details:   []byte("Details"),
@@ -1048,7 +1048,7 @@ func (s *handlerSuite) TestRespondDecisionTaskFailed() {
 	}
 	specialInput := &types.HistoryRespondDecisionTaskFailedRequest{
 		DomainUUID: testDomainID,
-		FailedRequest: &types.RespondDecisionTaskFailedRequest{
+		Request: &types.RespondDecisionTaskFailedRequest{
 			TaskToken: []byte("task-token"),
 			Cause:     types.DecisionTaskFailedCauseUnhandledDecision.Ptr(),
 			Details:   []byte("Details"),
@@ -1409,7 +1409,7 @@ func (s *handlerSuite) TestDescribeQueue() {
 func (s *handlerSuite) TestDescribeMutableState() {
 	validInput := &types.DescribeMutableStateRequest{
 		DomainUUID: testDomainID,
-		Execution: &types.WorkflowExecution{
+		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: testWorkflowID,
 			RunID:      testValidUUID,
 		},
@@ -1469,7 +1469,7 @@ func (s *handlerSuite) TestDescribeMutableState() {
 func (s *handlerSuite) TestGetMutableState() {
 	validInput := &types.GetMutableStateRequest{
 		DomainUUID: testDomainID,
-		Execution: &types.WorkflowExecution{
+		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: testWorkflowID,
 			RunID:      testValidUUID,
 		},
@@ -1539,7 +1539,7 @@ func (s *handlerSuite) TestGetMutableState() {
 func (s *handlerSuite) TestPollMutableState() {
 	validInput := &types.PollMutableStateRequest{
 		DomainUUID: testDomainID,
-		Execution: &types.WorkflowExecution{
+		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: testWorkflowID,
 			RunID:      testValidUUID,
 		},
@@ -1610,7 +1610,7 @@ func (s *handlerSuite) TestDescribeWorkflowExecution() {
 	validInput := &types.HistoryDescribeWorkflowExecutionRequest{
 		DomainUUID: testDomainID,
 		Request: &types.DescribeWorkflowExecutionRequest{
-			Execution: &types.WorkflowExecution{
+			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: testWorkflowID,
 				RunID:      testValidUUID,
 			},
@@ -1681,7 +1681,7 @@ func (s *handlerSuite) TestDescribeWorkflowExecution() {
 func (s *handlerSuite) TestRequestCancelWorkflowExecution() {
 	validInput := &types.HistoryRequestCancelWorkflowExecutionRequest{
 		DomainUUID: testDomainID,
-		CancelRequest: &types.RequestCancelWorkflowExecutionRequest{
+		Request: &types.RequestCancelWorkflowExecutionRequest{
 			Domain: "domain",
 			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: testWorkflowID,
@@ -1761,7 +1761,7 @@ func (s *handlerSuite) TestRequestCancelWorkflowExecution() {
 func (s *handlerSuite) TestSignalWorkflowExecution() {
 	validInput := &types.HistorySignalWorkflowExecutionRequest{
 		DomainUUID: testDomainID,
-		SignalRequest: &types.SignalWorkflowExecutionRequest{
+		Request: &types.SignalWorkflowExecutionRequest{
 			Domain: "domain",
 			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: testWorkflowID,
@@ -2016,7 +2016,7 @@ func (s *handlerSuite) TestRemoveSignalMutableState() {
 func (s *handlerSuite) TestTerminateWorkflowExecution() {
 	validInput := &types.HistoryTerminateWorkflowExecutionRequest{
 		DomainUUID: testDomainID,
-		TerminateRequest: &types.TerminateWorkflowExecutionRequest{
+		Request: &types.TerminateWorkflowExecutionRequest{
 			Domain: "domain",
 			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: testWorkflowID,
@@ -2097,7 +2097,7 @@ func (s *handlerSuite) TestTerminateWorkflowExecution() {
 func (s *handlerSuite) TestResetWorkflowExecution() {
 	validInput := &types.HistoryResetWorkflowExecutionRequest{
 		DomainUUID: testDomainID,
-		ResetRequest: &types.ResetWorkflowExecutionRequest{
+		Request: &types.ResetWorkflowExecutionRequest{
 			Domain: "domain",
 			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: testWorkflowID,
@@ -2183,7 +2183,7 @@ func (s *handlerSuite) TestQueryWorkflow() {
 		DomainUUID: testDomainID,
 		Request: &types.QueryWorkflowRequest{
 			Domain: "domain",
-			Execution: &types.WorkflowExecution{
+			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: testWorkflowID,
 				RunID:      testValidUUID,
 			},
@@ -2437,7 +2437,7 @@ func (s *handlerSuite) TestRecordChildExecutionCompleted() {
 func (s *handlerSuite) TestResetStickyTaskList() {
 	validInput := &types.HistoryResetStickyTaskListRequest{
 		DomainUUID: testDomainID,
-		Execution: &types.WorkflowExecution{
+		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: testWorkflowID,
 			RunID:      testValidUUID,
 		},
@@ -3282,7 +3282,7 @@ func (s *handlerSuite) TestRefreshWorkflowTasks() {
 	validInput := &types.HistoryRefreshWorkflowTasksRequest{
 		DomainUIID: testDomainID,
 		Request: &types.RefreshWorkflowTasksRequest{
-			Execution: &types.WorkflowExecution{
+			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: testWorkflowID,
 				RunID:      testValidUUID,
 			},

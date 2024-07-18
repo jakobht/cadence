@@ -441,7 +441,7 @@ func (s *engine3Suite) TestSignalWorkflowExecution_DeprecatedDomain() {
 	input := []byte("test input")
 	signalRequest := &types.HistorySignalWorkflowExecutionRequest{
 		DomainUUID: constants.TestDomainID,
-		SignalRequest: &types.SignalWorkflowExecutionRequest{
+		Request: &types.SignalWorkflowExecutionRequest{
 			Domain:            constants.TestDomainID,
 			WorkflowExecution: &we,
 			Identity:          identity,

@@ -102,7 +102,7 @@ func (c *clientImpl) GetMutableState(
 	request *types.GetMutableStateRequest,
 	opts ...yarpc.CallOption,
 ) (*types.GetMutableStateResponse, error) {
-	peer, err := c.peerResolver.FromWorkflowID(request.Execution.WorkflowID)
+	peer, err := c.peerResolver.FromWorkflowID(request.WorkflowExecution.WorkflowID)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +124,7 @@ func (c *clientImpl) PollMutableState(
 	request *types.PollMutableStateRequest,
 	opts ...yarpc.CallOption,
 ) (*types.PollMutableStateResponse, error) {
-	peer, err := c.peerResolver.FromWorkflowID(request.Execution.WorkflowID)
+	peer, err := c.peerResolver.FromWorkflowID(request.WorkflowExecution.WorkflowID)
 	if err != nil {
 		return nil, err
 	}
@@ -276,7 +276,7 @@ func (c *clientImpl) DescribeMutableState(
 	request *types.DescribeMutableStateRequest,
 	opts ...yarpc.CallOption,
 ) (*types.DescribeMutableStateResponse, error) {
-	peer, err := c.peerResolver.FromWorkflowID(request.Execution.WorkflowID)
+	peer, err := c.peerResolver.FromWorkflowID(request.WorkflowExecution.WorkflowID)
 	if err != nil {
 		return nil, err
 	}
@@ -298,7 +298,7 @@ func (c *clientImpl) ResetStickyTaskList(
 	request *types.HistoryResetStickyTaskListRequest,
 	opts ...yarpc.CallOption,
 ) (*types.HistoryResetStickyTaskListResponse, error) {
-	peer, err := c.peerResolver.FromWorkflowID(request.Execution.WorkflowID)
+	peer, err := c.peerResolver.FromWorkflowID(request.WorkflowExecution.WorkflowID)
 	if err != nil {
 		return nil, err
 	}
@@ -320,7 +320,7 @@ func (c *clientImpl) DescribeWorkflowExecution(
 	request *types.HistoryDescribeWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
 ) (*types.DescribeWorkflowExecutionResponse, error) {
-	peer, err := c.peerResolver.FromWorkflowID(request.Request.Execution.WorkflowID)
+	peer, err := c.peerResolver.FromWorkflowID(request.Request.WorkflowExecution.WorkflowID)
 	if err != nil {
 		return nil, err
 	}
@@ -386,7 +386,7 @@ func (c *clientImpl) RespondDecisionTaskCompleted(
 	request *types.HistoryRespondDecisionTaskCompletedRequest,
 	opts ...yarpc.CallOption,
 ) (*types.HistoryRespondDecisionTaskCompletedResponse, error) {
-	taskToken, err := c.tokenSerializer.Deserialize(request.CompleteRequest.TaskToken)
+	taskToken, err := c.tokenSerializer.Deserialize(request.Request.TaskToken)
 	if err != nil {
 		return nil, err
 	}
@@ -408,7 +408,7 @@ func (c *clientImpl) RespondDecisionTaskFailed(
 	request *types.HistoryRespondDecisionTaskFailedRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	taskToken, err := c.tokenSerializer.Deserialize(request.FailedRequest.TaskToken)
+	taskToken, err := c.tokenSerializer.Deserialize(request.Request.TaskToken)
 	if err != nil {
 		return err
 	}
@@ -428,7 +428,7 @@ func (c *clientImpl) RespondActivityTaskCompleted(
 	request *types.HistoryRespondActivityTaskCompletedRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	taskToken, err := c.tokenSerializer.Deserialize(request.CompleteRequest.TaskToken)
+	taskToken, err := c.tokenSerializer.Deserialize(request.Request.TaskToken)
 	if err != nil {
 		return err
 	}
@@ -448,7 +448,7 @@ func (c *clientImpl) RespondActivityTaskFailed(
 	request *types.HistoryRespondActivityTaskFailedRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	taskToken, err := c.tokenSerializer.Deserialize(request.FailedRequest.TaskToken)
+	taskToken, err := c.tokenSerializer.Deserialize(request.Request.TaskToken)
 	if err != nil {
 		return err
 	}
@@ -468,7 +468,7 @@ func (c *clientImpl) RespondActivityTaskCanceled(
 	request *types.HistoryRespondActivityTaskCanceledRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	taskToken, err := c.tokenSerializer.Deserialize(request.CancelRequest.TaskToken)
+	taskToken, err := c.tokenSerializer.Deserialize(request.Request.TaskToken)
 	if err != nil {
 		return err
 	}
@@ -488,7 +488,7 @@ func (c *clientImpl) RecordActivityTaskHeartbeat(
 	request *types.HistoryRecordActivityTaskHeartbeatRequest,
 	opts ...yarpc.CallOption,
 ) (*types.RecordActivityTaskHeartbeatResponse, error) {
-	taskToken, err := c.tokenSerializer.Deserialize(request.HeartbeatRequest.TaskToken)
+	taskToken, err := c.tokenSerializer.Deserialize(request.Request.TaskToken)
 	if err != nil {
 		return nil, err
 	}
@@ -514,7 +514,7 @@ func (c *clientImpl) RequestCancelWorkflowExecution(
 	request *types.HistoryRequestCancelWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	peer, err := c.peerResolver.FromWorkflowID(request.CancelRequest.WorkflowExecution.WorkflowID)
+	peer, err := c.peerResolver.FromWorkflowID(request.Request.WorkflowExecution.WorkflowID)
 	if err != nil {
 		return err
 	}
@@ -529,7 +529,7 @@ func (c *clientImpl) SignalWorkflowExecution(
 	request *types.HistorySignalWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	peer, err := c.peerResolver.FromWorkflowID(request.SignalRequest.WorkflowExecution.WorkflowID)
+	peer, err := c.peerResolver.FromWorkflowID(request.Request.WorkflowExecution.WorkflowID)
 	if err != nil {
 		return err
 	}
@@ -586,7 +586,7 @@ func (c *clientImpl) TerminateWorkflowExecution(
 	request *types.HistoryTerminateWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	peer, err := c.peerResolver.FromWorkflowID(request.TerminateRequest.WorkflowExecution.WorkflowID)
+	peer, err := c.peerResolver.FromWorkflowID(request.Request.WorkflowExecution.WorkflowID)
 	if err != nil {
 		return err
 	}
@@ -602,7 +602,7 @@ func (c *clientImpl) ResetWorkflowExecution(
 	request *types.HistoryResetWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
 ) (*types.ResetWorkflowExecutionResponse, error) {
-	peer, err := c.peerResolver.FromWorkflowID(request.ResetRequest.WorkflowExecution.WorkflowID)
+	peer, err := c.peerResolver.FromWorkflowID(request.Request.WorkflowExecution.WorkflowID)
 	if err != nil {
 		return nil, err
 	}

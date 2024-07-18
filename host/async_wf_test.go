@@ -235,7 +235,7 @@ func (s *AsyncWFIntegrationSuite) TestStartWorkflowExecutionAsync() {
 			for i := 0; i < 30; i++ {
 				resp, err := s.engine.DescribeWorkflowExecution(ctx, &types.DescribeWorkflowExecutionRequest{
 					Domain: s.domainName,
-					Execution: &types.WorkflowExecution{
+					WorkflowExecution: &types.WorkflowExecution{
 						WorkflowID: wfID,
 					},
 				})

@@ -148,7 +148,7 @@ func TestToSignalWithStartWorkflowExecutionRequestTags(t *testing.T) {
 func TestToDescribeWorkflowExecutionRequestTags(t *testing.T) {
 	req := &types.DescribeWorkflowExecutionRequest{
 		Domain: "test-domain",
-		Execution: &types.WorkflowExecution{
+		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: "test-workflow-id",
 			RunID:      "test-run-id",
 		},
@@ -474,7 +474,7 @@ func TestToRequestCancelWorkflowExecutionRequestTags(t *testing.T) {
 func TestToRefreshWorkflowTasksRequestTags(t *testing.T) {
 	req := &types.RefreshWorkflowTasksRequest{
 		Domain: "test-domain",
-		Execution: &types.WorkflowExecution{
+		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: "test-workflow-id",
 			RunID:      "test-run-id",
 		},
@@ -510,7 +510,7 @@ func TestToRecordActivityTaskHeartbeatByIDRequestTags(t *testing.T) {
 func TestToQueryWorkflowRequestTags(t *testing.T) {
 	req := &types.QueryWorkflowRequest{
 		Domain: "test-domain",
-		Execution: &types.WorkflowExecution{
+		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: "test-workflow-id",
 			RunID:      "test-run-id",
 		},

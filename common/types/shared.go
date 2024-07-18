@@ -1769,8 +1769,8 @@ func (v *DescribeTaskListResponse) GetTaskListStatus() (o *TaskListStatus) {
 
 // DescribeWorkflowExecutionRequest is an internal type (TBD...)
 type DescribeWorkflowExecutionRequest struct {
-	Domain    string             `json:"domain,omitempty"`
-	Execution *WorkflowExecution `json:"execution,omitempty"`
+	Domain            string             `json:"domain,omitempty"`
+	WorkflowExecution *WorkflowExecution `json:"execution,omitempty"`
 }
 
 func (v *DescribeWorkflowExecutionRequest) SerializeForLogging() (string, error) {
@@ -1790,8 +1790,8 @@ func (v *DescribeWorkflowExecutionRequest) GetDomain() (o string) {
 
 // GetExecution is an internal getter (TBD...)
 func (v *DescribeWorkflowExecutionRequest) GetExecution() (o *WorkflowExecution) {
-	if v != nil && v.Execution != nil {
-		return v.Execution
+	if v != nil && v.WorkflowExecution != nil {
+		return v.WorkflowExecution
 	}
 	return
 }
@@ -4402,7 +4402,7 @@ const (
 // QueryWorkflowRequest is an internal type (TBD...)
 type QueryWorkflowRequest struct {
 	Domain                string                 `json:"domain,omitempty"`
-	Execution             *WorkflowExecution     `json:"execution,omitempty"`
+	WorkflowExecution     *WorkflowExecution     `json:"execution,omitempty"`
 	Query                 *WorkflowQuery         `json:"query,omitempty"`
 	QueryRejectCondition  *QueryRejectCondition  `json:"queryRejectCondition,omitempty"`
 	QueryConsistencyLevel *QueryConsistencyLevel `json:"queryConsistencyLevel,omitempty"`
@@ -4425,8 +4425,8 @@ func (v *QueryWorkflowRequest) GetDomain() (o string) {
 
 // GetExecution is an internal getter (TBD...)
 func (v *QueryWorkflowRequest) GetExecution() (o *WorkflowExecution) {
-	if v != nil && v.Execution != nil {
-		return v.Execution
+	if v != nil && v.WorkflowExecution != nil {
+		return v.WorkflowExecution
 	}
 	return
 }
@@ -4593,8 +4593,8 @@ func (v *RecordMarkerDecisionAttributes) GetMarkerName() (o string) {
 
 // RefreshWorkflowTasksRequest is an internal type (TBD...)
 type RefreshWorkflowTasksRequest struct {
-	Domain    string             `json:"domain,omitempty"`
-	Execution *WorkflowExecution `json:"execution,omitempty"`
+	Domain            string             `json:"domain,omitempty"`
+	WorkflowExecution *WorkflowExecution `json:"execution,omitempty"`
 }
 
 func (v *RefreshWorkflowTasksRequest) SerializeForLogging() (string, error) {
@@ -4614,8 +4614,8 @@ func (v *RefreshWorkflowTasksRequest) GetDomain() (o string) {
 
 // GetExecution is an internal getter (TBD...)
 func (v *RefreshWorkflowTasksRequest) GetExecution() (o *WorkflowExecution) {
-	if v != nil && v.Execution != nil {
-		return v.Execution
+	if v != nil && v.WorkflowExecution != nil {
+		return v.WorkflowExecution
 	}
 	return
 }

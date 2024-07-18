@@ -129,7 +129,7 @@ func (s *IntegrationSuite) TestContinueAsNewWorkflow() {
 		ctx, cancel := createContext()
 		descResp, err := s.engine.DescribeWorkflowExecution(ctx, &types.DescribeWorkflowExecutionRequest{
 			Domain: s.domainName,
-			Execution: &types.WorkflowExecution{
+			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: id,
 			},
 		})
@@ -249,7 +249,7 @@ GetHistoryLoop:
 
 		lastEvent := history.Events[len(history.Events)-1]
 		if *lastEvent.EventType != types.EventTypeWorkflowExecutionTimedOut {
-			s.Logger.Warn("Execution not timedout yet.")
+			s.Logger.Warn("WorkflowExecution not timedout yet.")
 			time.Sleep(200 * time.Millisecond)
 			continue GetHistoryLoop
 		}
@@ -492,7 +492,7 @@ func (s *IntegrationSuite) TestChildWorkflowWithContinueAsNew() {
 	s.False(childComplete)
 	s.NotNil(startedEvent)
 
-	// Process Child Execution final decision to complete it
+	// Process Child WorkflowExecution final decision to complete it
 	_, err = poller.PollAndProcessDecisionTask(false, false)
 	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(err)
@@ -511,5 +511,5 @@ func (s *IntegrationSuite) TestChildWorkflowWithContinueAsNew() {
 	s.Equal(wtChild, completedAttributes.WorkflowType.Name)
 	s.Equal([]byte("Child Done."), completedAttributes.Result)
 
-	s.Logger.Info("Parent Workflow Execution History: ")
+	s.Logger.Info("Parent Workflow WorkflowExecution History: ")
 }

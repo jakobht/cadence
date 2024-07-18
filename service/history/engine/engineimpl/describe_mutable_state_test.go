@@ -73,8 +73,8 @@ func TestDescribeMutableState_Success(t *testing.T) {
 	}
 
 	resp, err := engine.DescribeMutableState(nil, &types.DescribeMutableStateRequest{
-		DomainUUID: constants.TestDomainID,
-		Execution:  getExpectedWFExecution(),
+		DomainUUID:        constants.TestDomainID,
+		WorkflowExecution: getExpectedWFExecution(),
 	})
 	assert.NoError(t, err)
 
@@ -115,8 +115,8 @@ func TestDescribeMutableState_Error_GetAndCreateError(t *testing.T) {
 	}
 
 	_, err := engine.DescribeMutableState(nil, &types.DescribeMutableStateRequest{
-		DomainUUID: constants.TestDomainID,
-		Execution:  getExpectedWFExecution(),
+		DomainUUID:        constants.TestDomainID,
+		WorkflowExecution: getExpectedWFExecution(),
 	})
 	assert.Error(t, err)
 	assert.ErrorIs(t, err, assert.AnError)
@@ -143,8 +143,8 @@ func TestDescribeMutableState_Error_LoadFromDBError(t *testing.T) {
 	}
 
 	_, err := engine.DescribeMutableState(nil, &types.DescribeMutableStateRequest{
-		DomainUUID: constants.TestDomainID,
-		Execution:  getExpectedWFExecution(),
+		DomainUUID:        constants.TestDomainID,
+		WorkflowExecution: getExpectedWFExecution(),
 	})
 	assert.ErrorIs(t, err, assert.AnError)
 

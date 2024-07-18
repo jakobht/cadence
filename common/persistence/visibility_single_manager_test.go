@@ -998,7 +998,7 @@ func TestConvertVisibilityWorkflowExecutionInfo(t *testing.T) {
 				ExecutionTime: &testResultTime,
 			},
 		},
-		"Case2: normal case with Execution Time is 0": {
+		"Case2: normal case with WorkflowExecution Time is 0": {
 			input: &InternalVisibilityWorkflowExecutionInfo{
 				ExecutionTime: time.UnixMilli(int64(testExecutionTime)),
 				StartTime:     testStartTime,

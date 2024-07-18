@@ -1406,7 +1406,7 @@ func (v *AddActivityTaskRequest) String() string {
 		i++
 	}
 	if v.Execution != nil {
-		fields[i] = fmt.Sprintf("Execution: %v", v.Execution)
+		fields[i] = fmt.Sprintf("WorkflowExecution: %v", v.Execution)
 		i++
 	}
 	if v.SourceDomainUUID != nil {
@@ -2150,7 +2150,7 @@ func (v *AddDecisionTaskRequest) String() string {
 		i++
 	}
 	if v.Execution != nil {
-		fields[i] = fmt.Sprintf("Execution: %v", v.Execution)
+		fields[i] = fmt.Sprintf("WorkflowExecution: %v", v.Execution)
 		i++
 	}
 	if v.TaskList != nil {

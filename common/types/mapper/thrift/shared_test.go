@@ -2151,7 +2151,7 @@ func TestRefreshWorkflowTasksRequestConversion(t *testing.T) {
 	testCases := []*types.RefreshWorkflowTasksRequest{
 		nil,
 		{},
-		{Domain: "test-domain", Execution: &testdata.WorkflowExecution},
+		{Domain: "test-domain", WorkflowExecution: &testdata.WorkflowExecution},
 	}
 
 	for _, original := range testCases {

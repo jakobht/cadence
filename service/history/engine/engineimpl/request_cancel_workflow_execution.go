@@ -42,7 +42,7 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 	}
 	domainID := domainEntry.GetInfo().ID
 
-	request := req.CancelRequest
+	request := req.Request
 	parentExecution := req.ExternalWorkflowExecution
 	childWorkflowOnly := req.GetChildWorkflowOnly()
 	workflowExecution := types.WorkflowExecution{
@@ -59,7 +59,7 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 			if !mutableState.IsWorkflowExecutionRunning() {
 				_, closeStatus := mutableState.GetWorkflowStateCloseStatus()
 				if isCancelRequested && closeStatus == persistence.WorkflowCloseStatusCanceled {
-					cancelRequest := req.CancelRequest
+					cancelRequest := req.Request
 					if cancelRequest.RequestID != "" && cancelRequest.RequestID == cancelRequestID {
 						return &workflow.UpdateAction{Noop: true}, nil
 					}
@@ -94,7 +94,7 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 			}
 
 			if isCancelRequested {
-				cancelRequest := req.CancelRequest
+				cancelRequest := req.Request
 				if cancelRequest.RequestID != "" && cancelRequest.RequestID == cancelRequestID {
 					return workflow.UpdateWithNewDecision, nil
 				}
@@ -103,7 +103,7 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 				return nil, workflow.ErrCancellationAlreadyRequested
 			}
 
-			if _, err := mutableState.AddWorkflowExecutionCancelRequestedEvent(req.CancelRequest.Cause, req); err != nil {
+			if _, err := mutableState.AddWorkflowExecutionCancelRequestedEvent(req.Request.Cause, req); err != nil {
 				return nil, &types.InternalServiceError{Message: "Unable to cancel workflow execution."}
 			}
 

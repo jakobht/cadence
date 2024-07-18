@@ -167,7 +167,7 @@ func (s *IntegrationSuite) TestQueryWorkflow_Sticky() {
 		defer cancel()
 		queryResp, err := s.engine.QueryWorkflow(ctx, &types.QueryWorkflowRequest{
 			Domain: s.domainName,
-			Execution: &types.WorkflowExecution{
+			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: id,
 				RunID:      we.RunID,
 			},
@@ -334,7 +334,7 @@ func (s *IntegrationSuite) TestQueryWorkflow_StickyTimeout() {
 		defer cancel()
 		queryResp, err := s.engine.QueryWorkflow(ctx, &types.QueryWorkflowRequest{
 			Domain: s.domainName,
-			Execution: &types.WorkflowExecution{
+			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: id,
 				RunID:      we.RunID,
 			},
@@ -479,7 +479,7 @@ func (s *IntegrationSuite) TestQueryWorkflow_NonSticky() {
 		defer cancel()
 		queryResp, err := s.engine.QueryWorkflow(ctx, &types.QueryWorkflowRequest{
 			Domain: s.domainName,
-			Execution: &types.WorkflowExecution{
+			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: id,
 				RunID:      we.RunID,
 			},
@@ -702,7 +702,7 @@ func (s *IntegrationSuite) TestQueryWorkflow_Consistent_PiggybackQuery() {
 		defer cancel()
 		queryResp, err := s.engine.QueryWorkflow(ctx, &types.QueryWorkflowRequest{
 			Domain: s.domainName,
-			Execution: &types.WorkflowExecution{
+			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: id,
 				RunID:      we.RunID,
 			},
@@ -888,7 +888,7 @@ func (s *IntegrationSuite) TestQueryWorkflow_Consistent_Timeout() {
 		shortCtx, cancel := context.WithTimeout(context.Background(), time.Second)
 		queryResp, err := s.engine.QueryWorkflow(shortCtx, &types.QueryWorkflowRequest{
 			Domain: s.domainName,
-			Execution: &types.WorkflowExecution{
+			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: id,
 				RunID:      we.RunID,
 			},
@@ -1059,7 +1059,7 @@ func (s *IntegrationSuite) TestQueryWorkflow_Consistent_BlockedByStarted_NonStic
 		defer cancel()
 		queryResp, err := s.engine.QueryWorkflow(ctx, &types.QueryWorkflowRequest{
 			Domain: s.domainName,
-			Execution: &types.WorkflowExecution{
+			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: id,
 				RunID:      we.RunID,
 			},
@@ -1270,7 +1270,7 @@ func (s *IntegrationSuite) TestQueryWorkflow_Consistent_NewDecisionTask_Sticky()
 		defer cancel()
 		queryResp, err := s.engine.QueryWorkflow(ctx, &types.QueryWorkflowRequest{
 			Domain: s.domainName,
-			Execution: &types.WorkflowExecution{
+			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: id,
 				RunID:      we.RunID,
 			},
@@ -1409,8 +1409,8 @@ func (s *IntegrationSuite) TestQueryWorkflow_BeforeFirstDecision() {
 	defer cancel()
 	// query workflow without any decision task should produce an error
 	queryResp, err := s.engine.QueryWorkflow(ctx, &types.QueryWorkflowRequest{
-		Domain:    s.domainName,
-		Execution: workflowExecution,
+		Domain:            s.domainName,
+		WorkflowExecution: workflowExecution,
 		Query: &types.WorkflowQuery{
 			QueryType: queryType,
 		},

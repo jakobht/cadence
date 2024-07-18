@@ -52,16 +52,16 @@ func TestResetStickyTaskList(t *testing.T) {
 		{
 			name: "Invalid Domain",
 			request: &types.HistoryResetStickyTaskListRequest{
-				DomainUUID: "",
-				Execution:  execution,
+				DomainUUID:        "",
+				WorkflowExecution: execution,
 			},
 			expectedErr: &types.BadRequestError{Message: "Missing domain UUID."},
 		},
 		{
 			name: "Completed Workflow",
 			request: &types.HistoryResetStickyTaskListRequest{
-				DomainUUID: constants.TestDomainID,
-				Execution:  execution,
+				DomainUUID:        constants.TestDomainID,
+				WorkflowExecution: execution,
 			},
 			init: func(engine *testdata.EngineForTest) {
 				engine.ShardCtx.Resource.ExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.MatchedBy(func(req *persistence.GetWorkflowExecutionRequest) bool {
@@ -84,8 +84,8 @@ func TestResetStickyTaskList(t *testing.T) {
 		{
 			name: "Success",
 			request: &types.HistoryResetStickyTaskListRequest{
-				DomainUUID: constants.TestDomainID,
-				Execution:  execution,
+				DomainUUID:        constants.TestDomainID,
+				WorkflowExecution: execution,
 			},
 			init: func(engine *testdata.EngineForTest) {
 				engine.ShardCtx.Resource.ExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.MatchedBy(func(req *persistence.GetWorkflowExecutionRequest) bool {

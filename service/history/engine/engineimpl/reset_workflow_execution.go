@@ -38,7 +38,7 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 	resetRequest *types.HistoryResetWorkflowExecutionRequest,
 ) (response *types.ResetWorkflowExecutionResponse, retError error) {
 
-	request := resetRequest.ResetRequest
+	request := resetRequest.Request
 	domainID := resetRequest.GetDomainUUID()
 	workflowID := request.WorkflowExecution.GetWorkflowID()
 	baseRunID := request.WorkflowExecution.GetRunID()

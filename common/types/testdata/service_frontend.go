@@ -383,8 +383,8 @@ var (
 		FirstExecutionRunID: RunID,
 	}
 	DescribeWorkflowExecutionRequest = types.DescribeWorkflowExecutionRequest{
-		Domain:    DomainName,
-		Execution: &WorkflowExecution,
+		Domain:            DomainName,
+		WorkflowExecution: &WorkflowExecution,
 	}
 	DescribeWorkflowExecutionResponse = types.DescribeWorkflowExecutionResponse{
 		ExecutionConfiguration: &WorkflowExecutionConfiguration,
@@ -395,7 +395,7 @@ var (
 	}
 	QueryWorkflowRequest = types.QueryWorkflowRequest{
 		Domain:                DomainName,
-		Execution:             &WorkflowExecution,
+		WorkflowExecution:     &WorkflowExecution,
 		Query:                 &WorkflowQuery,
 		QueryRejectCondition:  &QueryRejectCondition,
 		QueryConsistencyLevel: &QueryConsistencyLevel,

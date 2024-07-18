@@ -41,8 +41,8 @@ func (e *historyEngineImpl) DescribeMutableState(
 
 	domainID := request.DomainUUID
 	execution := types.WorkflowExecution{
-		WorkflowID: request.Execution.WorkflowID,
-		RunID:      request.Execution.RunID,
+		WorkflowID: request.WorkflowExecution.WorkflowID,
+		RunID:      request.WorkflowExecution.RunID,
 	}
 
 	cacheCtx, dbCtx, release, cacheHit, err := e.executionCache.GetAndCreateWorkflowExecution(

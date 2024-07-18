@@ -215,7 +215,7 @@ func (s *IntegrationSuite) TestResetWorkflow() {
 	defer cancel()
 	descResp, err := s.engine.DescribeWorkflowExecution(ctx, &types.DescribeWorkflowExecutionRequest{
 		Domain: s.domainName,
-		Execution: &types.WorkflowExecution{
+		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: id,
 			RunID:      resp.GetRunID(),
 		},

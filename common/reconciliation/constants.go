@@ -20,7 +20,7 @@
 
 package reconciliation
 
-// Execution fixer workflow relates
+// WorkflowExecution fixer workflow relates
 
 const (
 	CheckDataCorruptionWorkflowType                 = "check-data-corruption-workflow"

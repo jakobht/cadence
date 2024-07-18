@@ -96,7 +96,7 @@ func TestRatelimitedEndpoints_Table(t *testing.T) {
 			callWrapper: func() (interface{}, error) {
 				signalRequest := &types.HistorySignalWorkflowExecutionRequest{
 					DomainUUID: testDomainID,
-					SignalRequest: &types.SignalWorkflowExecutionRequest{
+					Request: &types.SignalWorkflowExecutionRequest{
 						WorkflowExecution: &types.WorkflowExecution{WorkflowID: testWorkflowID},
 					},
 				}
@@ -113,7 +113,7 @@ func TestRatelimitedEndpoints_Table(t *testing.T) {
 				describeRequest := &types.HistoryDescribeWorkflowExecutionRequest{
 					DomainUUID: testDomainID,
 					Request: &types.DescribeWorkflowExecutionRequest{
-						Execution: &types.WorkflowExecution{WorkflowID: testWorkflowID},
+						WorkflowExecution: &types.WorkflowExecution{WorkflowID: testWorkflowID},
 					},
 				}
 

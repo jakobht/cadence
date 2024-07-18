@@ -492,7 +492,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary:  thrift.UnaryHandler(h.RecordActivityTaskHeartbeat),
 					NoWire: recordactivitytaskheartbeat_NoWireHandler{impl},
 				},
-				Signature:    "RecordActivityTaskHeartbeat(HeartbeatRequest *history.RecordActivityTaskHeartbeatRequest) (*shared.RecordActivityTaskHeartbeatResponse)",
+				Signature:    "RecordActivityTaskHeartbeat(Request *history.RecordActivityTaskHeartbeatRequest) (*shared.RecordActivityTaskHeartbeatResponse)",
 				ThriftModule: history.ThriftModule,
 			},
 
@@ -588,7 +588,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary:  thrift.UnaryHandler(h.RequestCancelWorkflowExecution),
 					NoWire: requestcancelworkflowexecution_NoWireHandler{impl},
 				},
-				Signature:    "RequestCancelWorkflowExecution(CancelRequest *history.RequestCancelWorkflowExecutionRequest)",
+				Signature:    "RequestCancelWorkflowExecution(Request *history.RequestCancelWorkflowExecutionRequest)",
 				ThriftModule: history.ThriftModule,
 			},
 
@@ -612,7 +612,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary:  thrift.UnaryHandler(h.ResetStickyTaskList),
 					NoWire: resetstickytasklist_NoWireHandler{impl},
 				},
-				Signature:    "ResetStickyTaskList(ResetRequest *history.ResetStickyTaskListRequest) (*history.ResetStickyTaskListResponse)",
+				Signature:    "ResetStickyTaskList(Request *history.ResetStickyTaskListRequest) (*history.ResetStickyTaskListResponse)",
 				ThriftModule: history.ThriftModule,
 			},
 
@@ -624,7 +624,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary:  thrift.UnaryHandler(h.ResetWorkflowExecution),
 					NoWire: resetworkflowexecution_NoWireHandler{impl},
 				},
-				Signature:    "ResetWorkflowExecution(ResetRequest *history.ResetWorkflowExecutionRequest) (*shared.ResetWorkflowExecutionResponse)",
+				Signature:    "ResetWorkflowExecution(Request *history.ResetWorkflowExecutionRequest) (*shared.ResetWorkflowExecutionResponse)",
 				ThriftModule: history.ThriftModule,
 			},
 
@@ -648,7 +648,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary:  thrift.UnaryHandler(h.RespondActivityTaskCompleted),
 					NoWire: respondactivitytaskcompleted_NoWireHandler{impl},
 				},
-				Signature:    "RespondActivityTaskCompleted(CompleteRequest *history.RespondActivityTaskCompletedRequest)",
+				Signature:    "RespondActivityTaskCompleted(Request *history.RespondActivityTaskCompletedRequest)",
 				ThriftModule: history.ThriftModule,
 			},
 
@@ -684,7 +684,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary:  thrift.UnaryHandler(h.RespondDecisionTaskCompleted),
 					NoWire: responddecisiontaskcompleted_NoWireHandler{impl},
 				},
-				Signature:    "RespondDecisionTaskCompleted(CompleteRequest *history.RespondDecisionTaskCompletedRequest) (*history.RespondDecisionTaskCompletedResponse)",
+				Signature:    "RespondDecisionTaskCompleted(Request *history.RespondDecisionTaskCompletedRequest) (*history.RespondDecisionTaskCompletedResponse)",
 				ThriftModule: history.ThriftModule,
 			},
 
@@ -696,7 +696,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary:  thrift.UnaryHandler(h.RespondDecisionTaskFailed),
 					NoWire: responddecisiontaskfailed_NoWireHandler{impl},
 				},
-				Signature:    "RespondDecisionTaskFailed(FailedRequest *history.RespondDecisionTaskFailedRequest)",
+				Signature:    "RespondDecisionTaskFailed(Request *history.RespondDecisionTaskFailedRequest)",
 				ThriftModule: history.ThriftModule,
 			},
 
@@ -732,7 +732,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary:  thrift.UnaryHandler(h.SignalWorkflowExecution),
 					NoWire: signalworkflowexecution_NoWireHandler{impl},
 				},
-				Signature:    "SignalWorkflowExecution(SignalRequest *history.SignalWorkflowExecutionRequest)",
+				Signature:    "SignalWorkflowExecution(Request *history.SignalWorkflowExecutionRequest)",
 				ThriftModule: history.ThriftModule,
 			},
 
@@ -780,7 +780,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary:  thrift.UnaryHandler(h.TerminateWorkflowExecution),
 					NoWire: terminateworkflowexecution_NoWireHandler{impl},
 				},
-				Signature:    "TerminateWorkflowExecution(TerminateRequest *history.TerminateWorkflowExecutionRequest)",
+				Signature:    "TerminateWorkflowExecution(Request *history.TerminateWorkflowExecutionRequest)",
 				ThriftModule: history.ThriftModule,
 			},
 		},

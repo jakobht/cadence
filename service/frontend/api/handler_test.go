@@ -615,8 +615,8 @@ func (s *workflowHandlerSuite) TestRecordActivityTaskHeartbeat_Success() {
 	s.mockDomainCache.EXPECT().GetDomainName(s.testDomainID).Return(s.testDomain, nil)
 	s.mockHistoryClient.EXPECT().RecordActivityTaskHeartbeat(gomock.Any(),
 		&types.HistoryRecordActivityTaskHeartbeatRequest{
-			DomainUUID:       s.testDomainID,
-			HeartbeatRequest: req,
+			DomainUUID: s.testDomainID,
+			Request:    req,
 		}).Return(resp, nil)
 
 	result, err := wh.RecordActivityTaskHeartbeat(context.Background(), req)
@@ -703,8 +703,8 @@ func (s *workflowHandlerSuite) TestRespondActivityTaskCompleted_Success() {
 	s.mockDomainCache.EXPECT().GetDomainName(s.testDomainID).Return(s.testDomain, nil)
 	s.mockHistoryClient.EXPECT().RespondActivityTaskCompleted(gomock.Any(),
 		&types.HistoryRespondActivityTaskCompletedRequest{
-			DomainUUID:      taskToken.DomainID,
-			CompleteRequest: req,
+			DomainUUID: taskToken.DomainID,
+			Request:    req,
 		}).Return(nil)
 
 	err = wh.RespondActivityTaskCompleted(context.Background(), req)
@@ -773,8 +773,8 @@ func TestRespondActivityTaskFailed(t *testing.T) {
 				mockVersionChecker.EXPECT().ClientSupported(gomock.Any(), gomock.Any()).Return(nil)
 
 				t.HistoryClient.EXPECT().RespondActivityTaskFailed(gomock.Any(), &types.HistoryRespondActivityTaskFailedRequest{
-					DomainUUID:    testDomainID,
-					FailedRequest: failedRequest,
+					DomainUUID: testDomainID,
+					Request:    failedRequest,
 				}).Return(nil)
 
 				t.DomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain-id", nil)
@@ -3684,7 +3684,7 @@ func TestQueryWorkflow(t *testing.T) {
 			inMemoryClient: dc.NewInMemoryClient(),
 			queryRequest: &types.QueryWorkflowRequest{
 				Domain: "test-domain",
-				Execution: &types.WorkflowExecution{
+				WorkflowExecution: &types.WorkflowExecution{
 					WorkflowID: "test-workflow-id",
 					RunID:      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
 				},
@@ -3747,7 +3747,7 @@ func TestQueryWorkflow(t *testing.T) {
 			}(),
 			queryRequest: &types.QueryWorkflowRequest{
 				Domain: "test-domain",
-				Execution: &types.WorkflowExecution{
+				WorkflowExecution: &types.WorkflowExecution{
 					WorkflowID: "test-workflow-id",
 					RunID:      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
 				},
@@ -3762,7 +3762,7 @@ func TestQueryWorkflow(t *testing.T) {
 			inMemoryClient: dc.NewInMemoryClient(),
 			queryRequest: &types.QueryWorkflowRequest{
 				Domain: "test-domain",
-				Execution: &types.WorkflowExecution{
+				WorkflowExecution: &types.WorkflowExecution{
 					WorkflowID: "test-workflow-id",
 					RunID:      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
 				},
@@ -3777,7 +3777,7 @@ func TestQueryWorkflow(t *testing.T) {
 			inMemoryClient: dc.NewInMemoryClient(),
 			queryRequest: &types.QueryWorkflowRequest{
 				Domain: "test-domain",
-				Execution: &types.WorkflowExecution{
+				WorkflowExecution: &types.WorkflowExecution{
 					WorkflowID: "test-workflow-id",
 					RunID:      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
 				},
@@ -3794,7 +3794,7 @@ func TestQueryWorkflow(t *testing.T) {
 			inMemoryClient: dc.NewInMemoryClient(),
 			queryRequest: &types.QueryWorkflowRequest{
 				Domain: "test-domain",
-				Execution: &types.WorkflowExecution{
+				WorkflowExecution: &types.WorkflowExecution{
 					WorkflowID: "test-workflow-id",
 					RunID:      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
 				},
@@ -3813,7 +3813,7 @@ func TestQueryWorkflow(t *testing.T) {
 			inMemoryClient: dc.NewInMemoryClient(),
 			queryRequest: &types.QueryWorkflowRequest{
 				Domain: "test-domain",
-				Execution: &types.WorkflowExecution{
+				WorkflowExecution: &types.WorkflowExecution{
 					WorkflowID: "test-workflow-id",
 					RunID:      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
 				},
@@ -3834,7 +3834,7 @@ func TestQueryWorkflow(t *testing.T) {
 			inMemoryClient: dc.NewInMemoryClient(),
 			queryRequest: &types.QueryWorkflowRequest{
 				Domain: "test-domain",
-				Execution: &types.WorkflowExecution{
+				WorkflowExecution: &types.WorkflowExecution{
 					WorkflowID: "test-workflow-id",
 					RunID:      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
 				},
@@ -3907,7 +3907,7 @@ func TestDescribeWorkflowExecution(t *testing.T) {
 			},
 			describeRequest: &types.DescribeWorkflowExecutionRequest{
 				Domain: "test-domain",
-				Execution: &types.WorkflowExecution{
+				WorkflowExecution: &types.WorkflowExecution{
 					WorkflowID: "test-workflow-id",
 					RunID:      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
 				},
@@ -3959,7 +3959,7 @@ func TestDescribeWorkflowExecution(t *testing.T) {
 			},
 			describeRequest: &types.DescribeWorkflowExecutionRequest{
 				Domain: "test-domain",
-				Execution: &types.WorkflowExecution{
+				WorkflowExecution: &types.WorkflowExecution{
 					WorkflowID: "test-workflow-id",
 					RunID:      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
 				},
@@ -3975,7 +3975,7 @@ func TestDescribeWorkflowExecution(t *testing.T) {
 			},
 			describeRequest: &types.DescribeWorkflowExecutionRequest{
 				Domain: "test-domain",
-				Execution: &types.WorkflowExecution{
+				WorkflowExecution: &types.WorkflowExecution{
 					WorkflowID: "test-workflow-id",
 					RunID:      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
 				},

@@ -574,7 +574,7 @@ func (v *attrValidator) validateSignalExternalWorkflowExecutionAttributes(
 		return &types.BadRequestError{Message: "SignalExternalWorkflowExecutionDecisionAttributes is not set on decision."}
 	}
 	if attributes.Execution == nil {
-		return &types.BadRequestError{Message: "Execution is nil on decision."}
+		return &types.BadRequestError{Message: "WorkflowExecution is nil on decision."}
 	}
 	if attributes.Execution.WorkflowID == "" {
 		return &types.BadRequestError{Message: "WorkflowId is not set on decision."}

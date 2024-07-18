@@ -94,7 +94,7 @@ func FromHistoryDescribeMutableStateRequest(t *types.DescribeMutableStateRequest
 	}
 	return &historyv1.DescribeMutableStateRequest{
 		DomainId:          t.DomainUUID,
-		WorkflowExecution: FromWorkflowExecution(t.Execution),
+		WorkflowExecution: FromWorkflowExecution(t.WorkflowExecution),
 	}
 }
 
@@ -103,8 +103,8 @@ func ToHistoryDescribeMutableStateRequest(t *historyv1.DescribeMutableStateReque
 		return nil
 	}
 	return &types.DescribeMutableStateRequest{
-		DomainUUID: t.DomainId,
-		Execution:  ToWorkflowExecution(t.WorkflowExecution),
+		DomainUUID:        t.DomainId,
+		WorkflowExecution: ToWorkflowExecution(t.WorkflowExecution),
 	}
 }
 
@@ -294,7 +294,7 @@ func FromHistoryGetMutableStateRequest(t *types.GetMutableStateRequest) *history
 	}
 	return &historyv1.GetMutableStateRequest{
 		DomainId:            t.DomainUUID,
-		WorkflowExecution:   FromWorkflowExecution(t.Execution),
+		WorkflowExecution:   FromWorkflowExecution(t.WorkflowExecution),
 		ExpectedNextEventId: t.ExpectedNextEventID,
 		CurrentBranchToken:  t.CurrentBranchToken,
 	}
@@ -306,7 +306,7 @@ func ToHistoryGetMutableStateRequest(t *historyv1.GetMutableStateRequest) *types
 	}
 	return &types.GetMutableStateRequest{
 		DomainUUID:          t.DomainId,
-		Execution:           ToWorkflowExecution(t.WorkflowExecution),
+		WorkflowExecution:   ToWorkflowExecution(t.WorkflowExecution),
 		ExpectedNextEventID: t.ExpectedNextEventId,
 		CurrentBranchToken:  t.CurrentBranchToken,
 	}
@@ -513,7 +513,7 @@ func FromHistoryPollMutableStateRequest(t *types.PollMutableStateRequest) *histo
 	}
 	return &historyv1.PollMutableStateRequest{
 		DomainId:            t.DomainUUID,
-		WorkflowExecution:   FromWorkflowExecution(t.Execution),
+		WorkflowExecution:   FromWorkflowExecution(t.WorkflowExecution),
 		ExpectedNextEventId: t.ExpectedNextEventID,
 		CurrentBranchToken:  t.CurrentBranchToken,
 	}
@@ -525,7 +525,7 @@ func ToHistoryPollMutableStateRequest(t *historyv1.PollMutableStateRequest) *typ
 	}
 	return &types.PollMutableStateRequest{
 		DomainUUID:          t.DomainId,
-		Execution:           ToWorkflowExecution(t.WorkflowExecution),
+		WorkflowExecution:   ToWorkflowExecution(t.WorkflowExecution),
 		ExpectedNextEventID: t.ExpectedNextEventId,
 		CurrentBranchToken:  t.CurrentBranchToken,
 	}
@@ -733,7 +733,7 @@ func FromHistoryRecordActivityTaskHeartbeatRequest(t *types.HistoryRecordActivit
 	}
 	return &historyv1.RecordActivityTaskHeartbeatRequest{
 		DomainId: t.DomainUUID,
-		Request:  FromRecordActivityTaskHeartbeatRequest(t.HeartbeatRequest),
+		Request:  FromRecordActivityTaskHeartbeatRequest(t.Request),
 	}
 }
 
@@ -742,8 +742,8 @@ func ToHistoryRecordActivityTaskHeartbeatRequest(t *historyv1.RecordActivityTask
 		return nil
 	}
 	return &types.HistoryRecordActivityTaskHeartbeatRequest{
-		DomainUUID:       t.DomainId,
-		HeartbeatRequest: ToRecordActivityTaskHeartbeatRequest(t.Request),
+		DomainUUID: t.DomainId,
+		Request:    ToRecordActivityTaskHeartbeatRequest(t.Request),
 	}
 }
 
@@ -932,7 +932,7 @@ func FromHistoryRefreshWorkflowTasksRequest(t *types.HistoryRefreshWorkflowTasks
 	return &historyv1.RefreshWorkflowTasksRequest{
 		DomainId:          t.DomainUIID,
 		Domain:            t.Request.Domain,
-		WorkflowExecution: FromWorkflowExecution(t.Request.Execution),
+		WorkflowExecution: FromWorkflowExecution(t.Request.WorkflowExecution),
 	}
 }
 
@@ -942,8 +942,8 @@ func ToHistoryRefreshWorkflowTasksRequest(t *historyv1.RefreshWorkflowTasksReque
 	}
 	return &types.HistoryRefreshWorkflowTasksRequest{
 		Request: &types.RefreshWorkflowTasksRequest{
-			Domain:    t.Domain,
-			Execution: ToWorkflowExecution(t.WorkflowExecution),
+			Domain:            t.Domain,
+			WorkflowExecution: ToWorkflowExecution(t.WorkflowExecution),
 		},
 		DomainUIID: t.DomainId,
 	}
@@ -1029,7 +1029,7 @@ func FromHistoryRequestCancelWorkflowExecutionRequest(t *types.HistoryRequestCan
 	}
 	return &historyv1.RequestCancelWorkflowExecutionRequest{
 		DomainId:              t.DomainUUID,
-		CancelRequest:         FromRequestCancelWorkflowExecutionRequest(t.CancelRequest),
+		CancelRequest:         FromRequestCancelWorkflowExecutionRequest(t.Request),
 		ExternalExecutionInfo: FromExternalExecutionInfoFields(t.ExternalWorkflowExecution, t.ExternalInitiatedEventID),
 		ChildWorkflowOnly:     t.ChildWorkflowOnly,
 	}
@@ -1041,7 +1041,7 @@ func ToHistoryRequestCancelWorkflowExecutionRequest(t *historyv1.RequestCancelWo
 	}
 	return &types.HistoryRequestCancelWorkflowExecutionRequest{
 		DomainUUID:                t.DomainId,
-		CancelRequest:             ToRequestCancelWorkflowExecutionRequest(t.CancelRequest),
+		Request:                   ToRequestCancelWorkflowExecutionRequest(t.CancelRequest),
 		ExternalInitiatedEventID:  ToExternalInitiatedID(t.ExternalExecutionInfo),
 		ExternalWorkflowExecution: ToExternalWorkflowExecution(t.ExternalExecutionInfo),
 		ChildWorkflowOnly:         t.ChildWorkflowOnly,
@@ -1077,7 +1077,7 @@ func FromHistoryResetStickyTaskListRequest(t *types.HistoryResetStickyTaskListRe
 	return &historyv1.ResetStickyTaskListRequest{
 		Request: &apiv1.ResetStickyTaskListRequest{
 			Domain:            "",
-			WorkflowExecution: FromWorkflowExecution(t.Execution),
+			WorkflowExecution: FromWorkflowExecution(t.WorkflowExecution),
 		},
 		DomainId: t.DomainUUID,
 	}
@@ -1088,8 +1088,8 @@ func ToHistoryResetStickyTaskListRequest(t *historyv1.ResetStickyTaskListRequest
 		return nil
 	}
 	return &types.HistoryResetStickyTaskListRequest{
-		DomainUUID: t.DomainId,
-		Execution:  ToWorkflowExecution(t.Request.WorkflowExecution),
+		DomainUUID:        t.DomainId,
+		WorkflowExecution: ToWorkflowExecution(t.Request.WorkflowExecution),
 	}
 }
 
@@ -1098,7 +1098,7 @@ func FromHistoryResetWorkflowExecutionRequest(t *types.HistoryResetWorkflowExecu
 		return nil
 	}
 	return &historyv1.ResetWorkflowExecutionRequest{
-		Request:  FromResetWorkflowExecutionRequest(t.ResetRequest),
+		Request:  FromResetWorkflowExecutionRequest(t.Request),
 		DomainId: t.DomainUUID,
 	}
 }
@@ -1108,8 +1108,8 @@ func ToHistoryResetWorkflowExecutionRequest(t *historyv1.ResetWorkflowExecutionR
 		return nil
 	}
 	return &types.HistoryResetWorkflowExecutionRequest{
-		ResetRequest: ToResetWorkflowExecutionRequest(t.Request),
-		DomainUUID:   t.DomainId,
+		Request:    ToResetWorkflowExecutionRequest(t.Request),
+		DomainUUID: t.DomainId,
 	}
 }
 
@@ -1137,7 +1137,7 @@ func FromHistoryRespondActivityTaskCanceledRequest(t *types.HistoryRespondActivi
 	}
 	return &historyv1.RespondActivityTaskCanceledRequest{
 		DomainId: t.DomainUUID,
-		Request:  FromRespondActivityTaskCanceledRequest(t.CancelRequest),
+		Request:  FromRespondActivityTaskCanceledRequest(t.Request),
 	}
 }
 
@@ -1146,8 +1146,8 @@ func ToHistoryRespondActivityTaskCanceledRequest(t *historyv1.RespondActivityTas
 		return nil
 	}
 	return &types.HistoryRespondActivityTaskCanceledRequest{
-		DomainUUID:    t.DomainId,
-		CancelRequest: ToRespondActivityTaskCanceledRequest(t.Request),
+		DomainUUID: t.DomainId,
+		Request:    ToRespondActivityTaskCanceledRequest(t.Request),
 	}
 }
 
@@ -1157,7 +1157,7 @@ func FromHistoryRespondActivityTaskCompletedRequest(t *types.HistoryRespondActiv
 	}
 	return &historyv1.RespondActivityTaskCompletedRequest{
 		DomainId: t.DomainUUID,
-		Request:  FromRespondActivityTaskCompletedRequest(t.CompleteRequest),
+		Request:  FromRespondActivityTaskCompletedRequest(t.Request),
 	}
 }
 
@@ -1166,8 +1166,8 @@ func ToHistoryRespondActivityTaskCompletedRequest(t *historyv1.RespondActivityTa
 		return nil
 	}
 	return &types.HistoryRespondActivityTaskCompletedRequest{
-		DomainUUID:      t.DomainId,
-		CompleteRequest: ToRespondActivityTaskCompletedRequest(t.Request),
+		DomainUUID: t.DomainId,
+		Request:    ToRespondActivityTaskCompletedRequest(t.Request),
 	}
 }
 
@@ -1177,7 +1177,7 @@ func FromHistoryRespondActivityTaskFailedRequest(t *types.HistoryRespondActivity
 	}
 	return &historyv1.RespondActivityTaskFailedRequest{
 		DomainId: t.DomainUUID,
-		Request:  FromRespondActivityTaskFailedRequest(t.FailedRequest),
+		Request:  FromRespondActivityTaskFailedRequest(t.Request),
 	}
 }
 
@@ -1186,8 +1186,8 @@ func ToHistoryRespondActivityTaskFailedRequest(t *historyv1.RespondActivityTaskF
 		return nil
 	}
 	return &types.HistoryRespondActivityTaskFailedRequest{
-		DomainUUID:    t.DomainId,
-		FailedRequest: ToRespondActivityTaskFailedRequest(t.Request),
+		DomainUUID: t.DomainId,
+		Request:    ToRespondActivityTaskFailedRequest(t.Request),
 	}
 }
 
@@ -1197,7 +1197,7 @@ func FromHistoryRespondDecisionTaskCompletedRequest(t *types.HistoryRespondDecis
 	}
 	return &historyv1.RespondDecisionTaskCompletedRequest{
 		DomainId: t.DomainUUID,
-		Request:  FromRespondDecisionTaskCompletedRequest(t.CompleteRequest),
+		Request:  FromRespondDecisionTaskCompletedRequest(t.Request),
 	}
 }
 
@@ -1206,8 +1206,8 @@ func ToHistoryRespondDecisionTaskCompletedRequest(t *historyv1.RespondDecisionTa
 		return nil
 	}
 	return &types.HistoryRespondDecisionTaskCompletedRequest{
-		DomainUUID:      t.DomainId,
-		CompleteRequest: ToRespondDecisionTaskCompletedRequest(t.Request),
+		DomainUUID: t.DomainId,
+		Request:    ToRespondDecisionTaskCompletedRequest(t.Request),
 	}
 }
 
@@ -1237,7 +1237,7 @@ func FromHistoryRespondDecisionTaskFailedRequest(t *types.HistoryRespondDecision
 	}
 	return &historyv1.RespondDecisionTaskFailedRequest{
 		DomainId: t.DomainUUID,
-		Request:  FromRespondDecisionTaskFailedRequest(t.FailedRequest),
+		Request:  FromRespondDecisionTaskFailedRequest(t.Request),
 	}
 }
 
@@ -1246,8 +1246,8 @@ func ToHistoryRespondDecisionTaskFailedRequest(t *historyv1.RespondDecisionTaskF
 		return nil
 	}
 	return &types.HistoryRespondDecisionTaskFailedRequest{
-		DomainUUID:    t.DomainId,
-		FailedRequest: ToRespondDecisionTaskFailedRequest(t.Request),
+		DomainUUID: t.DomainId,
+		Request:    ToRespondDecisionTaskFailedRequest(t.Request),
 	}
 }
 
@@ -1318,7 +1318,7 @@ func FromHistorySignalWorkflowExecutionRequest(t *types.HistorySignalWorkflowExe
 		return nil
 	}
 	return &historyv1.SignalWorkflowExecutionRequest{
-		Request:                   FromSignalWorkflowExecutionRequest(t.SignalRequest),
+		Request:                   FromSignalWorkflowExecutionRequest(t.Request),
 		DomainId:                  t.DomainUUID,
 		ExternalWorkflowExecution: FromWorkflowExecution(t.ExternalWorkflowExecution),
 		ChildWorkflowOnly:         t.ChildWorkflowOnly,
@@ -1330,7 +1330,7 @@ func ToHistorySignalWorkflowExecutionRequest(t *historyv1.SignalWorkflowExecutio
 		return nil
 	}
 	return &types.HistorySignalWorkflowExecutionRequest{
-		SignalRequest:             ToSignalWorkflowExecutionRequest(t.Request),
+		Request:                   ToSignalWorkflowExecutionRequest(t.Request),
 		DomainUUID:                t.DomainId,
 		ExternalWorkflowExecution: ToWorkflowExecution(t.ExternalWorkflowExecution),
 		ChildWorkflowOnly:         t.ChildWorkflowOnly,
@@ -1463,7 +1463,7 @@ func FromHistoryTerminateWorkflowExecutionRequest(t *types.HistoryTerminateWorkf
 		return nil
 	}
 	return &historyv1.TerminateWorkflowExecutionRequest{
-		Request:                   FromTerminateWorkflowExecutionRequest(t.TerminateRequest),
+		Request:                   FromTerminateWorkflowExecutionRequest(t.Request),
 		DomainId:                  t.DomainUUID,
 		ExternalWorkflowExecution: FromWorkflowExecution(t.ExternalWorkflowExecution),
 		ChildWorkflowOnly:         t.ChildWorkflowOnly,
@@ -1475,7 +1475,7 @@ func ToHistoryTerminateWorkflowExecutionRequest(t *historyv1.TerminateWorkflowEx
 		return nil
 	}
 	return &types.HistoryTerminateWorkflowExecutionRequest{
-		TerminateRequest:          ToTerminateWorkflowExecutionRequest(t.Request),
+		Request:                   ToTerminateWorkflowExecutionRequest(t.Request),
 		DomainUUID:                t.DomainId,
 		ExternalWorkflowExecution: ToWorkflowExecution(t.ExternalWorkflowExecution),
 		ChildWorkflowOnly:         t.ChildWorkflowOnly,

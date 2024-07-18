@@ -497,10 +497,10 @@ func (b *HistoryBuilder) AddWorkflowExecutionCancelRequestedEvent(
 	event := b.msBuilder.CreateNewHistoryEvent(types.EventTypeWorkflowExecutionCancelRequested)
 	event.WorkflowExecutionCancelRequestedEventAttributes = &types.WorkflowExecutionCancelRequestedEventAttributes{
 		Cause:                     cause,
-		Identity:                  request.CancelRequest.Identity,
+		Identity:                  request.Request.Identity,
 		ExternalInitiatedEventID:  request.ExternalInitiatedEventID,
 		ExternalWorkflowExecution: request.ExternalWorkflowExecution,
-		RequestID:                 request.CancelRequest.RequestID,
+		RequestID:                 request.Request.RequestID,
 	}
 
 	return b.addEventToHistory(event)

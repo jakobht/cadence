@@ -329,7 +329,7 @@ GetHistoryLoop:
 
 		lastEvent := history.Events[len(history.Events)-1]
 		if *lastEvent.EventType != types.EventTypeWorkflowExecutionTerminated {
-			s.logger.Warn("Execution not terminated yet.")
+			s.logger.Warn("WorkflowExecution not terminated yet.")
 			time.Sleep(100 * time.Millisecond)
 			continue GetHistoryLoop
 		}

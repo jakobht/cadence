@@ -46,7 +46,7 @@ func (e *historyEngineImpl) RespondActivityTaskCanceled(
 	domainID := domainEntry.GetInfo().ID
 	domainName := domainEntry.GetInfo().Name
 
-	request := req.CancelRequest
+	request := req.Request
 	token, err0 := e.tokenSerializer.Deserialize(request.TaskToken)
 	if err0 != nil {
 		return workflow.ErrDeserializingToken

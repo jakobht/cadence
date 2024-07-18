@@ -471,7 +471,7 @@ func withState(execution *types.WorkflowExecution, state *persistence.WorkflowMu
 func resetExecutionRequest(execution *types.WorkflowExecution, decisionFinishEventID int) *types.HistoryResetWorkflowExecutionRequest {
 	return &types.HistoryResetWorkflowExecutionRequest{
 		DomainUUID: constants.TestDomainID,
-		ResetRequest: &types.ResetWorkflowExecutionRequest{
+		Request: &types.ResetWorkflowExecutionRequest{
 			Domain:                constants.TestDomainName,
 			WorkflowExecution:     execution,
 			Reason:                testRequestReason,

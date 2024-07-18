@@ -161,7 +161,7 @@ func ProcessorActivity(ctx context.Context, request Request) error {
 		case types.ParentClosePolicyTerminate:
 			terminateReq := &types.HistoryTerminateWorkflowExecutionRequest{
 				DomainUUID: domainID,
-				TerminateRequest: &types.TerminateWorkflowExecutionRequest{
+				Request: &types.TerminateWorkflowExecutionRequest{
 					Domain: domainName,
 					WorkflowExecution: &types.WorkflowExecution{
 						WorkflowID: execution.WorkflowID,
@@ -179,7 +179,7 @@ func ProcessorActivity(ctx context.Context, request Request) error {
 		case types.ParentClosePolicyRequestCancel:
 			cancelReq := &types.HistoryRequestCancelWorkflowExecutionRequest{
 				DomainUUID: domainID,
-				CancelRequest: &types.RequestCancelWorkflowExecutionRequest{
+				Request: &types.RequestCancelWorkflowExecutionRequest{
 					Domain: domainName,
 					WorkflowExecution: &types.WorkflowExecution{
 						WorkflowID: execution.WorkflowID,

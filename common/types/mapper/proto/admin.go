@@ -630,7 +630,7 @@ func FromAdminRefreshWorkflowTasksRequest(t *types.RefreshWorkflowTasksRequest) 
 	}
 	return &adminv1.RefreshWorkflowTasksRequest{
 		Domain:            t.Domain,
-		WorkflowExecution: FromWorkflowExecution(t.Execution),
+		WorkflowExecution: FromWorkflowExecution(t.WorkflowExecution),
 	}
 }
 
@@ -639,8 +639,8 @@ func ToAdminRefreshWorkflowTasksRequest(t *adminv1.RefreshWorkflowTasksRequest) 
 		return nil
 	}
 	return &types.RefreshWorkflowTasksRequest{
-		Domain:    t.Domain,
-		Execution: ToWorkflowExecution(t.WorkflowExecution),
+		Domain:            t.Domain,
+		WorkflowExecution: ToWorkflowExecution(t.WorkflowExecution),
 	}
 }
 

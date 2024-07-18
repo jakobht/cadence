@@ -65,7 +65,7 @@ func ExecutionOpen(execution interface{}) bool {
 	return Open(getExecution(execution).State)
 }
 
-// getExecution returns base Execution
+// getExecution returns base WorkflowExecution
 func getExecution(execution interface{}) *entity.Execution {
 	switch e := execution.(type) {
 	case *entity.CurrentExecution:

@@ -1781,7 +1781,7 @@ func FromDescribeWorkflowExecutionRequest(t *types.DescribeWorkflowExecutionRequ
 	}
 	return &shared.DescribeWorkflowExecutionRequest{
 		Domain:    &t.Domain,
-		Execution: FromWorkflowExecution(t.Execution),
+		Execution: FromWorkflowExecution(t.WorkflowExecution),
 	}
 }
 
@@ -1791,8 +1791,8 @@ func ToDescribeWorkflowExecutionRequest(t *shared.DescribeWorkflowExecutionReque
 		return nil
 	}
 	return &types.DescribeWorkflowExecutionRequest{
-		Domain:    t.GetDomain(),
-		Execution: ToWorkflowExecution(t.Execution),
+		Domain:            t.GetDomain(),
+		WorkflowExecution: ToWorkflowExecution(t.Execution),
 	}
 }
 
@@ -3843,7 +3843,7 @@ func FromQueryWorkflowRequest(t *types.QueryWorkflowRequest) *shared.QueryWorkfl
 	}
 	return &shared.QueryWorkflowRequest{
 		Domain:                &t.Domain,
-		Execution:             FromWorkflowExecution(t.Execution),
+		Execution:             FromWorkflowExecution(t.WorkflowExecution),
 		Query:                 FromWorkflowQuery(t.Query),
 		QueryRejectCondition:  FromQueryRejectCondition(t.QueryRejectCondition),
 		QueryConsistencyLevel: FromQueryConsistencyLevel(t.QueryConsistencyLevel),
@@ -3857,7 +3857,7 @@ func ToQueryWorkflowRequest(t *shared.QueryWorkflowRequest) *types.QueryWorkflow
 	}
 	return &types.QueryWorkflowRequest{
 		Domain:                t.GetDomain(),
-		Execution:             ToWorkflowExecution(t.Execution),
+		WorkflowExecution:     ToWorkflowExecution(t.Execution),
 		Query:                 ToWorkflowQuery(t.Query),
 		QueryRejectCondition:  ToQueryRejectCondition(t.QueryRejectCondition),
 		QueryConsistencyLevel: ToQueryConsistencyLevel(t.QueryConsistencyLevel),
@@ -4015,7 +4015,7 @@ func FromRefreshWorkflowTasksRequest(t *types.RefreshWorkflowTasksRequest) *shar
 	}
 	return &shared.RefreshWorkflowTasksRequest{
 		Domain:    &t.Domain,
-		Execution: FromWorkflowExecution(t.Execution),
+		Execution: FromWorkflowExecution(t.WorkflowExecution),
 	}
 }
 
@@ -4025,8 +4025,8 @@ func ToRefreshWorkflowTasksRequest(t *shared.RefreshWorkflowTasksRequest) *types
 		return nil
 	}
 	return &types.RefreshWorkflowTasksRequest{
-		Domain:    t.GetDomain(),
-		Execution: ToWorkflowExecution(t.Execution),
+		Domain:            t.GetDomain(),
+		WorkflowExecution: ToWorkflowExecution(t.Execution),
 	}
 }
 

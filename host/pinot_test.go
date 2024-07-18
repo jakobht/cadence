@@ -277,7 +277,7 @@ Retry:
 		logStr := fmt.Sprintf("Results for query '%s' (desired runId: %s): \n", query, runID)
 		s.Logger.Info(logStr)
 		for _, e := range resp.GetExecutions() {
-			logStr = fmt.Sprintf("Execution: %+v, %+v \n", e.Execution, e)
+			logStr = fmt.Sprintf("WorkflowExecution: %+v, %+v \n", e.Execution, e)
 			s.Logger.Info(logStr)
 		}
 		if len(resp.GetExecutions()) == 1 {
@@ -440,7 +440,7 @@ func (s *PinotIntegrationSuite) TestListWorkflow_SearchAttribute() {
 	// verify DescribeWorkflowExecution
 	descRequest := &types.DescribeWorkflowExecutionRequest{
 		Domain: s.domainName,
-		Execution: &types.WorkflowExecution{
+		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: id,
 		},
 	}

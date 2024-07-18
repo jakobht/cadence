@@ -275,8 +275,8 @@ func (adh *adminHandlerImpl) DescribeWorkflowExecution(
 
 	historyAddr := historyHost.GetAddress()
 	resp2, err := adh.GetHistoryClient().DescribeMutableState(ctx, &types.DescribeMutableStateRequest{
-		DomainUUID: domainID,
-		Execution:  request.Execution,
+		DomainUUID:        domainID,
+		WorkflowExecution: request.Execution,
 	})
 	if err != nil {
 		return &types.AdminDescribeWorkflowExecutionResponse{}, err
@@ -317,8 +317,8 @@ func (adh *adminHandlerImpl) getCorruptWorkflowQueryTemplates(
 			name: "DescribeWorkflowExecution",
 			function: func(request *types.AdminMaintainWorkflowRequest) error {
 				_, err := client.DescribeWorkflowExecution(ctx, &types.DescribeWorkflowExecutionRequest{
-					Domain:    request.Domain,
-					Execution: request.Execution,
+					Domain:            request.Domain,
+					WorkflowExecution: request.Execution,
 				})
 				return err
 			},
@@ -341,7 +341,7 @@ func (adh *adminHandlerImpl) MaintainCorruptWorkflow(
 	request *types.AdminMaintainWorkflowRequest,
 ) (*types.AdminMaintainWorkflowResponse, error) {
 	if request.GetExecution() == nil {
-		return nil, types.BadRequestError{Message: "Execution is missing"}
+		return nil, types.BadRequestError{Message: "WorkflowExecution is missing"}
 	}
 
 	logger := adh.GetLogger().WithTags(
@@ -732,8 +732,8 @@ func (adh *adminHandlerImpl) GetWorkflowExecutionRawHistoryV2(
 	var targetVersionHistory *persistence.VersionHistory
 	if request.NextPageToken == nil {
 		response, err := adh.GetHistoryClient().GetMutableState(ctx, &types.GetMutableStateRequest{
-			DomainUUID: domainID,
-			Execution:  execution,
+			DomainUUID:        domainID,
+			WorkflowExecution: execution,
 		})
 		if err != nil {
 			return nil, adh.error(err, scope)
@@ -1263,7 +1263,7 @@ func (adh *adminHandlerImpl) RefreshWorkflowTasks(
 	if request == nil {
 		return adh.error(validate.ErrRequestNotSet, scope)
 	}
-	if err := validate.CheckExecution(request.Execution); err != nil {
+	if err := validate.CheckExecution(request.WorkflowExecution); err != nil {
 		return adh.error(err, scope)
 	}
 	domainEntry, err := adh.GetDomainCache().GetDomain(request.GetDomain())

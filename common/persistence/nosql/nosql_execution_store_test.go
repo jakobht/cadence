@@ -1435,7 +1435,7 @@ func TestIsWorkflowExecutionExists(t *testing.T) {
 		expectedError  error
 	}{
 		{
-			name: "Workflow Execution Exists",
+			name: "Workflow WorkflowExecution Exists",
 			setupMock: func() {
 				mockDB.EXPECT().IsWorkflowExecutionExists(ctx, store.shardID, domainID, workflowID, runID).Return(true, nil)
 			},
@@ -1448,7 +1448,7 @@ func TestIsWorkflowExecutionExists(t *testing.T) {
 			expectedError:  nil,
 		},
 		{
-			name: "Workflow Execution Does Not Exist",
+			name: "Workflow WorkflowExecution Does Not Exist",
 			setupMock: func() {
 				mockDB.EXPECT().IsWorkflowExecutionExists(ctx, store.shardID, domainID, workflowID, runID).Return(false, nil)
 			},
@@ -1494,7 +1494,7 @@ func TestConflictResolveWorkflowExecution(t *testing.T) {
 		expectedError error
 	}{
 		{
-			name: "DB Error on Reset Execution Insertion",
+			name: "DB Error on Reset WorkflowExecution Insertion",
 			setupMocks: func() {
 				mockDB.EXPECT().UpdateWorkflowExecutionWithTasks(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("DB error")).Times(1)
 				mockDB.EXPECT().IsNotFoundError(gomock.Any()).Return(false).AnyTimes()

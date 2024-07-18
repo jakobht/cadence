@@ -143,7 +143,7 @@ func (s *attrValidatorSuite) TestValidateSignalExternalWorkflowExecutionAttribut
 
 	attributes = &types.SignalExternalWorkflowExecutionDecisionAttributes{}
 	err = s.validator.validateSignalExternalWorkflowExecutionAttributes(s.testDomainID, s.testTargetDomainID, attributes, metrics.HistoryRespondDecisionTaskCompletedScope)
-	s.EqualError(err, "Execution is nil on decision.")
+	s.EqualError(err, "WorkflowExecution is nil on decision.")
 
 	attributes.Execution = &types.WorkflowExecution{}
 	attributes.Execution.WorkflowID = "workflow-id"

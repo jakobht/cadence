@@ -1225,7 +1225,7 @@ func FromDescribeWorkflowExecutionRequest(t *types.DescribeWorkflowExecutionRequ
 	}
 	return &apiv1.DescribeWorkflowExecutionRequest{
 		Domain:            t.Domain,
-		WorkflowExecution: FromWorkflowExecution(t.Execution),
+		WorkflowExecution: FromWorkflowExecution(t.WorkflowExecution),
 	}
 }
 
@@ -1234,8 +1234,8 @@ func ToDescribeWorkflowExecutionRequest(t *apiv1.DescribeWorkflowExecutionReques
 		return nil
 	}
 	return &types.DescribeWorkflowExecutionRequest{
-		Domain:    t.Domain,
-		Execution: ToWorkflowExecution(t.WorkflowExecution),
+		Domain:            t.Domain,
+		WorkflowExecution: ToWorkflowExecution(t.WorkflowExecution),
 	}
 }
 
@@ -2351,7 +2351,7 @@ func FromQueryWorkflowRequest(t *types.QueryWorkflowRequest) *apiv1.QueryWorkflo
 	}
 	return &apiv1.QueryWorkflowRequest{
 		Domain:                t.Domain,
-		WorkflowExecution:     FromWorkflowExecution(t.Execution),
+		WorkflowExecution:     FromWorkflowExecution(t.WorkflowExecution),
 		Query:                 FromWorkflowQuery(t.Query),
 		QueryRejectCondition:  FromQueryRejectCondition(t.QueryRejectCondition),
 		QueryConsistencyLevel: FromQueryConsistencyLevel(t.QueryConsistencyLevel),
@@ -2364,7 +2364,7 @@ func ToQueryWorkflowRequest(t *apiv1.QueryWorkflowRequest) *types.QueryWorkflowR
 	}
 	return &types.QueryWorkflowRequest{
 		Domain:                t.Domain,
-		Execution:             ToWorkflowExecution(t.WorkflowExecution),
+		WorkflowExecution:     ToWorkflowExecution(t.WorkflowExecution),
 		Query:                 ToWorkflowQuery(t.Query),
 		QueryRejectCondition:  ToQueryRejectCondition(t.QueryRejectCondition),
 		QueryConsistencyLevel: ToQueryConsistencyLevel(t.QueryConsistencyLevel),
@@ -2805,8 +2805,8 @@ func ToRefreshWorkflowTasksRequest(t *apiv1.RefreshWorkflowTasksRequest) *types.
 		return nil
 	}
 	return &types.RefreshWorkflowTasksRequest{
-		Domain:    t.Domain,
-		Execution: ToWorkflowExecution(t.WorkflowExecution),
+		Domain:            t.Domain,
+		WorkflowExecution: ToWorkflowExecution(t.WorkflowExecution),
 	}
 }
 
@@ -2816,7 +2816,7 @@ func FromRefreshWorkflowTasksRequest(t *types.RefreshWorkflowTasksRequest) *apiv
 	}
 	return &apiv1.RefreshWorkflowTasksRequest{
 		Domain:            t.Domain,
-		WorkflowExecution: FromWorkflowExecution(t.Execution),
+		WorkflowExecution: FromWorkflowExecution(t.WorkflowExecution),
 	}
 }
 

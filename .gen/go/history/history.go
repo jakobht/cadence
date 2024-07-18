@@ -258,7 +258,7 @@ func (v *DescribeMutableStateRequest) String() string {
 		i++
 	}
 	if v.Execution != nil {
-		fields[i] = fmt.Sprintf("Execution: %v", v.Execution)
+		fields[i] = fmt.Sprintf("WorkflowExecution: %v", v.Execution)
 		i++
 	}
 
@@ -2666,7 +2666,7 @@ func (v *GetMutableStateRequest) String() string {
 		i++
 	}
 	if v.Execution != nil {
-		fields[i] = fmt.Sprintf("Execution: %v", v.Execution)
+		fields[i] = fmt.Sprintf("WorkflowExecution: %v", v.Execution)
 		i++
 	}
 	if v.ExpectedNextEventId != nil {
@@ -3671,7 +3671,7 @@ func (v *GetMutableStateResponse) String() string {
 	var fields [19]string
 	i := 0
 	if v.Execution != nil {
-		fields[i] = fmt.Sprintf("Execution: %v", v.Execution)
+		fields[i] = fmt.Sprintf("WorkflowExecution: %v", v.Execution)
 		i++
 	}
 	if v.WorkflowType != nil {
@@ -4794,7 +4794,7 @@ func (v *ParentExecutionInfo) String() string {
 		i++
 	}
 	if v.Execution != nil {
-		fields[i] = fmt.Sprintf("Execution: %v", v.Execution)
+		fields[i] = fmt.Sprintf("WorkflowExecution: %v", v.Execution)
 		i++
 	}
 	if v.InitiatedId != nil {
@@ -5184,7 +5184,7 @@ func (v *PollMutableStateRequest) String() string {
 		i++
 	}
 	if v.Execution != nil {
-		fields[i] = fmt.Sprintf("Execution: %v", v.Execution)
+		fields[i] = fmt.Sprintf("WorkflowExecution: %v", v.Execution)
 		i++
 	}
 	if v.ExpectedNextEventId != nil {
@@ -5987,7 +5987,7 @@ func (v *PollMutableStateResponse) String() string {
 	var fields [15]string
 	i := 0
 	if v.Execution != nil {
-		fields[i] = fmt.Sprintf("Execution: %v", v.Execution)
+		fields[i] = fmt.Sprintf("WorkflowExecution: %v", v.Execution)
 		i++
 	}
 	if v.WorkflowType != nil {
@@ -8734,7 +8734,7 @@ func (v *RecordActivityTaskHeartbeatRequest) String() string {
 		i++
 	}
 	if v.HeartbeatRequest != nil {
-		fields[i] = fmt.Sprintf("HeartbeatRequest: %v", v.HeartbeatRequest)
+		fields[i] = fmt.Sprintf("Request: %v", v.HeartbeatRequest)
 		i++
 	}
 
@@ -13798,7 +13798,7 @@ func (v *RequestCancelWorkflowExecutionRequest) String() string {
 		i++
 	}
 	if v.CancelRequest != nil {
-		fields[i] = fmt.Sprintf("CancelRequest: %v", v.CancelRequest)
+		fields[i] = fmt.Sprintf("Request: %v", v.CancelRequest)
 		i++
 	}
 	if v.ExternalInitiatedEventId != nil {
@@ -14143,7 +14143,7 @@ func (v *ResetStickyTaskListRequest) String() string {
 		i++
 	}
 	if v.Execution != nil {
-		fields[i] = fmt.Sprintf("Execution: %v", v.Execution)
+		fields[i] = fmt.Sprintf("WorkflowExecution: %v", v.Execution)
 		i++
 	}
 
@@ -14567,7 +14567,7 @@ func (v *ResetWorkflowExecutionRequest) String() string {
 		i++
 	}
 	if v.ResetRequest != nil {
-		fields[i] = fmt.Sprintf("ResetRequest: %v", v.ResetRequest)
+		fields[i] = fmt.Sprintf("Request: %v", v.ResetRequest)
 		i++
 	}
 
@@ -14849,7 +14849,7 @@ func (v *RespondActivityTaskCanceledRequest) String() string {
 		i++
 	}
 	if v.CancelRequest != nil {
-		fields[i] = fmt.Sprintf("CancelRequest: %v", v.CancelRequest)
+		fields[i] = fmt.Sprintf("Request: %v", v.CancelRequest)
 		i++
 	}
 
@@ -15131,7 +15131,7 @@ func (v *RespondActivityTaskCompletedRequest) String() string {
 		i++
 	}
 	if v.CompleteRequest != nil {
-		fields[i] = fmt.Sprintf("CompleteRequest: %v", v.CompleteRequest)
+		fields[i] = fmt.Sprintf("Request: %v", v.CompleteRequest)
 		i++
 	}
 
@@ -15413,7 +15413,7 @@ func (v *RespondActivityTaskFailedRequest) String() string {
 		i++
 	}
 	if v.FailedRequest != nil {
-		fields[i] = fmt.Sprintf("FailedRequest: %v", v.FailedRequest)
+		fields[i] = fmt.Sprintf("Request: %v", v.FailedRequest)
 		i++
 	}
 
@@ -15695,7 +15695,7 @@ func (v *RespondDecisionTaskCompletedRequest) String() string {
 		i++
 	}
 	if v.CompleteRequest != nil {
-		fields[i] = fmt.Sprintf("CompleteRequest: %v", v.CompleteRequest)
+		fields[i] = fmt.Sprintf("Request: %v", v.CompleteRequest)
 		i++
 	}
 
@@ -16427,7 +16427,7 @@ func (v *RespondDecisionTaskFailedRequest) String() string {
 		i++
 	}
 	if v.FailedRequest != nil {
-		fields[i] = fmt.Sprintf("FailedRequest: %v", v.FailedRequest)
+		fields[i] = fmt.Sprintf("Request: %v", v.FailedRequest)
 		i++
 	}
 
@@ -17897,7 +17897,7 @@ func (v *SignalWorkflowExecutionRequest) String() string {
 		i++
 	}
 	if v.SignalRequest != nil {
-		fields[i] = fmt.Sprintf("SignalRequest: %v", v.SignalRequest)
+		fields[i] = fmt.Sprintf("Request: %v", v.SignalRequest)
 		i++
 	}
 	if v.ExternalWorkflowExecution != nil {
@@ -20623,7 +20623,7 @@ func (v *TerminateWorkflowExecutionRequest) String() string {
 		i++
 	}
 	if v.TerminateRequest != nil {
-		fields[i] = fmt.Sprintf("TerminateRequest: %v", v.TerminateRequest)
+		fields[i] = fmt.Sprintf("Request: %v", v.TerminateRequest)
 		i++
 	}
 	if v.ExternalWorkflowExecution != nil {
@@ -39391,7 +39391,7 @@ func (v *HistoryService_RecordActivityTaskHeartbeat_Args) String() string {
 	var fields [1]string
 	i := 0
 	if v.HeartbeatRequest != nil {
-		fields[i] = fmt.Sprintf("HeartbeatRequest: %v", v.HeartbeatRequest)
+		fields[i] = fmt.Sprintf("Request: %v", v.HeartbeatRequest)
 		i++
 	}
 
@@ -48309,7 +48309,7 @@ func (v *HistoryService_RequestCancelWorkflowExecution_Args) String() string {
 	var fields [1]string
 	i := 0
 	if v.CancelRequest != nil {
-		fields[i] = fmt.Sprintf("CancelRequest: %v", v.CancelRequest)
+		fields[i] = fmt.Sprintf("Request: %v", v.CancelRequest)
 		i++
 	}
 
@@ -50277,7 +50277,7 @@ func (v *HistoryService_ResetStickyTaskList_Args) String() string {
 	var fields [1]string
 	i := 0
 	if v.ResetRequest != nil {
-		fields[i] = fmt.Sprintf("ResetRequest: %v", v.ResetRequest)
+		fields[i] = fmt.Sprintf("Request: %v", v.ResetRequest)
 		i++
 	}
 
@@ -51425,7 +51425,7 @@ func (v *HistoryService_ResetWorkflowExecution_Args) String() string {
 	var fields [1]string
 	i := 0
 	if v.ResetRequest != nil {
-		fields[i] = fmt.Sprintf("ResetRequest: %v", v.ResetRequest)
+		fields[i] = fmt.Sprintf("Request: %v", v.ResetRequest)
 		i++
 	}
 
@@ -53711,7 +53711,7 @@ func (v *HistoryService_RespondActivityTaskCompleted_Args) String() string {
 	var fields [1]string
 	i := 0
 	if v.CompleteRequest != nil {
-		fields[i] = fmt.Sprintf("CompleteRequest: %v", v.CompleteRequest)
+		fields[i] = fmt.Sprintf("Request: %v", v.CompleteRequest)
 		i++
 	}
 
@@ -56895,7 +56895,7 @@ func (v *HistoryService_RespondDecisionTaskCompleted_Args) String() string {
 	var fields [1]string
 	i := 0
 	if v.CompleteRequest != nil {
-		fields[i] = fmt.Sprintf("CompleteRequest: %v", v.CompleteRequest)
+		fields[i] = fmt.Sprintf("Request: %v", v.CompleteRequest)
 		i++
 	}
 
@@ -58123,7 +58123,7 @@ func (v *HistoryService_RespondDecisionTaskFailed_Args) String() string {
 	var fields [1]string
 	i := 0
 	if v.FailedRequest != nil {
-		fields[i] = fmt.Sprintf("FailedRequest: %v", v.FailedRequest)
+		fields[i] = fmt.Sprintf("Request: %v", v.FailedRequest)
 		i++
 	}
 
@@ -61559,7 +61559,7 @@ func (v *HistoryService_SignalWorkflowExecution_Args) String() string {
 	var fields [1]string
 	i := 0
 	if v.SignalRequest != nil {
-		fields[i] = fmt.Sprintf("SignalRequest: %v", v.SignalRequest)
+		fields[i] = fmt.Sprintf("Request: %v", v.SignalRequest)
 		i++
 	}
 
@@ -65709,7 +65709,7 @@ func (v *HistoryService_TerminateWorkflowExecution_Args) String() string {
 	var fields [1]string
 	i := 0
 	if v.TerminateRequest != nil {
-		fields[i] = fmt.Sprintf("TerminateRequest: %v", v.TerminateRequest)
+		fields[i] = fmt.Sprintf("Request: %v", v.TerminateRequest)
 		i++
 	}
 

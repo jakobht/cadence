@@ -2264,7 +2264,7 @@ func Test_RefreshWorkflowTasks(t *testing.T) {
 		"check execution error": {
 			input: &types.RefreshWorkflowTasksRequest{
 				Domain: "test-domain",
-				Execution: &types.WorkflowExecution{
+				WorkflowExecution: &types.WorkflowExecution{
 					WorkflowID: "test-workflow-id",
 				},
 			},
@@ -2276,7 +2276,7 @@ func Test_RefreshWorkflowTasks(t *testing.T) {
 		"normal request": {
 			input: &types.RefreshWorkflowTasksRequest{
 				Domain: "test-domain",
-				Execution: &types.WorkflowExecution{
+				WorkflowExecution: &types.WorkflowExecution{
 					WorkflowID: "test-workflow-id",
 				},
 			},
@@ -2296,7 +2296,7 @@ func Test_RefreshWorkflowTasks(t *testing.T) {
 		"refresh workflow tasks error": {
 			input: &types.RefreshWorkflowTasksRequest{
 				Domain: "test-domain",
-				Execution: &types.WorkflowExecution{
+				WorkflowExecution: &types.WorkflowExecution{
 					WorkflowID: "test-workflow-id",
 				},
 			},

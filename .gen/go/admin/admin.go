@@ -699,7 +699,7 @@ func (v *AdminDeleteWorkflowRequest) String() string {
 		i++
 	}
 	if v.Execution != nil {
-		fields[i] = fmt.Sprintf("Execution: %v", v.Execution)
+		fields[i] = fmt.Sprintf("WorkflowExecution: %v", v.Execution)
 		i++
 	}
 
@@ -1317,7 +1317,7 @@ func (v *AdminMaintainWorkflowRequest) String() string {
 		i++
 	}
 	if v.Execution != nil {
-		fields[i] = fmt.Sprintf("Execution: %v", v.Execution)
+		fields[i] = fmt.Sprintf("WorkflowExecution: %v", v.Execution)
 		i++
 	}
 
@@ -2447,7 +2447,7 @@ func (v *DescribeWorkflowExecutionRequest) String() string {
 		i++
 	}
 	if v.Execution != nil {
-		fields[i] = fmt.Sprintf("Execution: %v", v.Execution)
+		fields[i] = fmt.Sprintf("WorkflowExecution: %v", v.Execution)
 		i++
 	}
 
@@ -5179,7 +5179,7 @@ func (v *GetWorkflowExecutionRawHistoryV2Request) String() string {
 		i++
 	}
 	if v.Execution != nil {
-		fields[i] = fmt.Sprintf("Execution: %v", v.Execution)
+		fields[i] = fmt.Sprintf("WorkflowExecution: %v", v.Execution)
 		i++
 	}
 	if v.StartEventId != nil {

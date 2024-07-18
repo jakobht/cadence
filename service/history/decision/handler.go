@@ -253,7 +253,7 @@ func (handler *handlerImpl) HandleDecisionTaskFailed(
 	}
 	domainID := domainEntry.GetInfo().ID
 
-	request := req.FailedRequest
+	request := req.Request
 	token, err := handler.tokenSerializer.Deserialize(request.TaskToken)
 	if err != nil {
 		return workflow.ErrDeserializingToken
@@ -292,7 +292,7 @@ func (handler *handlerImpl) HandleDecisionTaskCompleted(
 	}
 	domainID := domainEntry.GetInfo().ID
 
-	request := req.CompleteRequest
+	request := req.Request
 	token, err0 := handler.tokenSerializer.Deserialize(request.TaskToken)
 	if err0 != nil {
 		return nil, workflow.ErrDeserializingToken

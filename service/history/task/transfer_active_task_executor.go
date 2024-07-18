@@ -888,7 +888,7 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 		return err
 	}
 
-	t.logger.Debug("Child Execution started successfully",
+	t.logger.Debug("Child WorkflowExecution started successfully",
 		tag.WorkflowDomainID(task.DomainID),
 		tag.WorkflowID(task.WorkflowID),
 		tag.WorkflowRunID(task.RunID),
@@ -1495,7 +1495,7 @@ func requestCancelExternalExecutionWithRetry(
 
 	request := &types.HistoryRequestCancelWorkflowExecutionRequest{
 		DomainUUID: task.TargetDomainID,
-		CancelRequest: &types.RequestCancelWorkflowExecutionRequest{
+		Request: &types.RequestCancelWorkflowExecutionRequest{
 			Domain: targetDomain,
 			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: task.TargetWorkflowID,
@@ -1544,7 +1544,7 @@ func signalExternalExecutionWithRetry(
 
 	request := &types.HistorySignalWorkflowExecutionRequest{
 		DomainUUID: task.TargetDomainID,
-		SignalRequest: &types.SignalWorkflowExecutionRequest{
+		Request: &types.SignalWorkflowExecutionRequest{
 			Domain: targetDomain,
 			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: task.TargetWorkflowID,
@@ -1849,7 +1849,7 @@ func (t *transferActiveTaskExecutor) applyParentClosePolicy(
 	case types.ParentClosePolicyTerminate:
 		return t.historyClient.TerminateWorkflowExecution(ctx, &types.HistoryTerminateWorkflowExecutionRequest{
 			DomainUUID: domainID,
-			TerminateRequest: &types.TerminateWorkflowExecutionRequest{
+			Request: &types.TerminateWorkflowExecutionRequest{
 				Domain: domainName,
 				WorkflowExecution: &types.WorkflowExecution{
 					WorkflowID: childInfo.StartedWorkflowID,
@@ -1867,7 +1867,7 @@ func (t *transferActiveTaskExecutor) applyParentClosePolicy(
 	case types.ParentClosePolicyRequestCancel:
 		return t.historyClient.RequestCancelWorkflowExecution(ctx, &types.HistoryRequestCancelWorkflowExecutionRequest{
 			DomainUUID: domainID,
-			CancelRequest: &types.RequestCancelWorkflowExecutionRequest{
+			Request: &types.RequestCancelWorkflowExecutionRequest{
 				Domain: domainName,
 				WorkflowExecution: &types.WorkflowExecution{
 					WorkflowID: childInfo.StartedWorkflowID,

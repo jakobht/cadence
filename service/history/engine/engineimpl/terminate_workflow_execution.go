@@ -40,7 +40,7 @@ func (e *historyEngineImpl) TerminateWorkflowExecution(
 	}
 	domainID := domainEntry.GetInfo().ID
 
-	request := terminateRequest.TerminateRequest
+	request := terminateRequest.Request
 	parentExecution := terminateRequest.ExternalWorkflowExecution
 	childWorkflowOnly := terminateRequest.GetChildWorkflowOnly()
 	workflowExecution := types.WorkflowExecution{

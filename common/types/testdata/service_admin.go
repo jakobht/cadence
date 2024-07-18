@@ -209,8 +209,8 @@ var (
 		Events:            &DataBlob,
 	}
 	AdminRefreshWorkflowTasksRequest = types.RefreshWorkflowTasksRequest{
-		Domain:    DomainName,
-		Execution: &WorkflowExecution,
+		Domain:            DomainName,
+		WorkflowExecution: &WorkflowExecution,
 	}
 	AdminRemoveTaskRequest = types.RemoveTaskRequest{
 		ShardID:             ShardID,

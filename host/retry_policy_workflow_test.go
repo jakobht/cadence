@@ -179,7 +179,7 @@ GetHistoryLoop:
 
 		lastEvent = history.Events[len(history.Events)-1]
 		if *lastEvent.EventType != types.EventTypeWorkflowExecutionTimedOut {
-			s.Logger.Warn("Execution not timedout yet.")
+			s.Logger.Warn("WorkflowExecution not timedout yet.")
 			time.Sleep(200 * time.Millisecond)
 			continue GetHistoryLoop
 		}

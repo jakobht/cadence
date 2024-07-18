@@ -708,7 +708,7 @@ func (s *transferActiveTaskExecutorSuite) expectCancelRequest(childDomainName st
 			option ...yarpc.CallOption,
 		) error {
 			s.Equal(childDomainID, request.DomainUUID)
-			s.Equal(childDomainName, request.CancelRequest.Domain)
+			s.Equal(childDomainName, request.Request.Domain)
 			s.True(request.GetChildWorkflowOnly())
 			errors := []error{nil, &types.CancellationAlreadyRequestedError{}, &types.EntityNotExistsError{}}
 			return errors[rand.Intn(len(errors))]
@@ -726,7 +726,7 @@ func (s *transferActiveTaskExecutorSuite) expectTerminateRequest(childDomainName
 			option ...yarpc.CallOption,
 		) error {
 			s.Equal(childDomainID, request.DomainUUID)
-			s.Equal(childDomainName, request.TerminateRequest.Domain)
+			s.Equal(childDomainName, request.Request.Domain)
 			errors := []error{nil, &types.EntityNotExistsError{}}
 			return errors[rand.Intn(len(errors))]
 		},
@@ -1819,7 +1819,7 @@ func createTestRequestCancelWorkflowExecutionRequest(
 
 	return &types.HistoryRequestCancelWorkflowExecutionRequest{
 		DomainUUID: taskInfo.TargetDomainID,
-		CancelRequest: &types.RequestCancelWorkflowExecutionRequest{
+		Request: &types.RequestCancelWorkflowExecutionRequest{
 			Domain:            targetDomainName,
 			WorkflowExecution: &targetExecution,
 			Identity:          execution.IdentityHistoryService,
@@ -1849,7 +1849,7 @@ func createTestSignalWorkflowExecutionRequest(
 
 	return &types.HistorySignalWorkflowExecutionRequest{
 		DomainUUID: taskInfo.TargetDomainID,
-		SignalRequest: &types.SignalWorkflowExecutionRequest{
+		Request: &types.SignalWorkflowExecutionRequest{
 			Domain:            targetDomainName,
 			WorkflowExecution: &targetExecution,
 			Identity:          execution.IdentityHistoryService,

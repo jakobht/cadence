@@ -31338,7 +31338,7 @@ func (v *DescribeWorkflowExecutionRequest) String() string {
 		i++
 	}
 	if v.Execution != nil {
-		fields[i] = fmt.Sprintf("Execution: %v", v.Execution)
+		fields[i] = fmt.Sprintf("WorkflowExecution: %v", v.Execution)
 		i++
 	}
 
@@ -40785,7 +40785,7 @@ func (v *GetWorkflowExecutionHistoryRequest) String() string {
 		i++
 	}
 	if v.Execution != nil {
-		fields[i] = fmt.Sprintf("Execution: %v", v.Execution)
+		fields[i] = fmt.Sprintf("WorkflowExecution: %v", v.Execution)
 		i++
 	}
 	if v.MaximumPageSize != nil {
@@ -61394,7 +61394,7 @@ func (v *QueryWorkflowRequest) String() string {
 		i++
 	}
 	if v.Execution != nil {
-		fields[i] = fmt.Sprintf("Execution: %v", v.Execution)
+		fields[i] = fmt.Sprintf("WorkflowExecution: %v", v.Execution)
 		i++
 	}
 	if v.Query != nil {
@@ -63763,7 +63763,7 @@ func (v *RefreshWorkflowTasksRequest) String() string {
 		i++
 	}
 	if v.Execution != nil {
-		fields[i] = fmt.Sprintf("Execution: %v", v.Execution)
+		fields[i] = fmt.Sprintf("WorkflowExecution: %v", v.Execution)
 		i++
 	}
 
@@ -69519,7 +69519,7 @@ func (v *ResetStickyTaskListRequest) String() string {
 		i++
 	}
 	if v.Execution != nil {
-		fields[i] = fmt.Sprintf("Execution: %v", v.Execution)
+		fields[i] = fmt.Sprintf("WorkflowExecution: %v", v.Execution)
 		i++
 	}
 
@@ -79843,7 +79843,7 @@ func (v *SignalExternalWorkflowExecutionDecisionAttributes) String() string {
 		i++
 	}
 	if v.Execution != nil {
-		fields[i] = fmt.Sprintf("Execution: %v", v.Execution)
+		fields[i] = fmt.Sprintf("WorkflowExecution: %v", v.Execution)
 		i++
 	}
 	if v.SignalName != nil {
@@ -101994,7 +101994,7 @@ func (v *WorkflowExecutionInfo) String() string {
 	var fields [18]string
 	i := 0
 	if v.Execution != nil {
-		fields[i] = fmt.Sprintf("Execution: %v", v.Execution)
+		fields[i] = fmt.Sprintf("WorkflowExecution: %v", v.Execution)
 		i++
 	}
 	if v.Type != nil {

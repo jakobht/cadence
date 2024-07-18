@@ -42,7 +42,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 	}
 
 	domainID := request.DomainUUID
-	wfExecution := *request.Request.Execution
+	wfExecution := *request.Request.WorkflowExecution
 
 	wfContext, release, err0 := e.executionCache.GetOrCreateWorkflowExecution(ctx, domainID, wfExecution)
 	if err0 != nil {

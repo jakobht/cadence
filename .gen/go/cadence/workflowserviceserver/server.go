@@ -489,7 +489,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary:  thrift.UnaryHandler(h.RecordActivityTaskHeartbeat),
 					NoWire: recordactivitytaskheartbeat_NoWireHandler{impl},
 				},
-				Signature:    "RecordActivityTaskHeartbeat(HeartbeatRequest *shared.RecordActivityTaskHeartbeatRequest) (*shared.RecordActivityTaskHeartbeatResponse)",
+				Signature:    "RecordActivityTaskHeartbeat(Request *shared.RecordActivityTaskHeartbeatRequest) (*shared.RecordActivityTaskHeartbeatResponse)",
 				ThriftModule: cadence.ThriftModule,
 			},
 
@@ -501,7 +501,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary:  thrift.UnaryHandler(h.RecordActivityTaskHeartbeatByID),
 					NoWire: recordactivitytaskheartbeatbyid_NoWireHandler{impl},
 				},
-				Signature:    "RecordActivityTaskHeartbeatByID(HeartbeatRequest *shared.RecordActivityTaskHeartbeatByIDRequest) (*shared.RecordActivityTaskHeartbeatResponse)",
+				Signature:    "RecordActivityTaskHeartbeatByID(Request *shared.RecordActivityTaskHeartbeatByIDRequest) (*shared.RecordActivityTaskHeartbeatResponse)",
 				ThriftModule: cadence.ThriftModule,
 			},
 
@@ -537,7 +537,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary:  thrift.UnaryHandler(h.RequestCancelWorkflowExecution),
 					NoWire: requestcancelworkflowexecution_NoWireHandler{impl},
 				},
-				Signature:    "RequestCancelWorkflowExecution(CancelRequest *shared.RequestCancelWorkflowExecutionRequest)",
+				Signature:    "RequestCancelWorkflowExecution(Request *shared.RequestCancelWorkflowExecutionRequest)",
 				ThriftModule: cadence.ThriftModule,
 			},
 
@@ -549,7 +549,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary:  thrift.UnaryHandler(h.ResetStickyTaskList),
 					NoWire: resetstickytasklist_NoWireHandler{impl},
 				},
-				Signature:    "ResetStickyTaskList(ResetRequest *shared.ResetStickyTaskListRequest) (*shared.ResetStickyTaskListResponse)",
+				Signature:    "ResetStickyTaskList(Request *shared.ResetStickyTaskListRequest) (*shared.ResetStickyTaskListResponse)",
 				ThriftModule: cadence.ThriftModule,
 			},
 
@@ -561,7 +561,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary:  thrift.UnaryHandler(h.ResetWorkflowExecution),
 					NoWire: resetworkflowexecution_NoWireHandler{impl},
 				},
-				Signature:    "ResetWorkflowExecution(ResetRequest *shared.ResetWorkflowExecutionRequest) (*shared.ResetWorkflowExecutionResponse)",
+				Signature:    "ResetWorkflowExecution(Request *shared.ResetWorkflowExecutionRequest) (*shared.ResetWorkflowExecutionResponse)",
 				ThriftModule: cadence.ThriftModule,
 			},
 
@@ -597,7 +597,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary:  thrift.UnaryHandler(h.RespondActivityTaskCompleted),
 					NoWire: respondactivitytaskcompleted_NoWireHandler{impl},
 				},
-				Signature:    "RespondActivityTaskCompleted(CompleteRequest *shared.RespondActivityTaskCompletedRequest)",
+				Signature:    "RespondActivityTaskCompleted(Request *shared.RespondActivityTaskCompletedRequest)",
 				ThriftModule: cadence.ThriftModule,
 			},
 
@@ -609,7 +609,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary:  thrift.UnaryHandler(h.RespondActivityTaskCompletedByID),
 					NoWire: respondactivitytaskcompletedbyid_NoWireHandler{impl},
 				},
-				Signature:    "RespondActivityTaskCompletedByID(CompleteRequest *shared.RespondActivityTaskCompletedByIDRequest)",
+				Signature:    "RespondActivityTaskCompletedByID(Request *shared.RespondActivityTaskCompletedByIDRequest)",
 				ThriftModule: cadence.ThriftModule,
 			},
 
@@ -645,7 +645,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary:  thrift.UnaryHandler(h.RespondDecisionTaskCompleted),
 					NoWire: responddecisiontaskcompleted_NoWireHandler{impl},
 				},
-				Signature:    "RespondDecisionTaskCompleted(CompleteRequest *shared.RespondDecisionTaskCompletedRequest) (*shared.RespondDecisionTaskCompletedResponse)",
+				Signature:    "RespondDecisionTaskCompleted(Request *shared.RespondDecisionTaskCompletedRequest) (*shared.RespondDecisionTaskCompletedResponse)",
 				ThriftModule: cadence.ThriftModule,
 			},
 
@@ -657,7 +657,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary:  thrift.UnaryHandler(h.RespondDecisionTaskFailed),
 					NoWire: responddecisiontaskfailed_NoWireHandler{impl},
 				},
-				Signature:    "RespondDecisionTaskFailed(FailedRequest *shared.RespondDecisionTaskFailedRequest)",
+				Signature:    "RespondDecisionTaskFailed(Request *shared.RespondDecisionTaskFailedRequest)",
 				ThriftModule: cadence.ThriftModule,
 			},
 
@@ -669,7 +669,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary:  thrift.UnaryHandler(h.RespondQueryTaskCompleted),
 					NoWire: respondquerytaskcompleted_NoWireHandler{impl},
 				},
-				Signature:    "RespondQueryTaskCompleted(CompleteRequest *shared.RespondQueryTaskCompletedRequest)",
+				Signature:    "RespondQueryTaskCompleted(Request *shared.RespondQueryTaskCompletedRequest)",
 				ThriftModule: cadence.ThriftModule,
 			},
 
@@ -729,7 +729,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary:  thrift.UnaryHandler(h.SignalWorkflowExecution),
 					NoWire: signalworkflowexecution_NoWireHandler{impl},
 				},
-				Signature:    "SignalWorkflowExecution(SignalRequest *shared.SignalWorkflowExecutionRequest)",
+				Signature:    "SignalWorkflowExecution(Request *shared.SignalWorkflowExecutionRequest)",
 				ThriftModule: cadence.ThriftModule,
 			},
 
@@ -765,7 +765,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary:  thrift.UnaryHandler(h.TerminateWorkflowExecution),
 					NoWire: terminateworkflowexecution_NoWireHandler{impl},
 				},
-				Signature:    "TerminateWorkflowExecution(TerminateRequest *shared.TerminateWorkflowExecutionRequest)",
+				Signature:    "TerminateWorkflowExecution(Request *shared.TerminateWorkflowExecutionRequest)",
 				ThriftModule: cadence.ThriftModule,
 			},
 

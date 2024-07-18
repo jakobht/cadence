@@ -498,7 +498,7 @@ func processTask(
 		}
 		resp, err := client.DescribeWorkflowExecution(ctx, &types.DescribeWorkflowExecutionRequest{
 			Domain: batchParams.DomainName,
-			Execution: &types.WorkflowExecution{
+			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: wf.WorkflowID,
 				RunID:      wf.RunID,
 			},

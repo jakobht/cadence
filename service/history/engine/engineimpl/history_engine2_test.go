@@ -824,7 +824,7 @@ func (s *engine2Suite) TestRequestCancelWorkflowExecutionSuccess() {
 
 	err := s.historyEngine.RequestCancelWorkflowExecution(context.Background(), &types.HistoryRequestCancelWorkflowExecutionRequest{
 		DomainUUID: domainID,
-		CancelRequest: &types.RequestCancelWorkflowExecutionRequest{
+		Request: &types.RequestCancelWorkflowExecutionRequest{
 			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: workflowExecution.WorkflowID,
 				RunID:      workflowExecution.RunID,
@@ -858,7 +858,7 @@ func (s *engine2Suite) TestRequestCancelWorkflowExecutionDuplicateRequestError()
 
 	err := s.historyEngine.RequestCancelWorkflowExecution(context.Background(), &types.HistoryRequestCancelWorkflowExecutionRequest{
 		DomainUUID: domainID,
-		CancelRequest: &types.RequestCancelWorkflowExecutionRequest{
+		Request: &types.RequestCancelWorkflowExecutionRequest{
 			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: workflowExecution.WorkflowID,
 				RunID:      workflowExecution.RunID,
@@ -892,7 +892,7 @@ func (s *engine2Suite) TestRequestCancelWorkflowExecutionAlreadyCancelled_Succes
 
 	err := s.historyEngine.RequestCancelWorkflowExecution(context.Background(), &types.HistoryRequestCancelWorkflowExecutionRequest{
 		DomainUUID: domainID,
-		CancelRequest: &types.RequestCancelWorkflowExecutionRequest{
+		Request: &types.RequestCancelWorkflowExecutionRequest{
 			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: workflowExecution.WorkflowID,
 				RunID:      workflowExecution.RunID,
@@ -926,7 +926,7 @@ func (s *engine2Suite) TestRequestCancelWorkflowExecutionAlreadyCancelled_Fail()
 
 	err := s.historyEngine.RequestCancelWorkflowExecution(context.Background(), &types.HistoryRequestCancelWorkflowExecutionRequest{
 		DomainUUID: domainID,
-		CancelRequest: &types.RequestCancelWorkflowExecutionRequest{
+		Request: &types.RequestCancelWorkflowExecutionRequest{
 			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: workflowExecution.WorkflowID,
 				RunID:      workflowExecution.RunID,
@@ -958,7 +958,7 @@ func (s *engine2Suite) TestRequestCancelWorkflowExecutionFail() {
 
 	err := s.historyEngine.RequestCancelWorkflowExecution(context.Background(), &types.HistoryRequestCancelWorkflowExecutionRequest{
 		DomainUUID: domainID,
-		CancelRequest: &types.RequestCancelWorkflowExecutionRequest{
+		Request: &types.RequestCancelWorkflowExecutionRequest{
 			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: workflowExecution.WorkflowID,
 				RunID:      workflowExecution.RunID,
@@ -1039,7 +1039,7 @@ func (s *engine2Suite) TestRespondDecisionTaskCompletedRecordMarkerDecision() {
 
 	_, err := s.historyEngine.RespondDecisionTaskCompleted(context.Background(), &types.HistoryRespondDecisionTaskCompletedRequest{
 		DomainUUID: domainID,
-		CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
+		Request: &types.RespondDecisionTaskCompletedRequest{
 			TaskToken:        taskToken,
 			Decisions:        decisions,
 			ExecutionContext: nil,

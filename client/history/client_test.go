@@ -76,7 +76,7 @@ func TestClient_withResponse(t *testing.T) {
 			name: "GetMutableState",
 			op: func(c Client) (any, error) {
 				return c.GetMutableState(context.Background(), &types.GetMutableStateRequest{
-					Execution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
+					WorkflowExecution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
 				})
 			},
 			mock: func(p *MockPeerResolver, c *MockClient) {
@@ -90,7 +90,7 @@ func TestClient_withResponse(t *testing.T) {
 			name: "PollMutableState",
 			op: func(c Client) (any, error) {
 				return c.PollMutableState(context.Background(), &types.PollMutableStateRequest{
-					Execution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
+					WorkflowExecution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
 				})
 			},
 			mock: func(p *MockPeerResolver, c *MockClient) {
@@ -104,7 +104,7 @@ func TestClient_withResponse(t *testing.T) {
 			name: "ResetWorkflowExecution",
 			op: func(c Client) (any, error) {
 				return c.ResetWorkflowExecution(context.Background(), &types.HistoryResetWorkflowExecutionRequest{
-					ResetRequest: &types.ResetWorkflowExecutionRequest{
+					Request: &types.ResetWorkflowExecutionRequest{
 						WorkflowExecution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
 					},
 				})
@@ -121,7 +121,7 @@ func TestClient_withResponse(t *testing.T) {
 			op: func(c Client) (any, error) {
 				return c.DescribeWorkflowExecution(context.Background(), &types.HistoryDescribeWorkflowExecutionRequest{
 					Request: &types.DescribeWorkflowExecutionRequest{
-						Execution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
+						WorkflowExecution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
 					},
 				})
 			},
@@ -136,7 +136,7 @@ func TestClient_withResponse(t *testing.T) {
 			name: "RecordActivityTaskHeartbeat",
 			op: func(c Client) (any, error) {
 				return c.RecordActivityTaskHeartbeat(context.Background(), &types.HistoryRecordActivityTaskHeartbeatRequest{
-					HeartbeatRequest: &types.RecordActivityTaskHeartbeatRequest{
+					Request: &types.RecordActivityTaskHeartbeatRequest{
 						TaskToken: []byte(`{"workflowId": "test-workflow"}`),
 					},
 				})
@@ -325,7 +325,7 @@ func TestClient_withResponse(t *testing.T) {
 			name: "DescribeMutableState",
 			op: func(c Client) (any, error) {
 				return c.DescribeMutableState(context.Background(), &types.DescribeMutableStateRequest{
-					Execution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
+					WorkflowExecution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
 				})
 			},
 			mock: func(p *MockPeerResolver, c *MockClient) {
@@ -381,7 +381,7 @@ func TestClient_withResponse(t *testing.T) {
 			op: func(c Client) (any, error) {
 				return c.QueryWorkflow(context.Background(), &types.HistoryQueryWorkflowRequest{
 					Request: &types.QueryWorkflowRequest{
-						Execution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
+						WorkflowExecution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
 					},
 				})
 			},
@@ -396,7 +396,7 @@ func TestClient_withResponse(t *testing.T) {
 			name: "ResetStickyTaskList",
 			op: func(c Client) (any, error) {
 				return c.ResetStickyTaskList(context.Background(), &types.HistoryResetStickyTaskListRequest{
-					Execution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
+					WorkflowExecution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
 				})
 			},
 			mock: func(p *MockPeerResolver, c *MockClient) {
@@ -410,7 +410,7 @@ func TestClient_withResponse(t *testing.T) {
 			name: "RespondDecisionTaskCompleted",
 			op: func(c Client) (any, error) {
 				return c.RespondDecisionTaskCompleted(context.Background(), &types.HistoryRespondDecisionTaskCompletedRequest{
-					CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
+					Request: &types.RespondDecisionTaskCompletedRequest{
 						TaskToken: []byte(`{"workflowId": "test-workflow"}`),
 					},
 				})
@@ -426,7 +426,7 @@ func TestClient_withResponse(t *testing.T) {
 			name: "RespondDecisionTaskCompleted",
 			op: func(c Client) (any, error) {
 				return c.RespondDecisionTaskCompleted(context.Background(), &types.HistoryRespondDecisionTaskCompletedRequest{
-					CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
+					Request: &types.RespondDecisionTaskCompletedRequest{
 						TaskToken: []byte(`{"workflowId": "test-workflow"}`),
 					},
 				})
@@ -568,7 +568,7 @@ func TestClient_withResponse(t *testing.T) {
 			name: "GetMutableState fail",
 			op: func(c Client) (any, error) {
 				return c.GetMutableState(context.Background(), &types.GetMutableStateRequest{
-					Execution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
+					WorkflowExecution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
 				})
 			},
 			mock: func(p *MockPeerResolver, c *MockClient) {
@@ -583,7 +583,7 @@ func TestClient_withResponse(t *testing.T) {
 			name: "PollMutableState fail",
 			op: func(c Client) (any, error) {
 				return c.PollMutableState(context.Background(), &types.PollMutableStateRequest{
-					Execution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
+					WorkflowExecution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
 				})
 			},
 			mock: func(p *MockPeerResolver, c *MockClient) {
@@ -598,7 +598,7 @@ func TestClient_withResponse(t *testing.T) {
 			name: "ResetWorkflowExecution fail",
 			op: func(c Client) (any, error) {
 				return c.ResetWorkflowExecution(context.Background(), &types.HistoryResetWorkflowExecutionRequest{
-					ResetRequest: &types.ResetWorkflowExecutionRequest{
+					Request: &types.ResetWorkflowExecutionRequest{
 						WorkflowExecution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
 					},
 				})
@@ -616,7 +616,7 @@ func TestClient_withResponse(t *testing.T) {
 			op: func(c Client) (any, error) {
 				return c.DescribeWorkflowExecution(context.Background(), &types.HistoryDescribeWorkflowExecutionRequest{
 					Request: &types.DescribeWorkflowExecutionRequest{
-						Execution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
+						WorkflowExecution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
 					},
 				})
 			},
@@ -632,7 +632,7 @@ func TestClient_withResponse(t *testing.T) {
 			name: "RecordActivityTaskHeartbeat fail",
 			op: func(c Client) (any, error) {
 				return c.RecordActivityTaskHeartbeat(context.Background(), &types.HistoryRecordActivityTaskHeartbeatRequest{
-					HeartbeatRequest: &types.RecordActivityTaskHeartbeatRequest{
+					Request: &types.RecordActivityTaskHeartbeatRequest{
 						TaskToken: []byte(`{"workflowId": "test-workflow"}`),
 					},
 				})
@@ -800,7 +800,7 @@ func TestClient_withResponse(t *testing.T) {
 			name: "DescribeMutableState fail",
 			op: func(c Client) (any, error) {
 				return c.DescribeMutableState(context.Background(), &types.DescribeMutableStateRequest{
-					Execution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
+					WorkflowExecution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
 				})
 			},
 			mock: func(p *MockPeerResolver, c *MockClient) {
@@ -844,7 +844,7 @@ func TestClient_withResponse(t *testing.T) {
 			op: func(c Client) (any, error) {
 				return c.QueryWorkflow(context.Background(), &types.HistoryQueryWorkflowRequest{
 					Request: &types.QueryWorkflowRequest{
-						Execution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
+						WorkflowExecution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
 					},
 				})
 			},
@@ -860,7 +860,7 @@ func TestClient_withResponse(t *testing.T) {
 			name: "ResetStickyTaskList fail",
 			op: func(c Client) (any, error) {
 				return c.ResetStickyTaskList(context.Background(), &types.HistoryResetStickyTaskListRequest{
-					Execution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
+					WorkflowExecution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
 				})
 			},
 			mock: func(p *MockPeerResolver, c *MockClient) {
@@ -875,7 +875,7 @@ func TestClient_withResponse(t *testing.T) {
 			name: "RespondDecisionTaskCompleted fail",
 			op: func(c Client) (any, error) {
 				return c.RespondDecisionTaskCompleted(context.Background(), &types.HistoryRespondDecisionTaskCompletedRequest{
-					CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
+					Request: &types.RespondDecisionTaskCompletedRequest{
 						TaskToken: []byte(`{"workflowId": "test-workflow"}`),
 					},
 				})
@@ -892,7 +892,7 @@ func TestClient_withResponse(t *testing.T) {
 			name: "RespondDecisionTaskCompleted fail",
 			op: func(c Client) (any, error) {
 				return c.RespondDecisionTaskCompleted(context.Background(), &types.HistoryRespondDecisionTaskCompletedRequest{
-					CompleteRequest: &types.RespondDecisionTaskCompletedRequest{
+					Request: &types.RespondDecisionTaskCompletedRequest{
 						TaskToken: []byte(`{"workflowId": "test-workflow"}`),
 					},
 				})
@@ -974,7 +974,7 @@ func TestClient_withNoResponse(t *testing.T) {
 			op: func(c Client) error {
 				return c.RefreshWorkflowTasks(context.Background(), &types.HistoryRefreshWorkflowTasksRequest{
 					Request: &types.RefreshWorkflowTasksRequest{
-						Execution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
+						WorkflowExecution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
 					},
 				})
 			},
@@ -1016,7 +1016,7 @@ func TestClient_withNoResponse(t *testing.T) {
 			name: "TerminateWorkflowExecution",
 			op: func(c Client) error {
 				return c.TerminateWorkflowExecution(context.Background(), &types.HistoryTerminateWorkflowExecutionRequest{
-					TerminateRequest: &types.TerminateWorkflowExecutionRequest{
+					Request: &types.TerminateWorkflowExecutionRequest{
 						WorkflowExecution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
 					},
 				})
@@ -1098,7 +1098,7 @@ func TestClient_withNoResponse(t *testing.T) {
 			op: func(c Client) error {
 				return c.RefreshWorkflowTasks(context.Background(), &types.HistoryRefreshWorkflowTasksRequest{
 					Request: &types.RefreshWorkflowTasksRequest{
-						Execution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
+						WorkflowExecution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
 					},
 				})
 			},
@@ -1138,7 +1138,7 @@ func TestClient_withNoResponse(t *testing.T) {
 			name: "RequestCancelWorkflowExecution",
 			op: func(c Client) error {
 				return c.RequestCancelWorkflowExecution(context.Background(), &types.HistoryRequestCancelWorkflowExecutionRequest{
-					CancelRequest: &types.RequestCancelWorkflowExecutionRequest{
+					Request: &types.RequestCancelWorkflowExecutionRequest{
 						WorkflowExecution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
 					},
 				})
@@ -1166,7 +1166,7 @@ func TestClient_withNoResponse(t *testing.T) {
 			name: "RespondActivityTaskCanceled",
 			op: func(c Client) error {
 				return c.RespondActivityTaskCanceled(context.Background(), &types.HistoryRespondActivityTaskCanceledRequest{
-					CancelRequest: &types.RespondActivityTaskCanceledRequest{
+					Request: &types.RespondActivityTaskCanceledRequest{
 						TaskToken: []byte(`{"workflowId": "test-workflow"}`),
 					},
 				})
@@ -1181,7 +1181,7 @@ func TestClient_withNoResponse(t *testing.T) {
 			name: "RespondActivityTaskCompleted",
 			op: func(c Client) error {
 				return c.RespondActivityTaskCompleted(context.Background(), &types.HistoryRespondActivityTaskCompletedRequest{
-					CompleteRequest: &types.RespondActivityTaskCompletedRequest{
+					Request: &types.RespondActivityTaskCompletedRequest{
 						TaskToken: []byte(`{"workflowId": "test-workflow"}`),
 					},
 				})
@@ -1196,7 +1196,7 @@ func TestClient_withNoResponse(t *testing.T) {
 			name: "RespondActivityTaskFailed",
 			op: func(c Client) error {
 				return c.RespondActivityTaskFailed(context.Background(), &types.HistoryRespondActivityTaskFailedRequest{
-					FailedRequest: &types.RespondActivityTaskFailedRequest{
+					Request: &types.RespondActivityTaskFailedRequest{
 						TaskToken: []byte(`{"workflowId": "test-workflow"}`),
 					},
 				})
@@ -1211,7 +1211,7 @@ func TestClient_withNoResponse(t *testing.T) {
 			name: "RespondDecisionTaskFailed",
 			op: func(c Client) error {
 				return c.RespondDecisionTaskFailed(context.Background(), &types.HistoryRespondDecisionTaskFailedRequest{
-					FailedRequest: &types.RespondDecisionTaskFailedRequest{
+					Request: &types.RespondDecisionTaskFailedRequest{
 						TaskToken: []byte(`{"workflowId": "test-workflow"}`),
 					},
 				})
@@ -1239,7 +1239,7 @@ func TestClient_withNoResponse(t *testing.T) {
 			name: "SignalWorkflowExecution",
 			op: func(c Client) error {
 				return c.SignalWorkflowExecution(context.Background(), &types.HistorySignalWorkflowExecutionRequest{
-					SignalRequest: &types.SignalWorkflowExecutionRequest{
+					Request: &types.SignalWorkflowExecutionRequest{
 						WorkflowExecution: &types.WorkflowExecution{WorkflowID: "test-workflow"},
 					},
 				})

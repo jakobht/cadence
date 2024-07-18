@@ -1193,7 +1193,7 @@ func (s *historyBuilderSuite) TestHistoryBuilderWorkflowExternalCancellationRequ
 
 	cause := "cancel workflow"
 	req := &types.HistoryRequestCancelWorkflowExecutionRequest{
-		CancelRequest: &types.RequestCancelWorkflowExecutionRequest{
+		Request: &types.RequestCancelWorkflowExecutionRequest{
 			Identity:  "identity",
 			RequestID: "b071cbe8-3a95-4223-a8ac-f308a42db383",
 		},
@@ -1438,7 +1438,7 @@ func (s *historyBuilderSuite) TestHistoryBuilderCancelWorkflow() {
 	// 1
 	s.addWorkflowExecutionStartedEvent(we, wt, tl, input, execTimeout, taskTimeout, identity, partitionConfig)
 	req := &types.HistoryRequestCancelWorkflowExecutionRequest{
-		CancelRequest: &types.RequestCancelWorkflowExecutionRequest{
+		Request: &types.RequestCancelWorkflowExecutionRequest{
 			Identity:  "identity",
 			RequestID: "b071cbe8-3a95-4223-a8ac-f308a42db383",
 		},

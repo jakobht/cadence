@@ -183,7 +183,7 @@ func showHistoryHelper(c *cli.Context, wid, rid string) {
 	frontendClient := cFactory.ServerFrontendClient(c)
 	resp, err := frontendClient.DescribeWorkflowExecution(ctx, &types.DescribeWorkflowExecutionRequest{
 		Domain: domain,
-		Execution: &types.WorkflowExecution{
+		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: wid,
 			RunID:      rid,
 		},
@@ -656,7 +656,7 @@ func queryWorkflowHelper(c *cli.Context, queryType string) {
 	defer cancel()
 	queryRequest := &types.QueryWorkflowRequest{
 		Domain: domain,
-		Execution: &types.WorkflowExecution{
+		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: wid,
 			RunID:      rid,
 		},
@@ -791,7 +791,7 @@ func describeWorkflowHelper(c *cli.Context, wid, rid string) {
 
 	resp, err := frontendClient.DescribeWorkflowExecution(ctx, &types.DescribeWorkflowExecutionRequest{
 		Domain: domain,
-		Execution: &types.WorkflowExecution{
+		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: wid,
 			RunID:      rid,
 		},
@@ -1037,7 +1037,7 @@ type WorkflowRow struct {
 	TaskList         string                 `header:"Task List"`
 	IsCron           bool                   `header:"Is Cron"`
 	StartTime        time.Time              `header:"Start Time"`
-	ExecutionTime    time.Time              `header:"Execution Time"`
+	ExecutionTime    time.Time              `header:"WorkflowExecution Time"`
 	EndTime          time.Time              `header:"End Time"`
 	CloseStatus      string                 `header:"Close Status"`
 	HistoryLength    int64                  `header:"History Length"`
@@ -1693,7 +1693,7 @@ func doReset(c *cli.Context, domain, wid, rid string, params batchResetParamsTyp
 	frontendClient := cFactory.ServerFrontendClient(c)
 	resp, err := frontendClient.DescribeWorkflowExecution(ctx, &types.DescribeWorkflowExecutionRequest{
 		Domain: domain,
-		Execution: &types.WorkflowExecution{
+		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: wid,
 		},
 	})
@@ -1918,7 +1918,7 @@ func getFirstDecisionTaskByType(
 func getCurrentRunID(ctx context.Context, domain, wid string, frontendClient frontend.Client) (string, error) {
 	resp, err := frontendClient.DescribeWorkflowExecution(ctx, &types.DescribeWorkflowExecutionRequest{
 		Domain: domain,
-		Execution: &types.WorkflowExecution{
+		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: wid,
 		},
 	})
@@ -1931,7 +1931,7 @@ func getCurrentRunID(ctx context.Context, domain, wid string, frontendClient fro
 func getBadDecisionCompletedID(ctx context.Context, domain, wid, rid, binChecksum string, frontendClient frontend.Client) (decisionFinishID int64, err error) {
 	resp, err := frontendClient.DescribeWorkflowExecution(ctx, &types.DescribeWorkflowExecutionRequest{
 		Domain: domain,
-		Execution: &types.WorkflowExecution{
+		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: wid,
 			RunID:      rid,
 		},

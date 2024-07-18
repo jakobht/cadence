@@ -165,7 +165,7 @@ GetHistoryLoop:
 
 		lastEvent := history.Events[len(history.Events)-1]
 		if *lastEvent.EventType != types.EventTypeWorkflowExecutionCanceled {
-			s.Logger.Warn("Execution not cancelled yet.")
+			s.Logger.Warn("WorkflowExecution not cancelled yet.")
 			time.Sleep(100 * time.Millisecond)
 			continue GetHistoryLoop
 		}
@@ -392,7 +392,7 @@ GetHistoryLoop:
 
 		lastEvent := history.Events[len(history.Events)-1]
 		if *lastEvent.EventType != types.EventTypeWorkflowExecutionCanceled {
-			s.Logger.Warn("Execution not cancelled yet.")
+			s.Logger.Warn("WorkflowExecution not cancelled yet.")
 			time.Sleep(100 * time.Millisecond)
 			continue GetHistoryLoop
 		}

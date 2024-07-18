@@ -81,7 +81,7 @@ func TestTerminateWorkflowExecution(t *testing.T) {
 			terminationRequest: types.HistoryTerminateWorkflowExecutionRequest{
 				DomainUUID:        constants.TestDomainID,
 				ChildWorkflowOnly: true,
-				TerminateRequest: &types.TerminateWorkflowExecutionRequest{
+				Request: &types.TerminateWorkflowExecutionRequest{
 					Domain:            constants.TestDomainName,
 					WorkflowExecution: &types.WorkflowExecution{WorkflowID: constants.TestWorkflowID, RunID: constants.TestRunID},
 					Reason:            "Test termination",
@@ -154,7 +154,7 @@ func TestTerminateWorkflowExecution(t *testing.T) {
 			name: "valid first execution run ID",
 			terminationRequest: types.HistoryTerminateWorkflowExecutionRequest{
 				DomainUUID: constants.TestDomainID,
-				TerminateRequest: &types.TerminateWorkflowExecutionRequest{
+				Request: &types.TerminateWorkflowExecutionRequest{
 					Domain:              constants.TestDomainName,
 					WorkflowExecution:   &types.WorkflowExecution{WorkflowID: constants.TestWorkflowID, RunID: constants.TestRunID},
 					Reason:              "Test termination",
@@ -252,7 +252,7 @@ func TestTerminateWorkflowExecution(t *testing.T) {
 			name: "successful termination of a running workflow",
 			terminationRequest: types.HistoryTerminateWorkflowExecutionRequest{
 				DomainUUID: constants.TestDomainID,
-				TerminateRequest: &types.TerminateWorkflowExecutionRequest{
+				Request: &types.TerminateWorkflowExecutionRequest{
 					Domain: constants.TestDomainName,
 					WorkflowExecution: &types.WorkflowExecution{
 						WorkflowID: constants.TestWorkflowID,
@@ -330,7 +330,7 @@ func TestTerminateWorkflowExecution(t *testing.T) {
 			name: "first execution run ID matches",
 			terminationRequest: types.HistoryTerminateWorkflowExecutionRequest{
 				DomainUUID: constants.TestDomainID,
-				TerminateRequest: &types.TerminateWorkflowExecutionRequest{
+				Request: &types.TerminateWorkflowExecutionRequest{
 					Domain:              constants.TestDomainName,
 					WorkflowExecution:   &types.WorkflowExecution{WorkflowID: constants.TestWorkflowID, RunID: constants.TestRunID},
 					Reason:              "Test termination",
@@ -402,7 +402,7 @@ func TestTerminateWorkflowExecution(t *testing.T) {
 			name: "first execution run ID does not match",
 			terminationRequest: types.HistoryTerminateWorkflowExecutionRequest{
 				DomainUUID: constants.TestDomainID,
-				TerminateRequest: &types.TerminateWorkflowExecutionRequest{
+				Request: &types.TerminateWorkflowExecutionRequest{
 					Domain:              constants.TestDomainName,
 					WorkflowExecution:   &types.WorkflowExecution{WorkflowID: constants.TestWorkflowID, RunID: constants.TestRunID},
 					Reason:              "Test termination",
@@ -463,7 +463,7 @@ func TestTerminateWorkflowExecution(t *testing.T) {
 			name: "load first execution run ID from start event",
 			terminationRequest: types.HistoryTerminateWorkflowExecutionRequest{
 				DomainUUID: constants.TestDomainID,
-				TerminateRequest: &types.TerminateWorkflowExecutionRequest{
+				Request: &types.TerminateWorkflowExecutionRequest{
 					Domain:              constants.TestDomainName,
 					WorkflowExecution:   &types.WorkflowExecution{WorkflowID: constants.TestWorkflowID, RunID: constants.TestRunID},
 					Reason:              "Test termination",

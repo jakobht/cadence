@@ -208,8 +208,8 @@ func TestDescribeWorkflowExecution(t *testing.T) {
 	result, err := eft.Engine.DescribeWorkflowExecution(ctx.Background(), &types.HistoryDescribeWorkflowExecutionRequest{
 		DomainUUID: constants.TestDomainID,
 		Request: &types.DescribeWorkflowExecutionRequest{
-			Domain:    "why do we even have this field?",
-			Execution: &execution,
+			Domain:            "why do we even have this field?",
+			WorkflowExecution: &execution,
 		},
 	})
 	eft.Engine.Stop()
