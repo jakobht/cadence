@@ -11,25 +11,25 @@ import (
 
 {{ $ratelimitTypeMap := dict "StartWorkflowExecution" (
     dict
-        "ratelimit" "ratelimitTypeUserPerID"
+        "ratelimit" ( list "hostRateLimit" "ratelimitTypeUserPerID" )
         "workflowID" "StartRequest.GetWorkflowID()"
     )
 }}
 {{ $ratelimitTypeMap := set $ratelimitTypeMap "SignalWithStartWorkflowExecution" (
     dict
-        "ratelimit" "ratelimitTypeUserPerID"
+        "ratelimit" ( list "ratelimitTypeUserPerID" )
         "workflowID" "SignalWithStartRequest.GetWorkflowID()"
     )
 }}
 {{ $ratelimitTypeMap := set $ratelimitTypeMap "SignalWorkflowExecution" (
     dict
-        "ratelimit" "ratelimitTypeUserPerID"
+        "ratelimit" ( list "ratelimitTypeUserPerID" )
         "workflowID" "SignalRequest.GetWorkflowExecution().GetWorkflowID()"
     )
 }}
 {{ $ratelimitTypeMap := set $ratelimitTypeMap "DescribeWorkflowExecution" (
     dict
-        "ratelimit" "ratelimitTypeUserPerID"
+        "ratelimit" ( list "ratelimitTypeUserPerID" )
         "workflowID" "Request.GetExecution().GetWorkflowID()"
     )
 }}
@@ -72,9 +72,21 @@ func New{{$Decorator}}(
 {{range $method := .Interface.Methods}}
 func (h *{{$decorator}}) {{$method.Declaration}} {
     {{- if hasKey $ratelimitTypeMap $method.Name }}
-        {{- if eq
-            ( get ( get $ratelimitTypeMap $method.Name ) "ratelimit" )
+        {{- $ratelimits :=  ( get ( get $ratelimitTypeMap $method.Name ) "ratelimit" ) }}
+
+        {{- /* Host rate limit */}}
+        {{- if has
+            "hostRateLimit"
+            $ratelimits
+        }}
+
+
+        {{- end}}
+
+        {{- /* Per workflow ID rate limit */}}
+        {{- if has
             "ratelimitTypeUserPerID"
+            $ratelimits
         }}
 
             {{ $workflowID := ( get ( get $ratelimitTypeMap $method.Name ) "workflowID" ) }}
