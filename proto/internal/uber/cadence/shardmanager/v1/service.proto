@@ -1,0 +1,45 @@
+// Copyright (c) 2020 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+syntax = "proto3";
+
+package uber.cadence.shardmanager.v1;
+
+option go_package = "github.com/uber/cadence/.gen/proto/shardmanager/v1;shardmanagerv1";
+
+// MatchingAPI is exposed to provide support for polling from long running applications.
+// Such applications are expected to have a worker which regularly polls for DecisionTask and ActivityTask.  For each
+// DecisionTask, application is expected to process the history of events for that session and respond back with next
+// decisions.  For each ActivityTask, application is expected to execute the actual logic for that task and respond back
+// with completion or failure.
+service ShardManagerAPI {
+
+  // GetShardOwner returns the owner of a specific shard
+  rpc GetShardOwner(stream GetShardOwnerRequest) returns (GetShardOwnerResponse);
+
+}
+
+message GetShardOwnerRequest {
+  string shard_key = 1;
+}
+
+message GetShardOwnerResponse {
+  string owner = 1;
+}
