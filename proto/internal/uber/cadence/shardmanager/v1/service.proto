@@ -32,7 +32,7 @@ option go_package = "github.com/uber/cadence/.gen/proto/shardmanager/v1;shardman
 service ShardManagerAPI {
 
   // GetShardOwner returns the owner of a specific shard
-  rpc GetShardOwner(stream GetShardOwnerRequest) returns (GetShardOwnerResponse);
+  rpc GetShardOwner(stream GetShardOwnerRequest) returns (stream GetShardOwnerResponse);
 
 }
 
@@ -41,5 +41,6 @@ message GetShardOwnerRequest {
 }
 
 message GetShardOwnerResponse {
-  string owner = 1;
+  string shard_key = 1;
+  string owner = 2;
 }

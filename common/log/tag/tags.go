@@ -1016,3 +1016,12 @@ func GlobalRatelimiterCollectionName(name string) Tag {
 func GlobalRatelimiterPeer(peer string) Tag {
 	return newStringTag("global-ratelimit-peer", peer)
 }
+
+// Shard Manager keys
+func ShardKey(key string) Tag {
+	return newStringTag("shard-key", key)
+}
+
+func ShardOwner(owner string) Tag {
+	return newStringTag("shard-owner", owner)
+}
