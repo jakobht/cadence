@@ -23,21 +23,23 @@ package shardmanager
 import (
 	"sync/atomic"
 
+	shardmanagerv1 "github.com/uber/cadence/.gen/proto/shardmanager/v1"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/service/shardmanager/config"
+	"github.com/uber/cadence/service/shardmanager/handler"
 )
 
 // Service represents the shard manager service
 type Service struct {
 	resource.Resource
 
-	status int32
-	//  handler handler.Handler
-	stopC  chan struct{}
-	config *config.Config
+	status  int32
+	handler shardmanagerv1.ShardManagerAPIYARPCServer
+	stopC   chan struct{}
+	config  *config.Config
 }
 
 // NewService builds a new task manager service
@@ -87,9 +89,13 @@ func (s *Service) Start() {
 	logger := s.GetLogger()
 	logger.Info("shard manager starting")
 
-	// setup the handler
+	s.handler = handler.NewGrpcHandler(s.GetLogger())
+	s.GetDispatcher().Register(shardmanagerv1.BuildShardManagerAPIYARPCProcedures(s.handler))
 
+	// TODO: add health check handler
 	s.Resource.Start()
+
+	logger.Info("shard manager started")
 
 	<-s.stopC
 }
