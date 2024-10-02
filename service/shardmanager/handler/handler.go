@@ -26,18 +26,21 @@ import (
 	"fmt"
 
 	shardmanagerv1 "github.com/uber/cadence/.gen/proto/shardmanager/v1"
+	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 )
 
-func NewGrpcHandler(logger log.Logger) shardmanagerv1.ShardManagerAPIYARPCServer {
+func NewGrpcHandler(logger log.Logger, peerResolver matching.PeerResolver) shardmanagerv1.ShardManagerAPIYARPCServer {
 	return handlerImpl{
-		logger: logger,
+		logger:       logger,
+		peerResolver: peerResolver,
 	}
 }
 
 type handlerImpl struct {
-	logger log.Logger
+	logger       log.Logger
+	peerResolver matching.PeerResolver
 }
 
 func (h handlerImpl) GetShardOwner(stream shardmanagerv1.ShardManagerAPIServiceGetShardOwnerYARPCServer) error {
@@ -48,10 +51,14 @@ func (h handlerImpl) GetShardOwner(stream shardmanagerv1.ShardManagerAPIServiceG
 		}
 
 		h.logger.Info("GetShardOwner", tag.ShardKey(message.ShardKey))
+		owner, err := h.peerResolver.FromTaskList(message.ShardKey)
+		if err != nil {
+			return fmt.Errorf("get shard owner %w", err)
+		}
 
 		resp := &shardmanagerv1.GetShardOwnerResponse{
 			ShardKey: message.ShardKey,
-			Owner:    "owner",
+			Owner:    owner,
 		}
 
 		if err := stream.Send(resp); err != nil {
