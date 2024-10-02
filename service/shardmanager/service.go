@@ -24,8 +24,10 @@ import (
 	"sync/atomic"
 
 	shardmanagerv1 "github.com/uber/cadence/.gen/proto/shardmanager/v1"
+	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/service/shardmanager/config"
@@ -89,7 +91,9 @@ func (s *Service) Start() {
 	logger := s.GetLogger()
 	logger.Info("shard manager starting")
 
-	s.handler = handler.NewGrpcHandler(s.GetLogger())
+	peerResolver := matching.NewPeerResolver(s.GetMembershipResolver(), membership.PortGRPC)
+
+	s.handler = handler.NewGrpcHandler(s.GetLogger(), peerResolver)
 	s.GetDispatcher().Register(shardmanagerv1.BuildShardManagerAPIYARPCProcedures(s.handler))
 
 	// TODO: add health check handler
