@@ -23,6 +23,7 @@
 package handler
 
 import (
+	"context"
 	"fmt"
 
 	shardmanagerv1 "github.com/uber/cadence/.gen/proto/shardmanager/v1"
@@ -43,28 +44,19 @@ type handlerImpl struct {
 	peerResolver matching.PeerResolver
 }
 
-func (h handlerImpl) GetShardOwner(stream shardmanagerv1.ShardManagerAPIServiceGetShardOwnerYARPCServer) error {
-	for {
-		message, err := stream.Recv()
-		if err != nil {
-			return fmt.Errorf("receive on stream %w", err)
-		}
-
-		h.logger.Info("GetShardOwner", tag.ShardKey(message.ShardKey))
-		owner, err := h.peerResolver.FromTaskList(message.ShardKey)
-		if err != nil {
-			return fmt.Errorf("get shard owner %w", err)
-		}
-
-		resp := &shardmanagerv1.GetShardOwnerResponse{
-			ShardKey: message.ShardKey,
-			Owner:    owner,
-		}
-
-		if err := stream.Send(resp); err != nil {
-			return fmt.Errorf("send on stream %w", err)
-		}
-
-		h.logger.Info("GetShardOwner response sent", tag.ShardKey(message.ShardKey), tag.ShardOwner("owner"))
+func (h handlerImpl) GetShardOwner(ctx context.Context, request *shardmanagerv1.GetShardOwnerRequest) (*shardmanagerv1.GetShardOwnerResponse, error) {
+	h.logger.Info("GetShardOwner", tag.ShardKey(request.ShardKey))
+	owner, err := h.peerResolver.FromTaskList(request.ShardKey)
+	if err != nil {
+		return nil, fmt.Errorf("get shard owner %w", err)
 	}
+
+	resp := &shardmanagerv1.GetShardOwnerResponse{
+		ShardKey: request.ShardKey,
+		Owner:    owner,
+	}
+
+	h.logger.Info("GetShardOwner response", tag.ShardKey(resp.ShardKey), tag.ShardOwner(resp.Owner))
+
+	return resp, nil
 }

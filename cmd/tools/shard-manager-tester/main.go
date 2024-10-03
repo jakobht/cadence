@@ -37,7 +37,7 @@ import (
 
 func main() {
 	var wg sync.WaitGroup
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 100; i++ {
 		wg.Add(1)
 		go do(i, &wg)
 	}
@@ -76,7 +76,7 @@ func do(id int, group *sync.WaitGroup) error {
 		return fmt.Errorf("failed to create stream: %s", err.Error())
 	}
 
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 10; i++ {
 		time.Sleep(timeToSleep)
 		fmt.Printf("%v, sending message: %v\n", id, i)
 		err := stream.Send(&shardmanagerv1.GetShardOwnerRequest{
