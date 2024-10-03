@@ -44,15 +44,7 @@ var _ = ioutil.NopCloser
 
 // ShardManagerAPIYARPCClient is the YARPC client-side interface for the ShardManagerAPI service.
 type ShardManagerAPIYARPCClient interface {
-	GetShardOwner(context.Context, ...yarpc.CallOption) (ShardManagerAPIServiceGetShardOwnerYARPCClient, error)
-}
-
-// ShardManagerAPIServiceGetShardOwnerYARPCClient sends GetShardOwnerRequests and receives GetShardOwnerResponses, returning io.EOF when the stream is complete.
-type ShardManagerAPIServiceGetShardOwnerYARPCClient interface {
-	Context() context.Context
-	Send(*GetShardOwnerRequest, ...yarpc.StreamOption) error
-	Recv(...yarpc.StreamOption) (*GetShardOwnerResponse, error)
-	CloseSend(...yarpc.StreamOption) error
+	GetShardOwner(context.Context, *GetShardOwnerRequest, ...yarpc.CallOption) (*GetShardOwnerResponse, error)
 }
 
 func newShardManagerAPIYARPCClient(clientConfig transport.ClientConfig, anyResolver jsonpb.AnyResolver, options ...protobuf.ClientOption) ShardManagerAPIYARPCClient {
@@ -73,14 +65,7 @@ func NewShardManagerAPIYARPCClient(clientConfig transport.ClientConfig, options 
 
 // ShardManagerAPIYARPCServer is the YARPC server-side interface for the ShardManagerAPI service.
 type ShardManagerAPIYARPCServer interface {
-	GetShardOwner(ShardManagerAPIServiceGetShardOwnerYARPCServer) error
-}
-
-// ShardManagerAPIServiceGetShardOwnerYARPCServer receives GetShardOwnerRequests and sends GetShardOwnerResponse.
-type ShardManagerAPIServiceGetShardOwnerYARPCServer interface {
-	Context() context.Context
-	Recv(...yarpc.StreamOption) (*GetShardOwnerRequest, error)
-	Send(*GetShardOwnerResponse, ...yarpc.StreamOption) error
+	GetShardOwner(context.Context, *GetShardOwnerRequest) (*GetShardOwnerResponse, error)
 }
 
 type buildShardManagerAPIYARPCProceduresParams struct {
@@ -92,19 +77,21 @@ func buildShardManagerAPIYARPCProcedures(params buildShardManagerAPIYARPCProcedu
 	handler := &_ShardManagerAPIYARPCHandler{params.Server}
 	return protobuf.BuildProcedures(
 		protobuf.BuildProceduresParams{
-			ServiceName:         "uber.cadence.shardmanager.v1.ShardManagerAPI",
-			UnaryHandlerParams:  []protobuf.BuildProceduresUnaryHandlerParams{},
-			OnewayHandlerParams: []protobuf.BuildProceduresOnewayHandlerParams{},
-			StreamHandlerParams: []protobuf.BuildProceduresStreamHandlerParams{
+			ServiceName: "uber.cadence.shardmanager.v1.ShardManagerAPI",
+			UnaryHandlerParams: []protobuf.BuildProceduresUnaryHandlerParams{
 				{
 					MethodName: "GetShardOwner",
-					Handler: protobuf.NewStreamHandler(
-						protobuf.StreamHandlerParams{
-							Handle: handler.GetShardOwner,
+					Handler: protobuf.NewUnaryHandler(
+						protobuf.UnaryHandlerParams{
+							Handle:      handler.GetShardOwner,
+							NewRequest:  newShardManagerAPIServiceGetShardOwnerYARPCRequest,
+							AnyResolver: params.AnyResolver,
 						},
 					),
 				},
 			},
+			OnewayHandlerParams: []protobuf.BuildProceduresOnewayHandlerParams{},
+			StreamHandlerParams: []protobuf.BuildProceduresStreamHandlerParams{},
 		},
 	)
 }
@@ -220,36 +207,8 @@ type _ShardManagerAPIYARPCCaller struct {
 	streamClient protobuf.StreamClient
 }
 
-func (c *_ShardManagerAPIYARPCCaller) GetShardOwner(ctx context.Context, options ...yarpc.CallOption) (ShardManagerAPIServiceGetShardOwnerYARPCClient, error) {
-	stream, err := c.streamClient.CallStream(ctx, "GetShardOwner", options...)
-	if err != nil {
-		return nil, err
-	}
-	return &_ShardManagerAPIServiceGetShardOwnerYARPCClient{stream: stream}, nil
-}
-
-type _ShardManagerAPIYARPCHandler struct {
-	server ShardManagerAPIYARPCServer
-}
-
-func (h *_ShardManagerAPIYARPCHandler) GetShardOwner(serverStream *protobuf.ServerStream) error {
-	return h.server.GetShardOwner(&_ShardManagerAPIServiceGetShardOwnerYARPCServer{serverStream: serverStream})
-}
-
-type _ShardManagerAPIServiceGetShardOwnerYARPCClient struct {
-	stream *protobuf.ClientStream
-}
-
-func (c *_ShardManagerAPIServiceGetShardOwnerYARPCClient) Context() context.Context {
-	return c.stream.Context()
-}
-
-func (c *_ShardManagerAPIServiceGetShardOwnerYARPCClient) Send(request *GetShardOwnerRequest, options ...yarpc.StreamOption) error {
-	return c.stream.Send(request, options...)
-}
-
-func (c *_ShardManagerAPIServiceGetShardOwnerYARPCClient) Recv(options ...yarpc.StreamOption) (*GetShardOwnerResponse, error) {
-	responseMessage, err := c.stream.Receive(newShardManagerAPIServiceGetShardOwnerYARPCResponse, options...)
+func (c *_ShardManagerAPIYARPCCaller) GetShardOwner(ctx context.Context, request *GetShardOwnerRequest, options ...yarpc.CallOption) (*GetShardOwnerResponse, error) {
+	responseMessage, err := c.streamClient.Call(ctx, "GetShardOwner", request, newShardManagerAPIServiceGetShardOwnerYARPCResponse, options...)
 	if responseMessage == nil {
 		return nil, err
 	}
@@ -260,32 +219,24 @@ func (c *_ShardManagerAPIServiceGetShardOwnerYARPCClient) Recv(options ...yarpc.
 	return response, err
 }
 
-func (c *_ShardManagerAPIServiceGetShardOwnerYARPCClient) CloseSend(options ...yarpc.StreamOption) error {
-	return c.stream.Close(options...)
+type _ShardManagerAPIYARPCHandler struct {
+	server ShardManagerAPIYARPCServer
 }
 
-type _ShardManagerAPIServiceGetShardOwnerYARPCServer struct {
-	serverStream *protobuf.ServerStream
-}
-
-func (s *_ShardManagerAPIServiceGetShardOwnerYARPCServer) Context() context.Context {
-	return s.serverStream.Context()
-}
-
-func (s *_ShardManagerAPIServiceGetShardOwnerYARPCServer) Recv(options ...yarpc.StreamOption) (*GetShardOwnerRequest, error) {
-	requestMessage, err := s.serverStream.Receive(newShardManagerAPIServiceGetShardOwnerYARPCRequest, options...)
-	if requestMessage == nil {
+func (h *_ShardManagerAPIYARPCHandler) GetShardOwner(ctx context.Context, requestMessage proto.Message) (proto.Message, error) {
+	var request *GetShardOwnerRequest
+	var ok bool
+	if requestMessage != nil {
+		request, ok = requestMessage.(*GetShardOwnerRequest)
+		if !ok {
+			return nil, protobuf.CastError(emptyShardManagerAPIServiceGetShardOwnerYARPCRequest, requestMessage)
+		}
+	}
+	response, err := h.server.GetShardOwner(ctx, request)
+	if response == nil {
 		return nil, err
 	}
-	request, ok := requestMessage.(*GetShardOwnerRequest)
-	if !ok {
-		return nil, protobuf.CastError(emptyShardManagerAPIServiceGetShardOwnerYARPCRequest, requestMessage)
-	}
-	return request, err
-}
-
-func (s *_ShardManagerAPIServiceGetShardOwnerYARPCServer) Send(response *GetShardOwnerResponse, options ...yarpc.StreamOption) error {
-	return s.serverStream.Send(response, options...)
+	return response, err
 }
 
 func newShardManagerAPIServiceGetShardOwnerYARPCRequest() proto.Message {
@@ -312,13 +263,13 @@ var yarpcFileDescriptorClosure889886f494a83aa4 = [][]byte{
 		0x4b, 0x2d, 0x0a, 0x4a, 0x2d, 0x2c, 0x4d, 0x2d, 0x2e, 0x11, 0x92, 0xe6, 0xe2, 0x04, 0x2b, 0x8d,
 		0xcf, 0x4e, 0xad, 0x94, 0x60, 0x54, 0x60, 0xd4, 0xe0, 0x0c, 0xe2, 0x00, 0x0b, 0x78, 0xa7, 0x56,
 		0x2a, 0x79, 0x71, 0x89, 0xa2, 0x69, 0x2a, 0x2e, 0xc8, 0xcf, 0x2b, 0x4e, 0xc5, 0xab, 0x4b, 0x48,
-		0x84, 0x8b, 0x35, 0x1f, 0xa4, 0x5a, 0x82, 0x09, 0x2c, 0x01, 0xe1, 0x18, 0xf5, 0x33, 0x72, 0xf1,
-		0x83, 0x4d, 0xf2, 0x85, 0x38, 0xca, 0x31, 0xc0, 0x53, 0xa8, 0x86, 0x8b, 0x17, 0xc5, 0x7c, 0x21,
-		0x23, 0x3d, 0x7c, 0x9e, 0xd0, 0xc3, 0xe6, 0x03, 0x29, 0x63, 0x92, 0xf4, 0x40, 0x3c, 0xa0, 0xc1,
-		0x68, 0xc0, 0xe8, 0xe4, 0x1c, 0xe5, 0x98, 0x9e, 0x59, 0x92, 0x51, 0x9a, 0xa4, 0x97, 0x9c, 0x9f,
-		0xab, 0x8f, 0x12, 0xd2, 0x7a, 0xe9, 0xa9, 0x79, 0xfa, 0xe0, 0x60, 0x45, 0x0f, 0x74, 0x6b, 0x64,
-		0x7e, 0x99, 0x61, 0x12, 0x1b, 0x58, 0x95, 0x31, 0x20, 0x00, 0x00, 0xff, 0xff, 0x94, 0x13, 0x93,
-		0x5c, 0xaa, 0x01, 0x00, 0x00,
+		0x84, 0x8b, 0x35, 0x1f, 0xa4, 0x5a, 0x82, 0x09, 0x2c, 0x01, 0xe1, 0x18, 0x75, 0x33, 0x72, 0xf1,
+		0x83, 0x4d, 0xf2, 0x85, 0x38, 0xca, 0x31, 0xc0, 0x53, 0xa8, 0x82, 0x8b, 0x17, 0xc5, 0x7c, 0x21,
+		0x23, 0x3d, 0x7c, 0x9e, 0xd0, 0xc3, 0xe6, 0x03, 0x29, 0x63, 0x92, 0xf4, 0x40, 0x3c, 0xe0, 0xe4,
+		0x1c, 0xe5, 0x98, 0x9e, 0x59, 0x92, 0x51, 0x9a, 0xa4, 0x97, 0x9c, 0x9f, 0xab, 0x8f, 0x12, 0xca,
+		0x7a, 0xe9, 0xa9, 0x79, 0xfa, 0xe0, 0x20, 0x45, 0x0f, 0x70, 0x6b, 0x64, 0x7e, 0x99, 0x61, 0x12,
+		0x1b, 0x58, 0x95, 0x31, 0x20, 0x00, 0x00, 0xff, 0xff, 0xb4, 0x11, 0x6f, 0x2e, 0xa6, 0x01, 0x00,
+		0x00,
 	},
 }
 
