@@ -91,7 +91,7 @@ func NewParams(serviceName string, config *config.Config, dc *dynamicconfig.Coll
 
 	enableGRPCOutbound := dc.GetBoolProperty(dynamicconfig.EnableGRPCOutbound)()
 
-	publicClientOutbound, err := newPublicClientOutbound(config)
+	pubClientOutbound, err := newPublicClientOutbound(config)
 	if err != nil {
 		return Params{}, fmt.Errorf("public client outbound: %v", err)
 	}
@@ -153,7 +153,16 @@ func NewParams(serviceName string, config *config.Config, dc *dynamicconfig.Coll
 				NewDirectPeerChooserFactory(service.Matching, logger),
 				dc.GetBoolProperty(dynamicconfig.EnableConnectionRetainingDirectChooser),
 			),
-			publicClientOutbound,
+
+			publicClientOutbound{
+				address:        fmt.Sprintf("localhost:%v", config.Services["shard-manager"].RPC.GRPCPort),
+				isGRPC:         true,
+				authMiddleware: nil,
+				serviceName:    service.ShardManager,
+				outboundName:   service.ShardManager,
+			},
+
+			pubClientOutbound,
 		),
 		InboundTLS:  inboundTLS,
 		OutboundTLS: outboundTLS,
