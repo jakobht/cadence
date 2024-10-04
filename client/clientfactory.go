@@ -21,6 +21,7 @@
 package client
 
 import (
+	"fmt"
 	"time"
 
 	adminv1 "github.com/uber/cadence-idl/go/proto/admin/v1"
@@ -33,6 +34,7 @@ import (
 	"github.com/uber/cadence/.gen/go/matching/matchingserviceclient"
 	historyv1 "github.com/uber/cadence/.gen/proto/history/v1"
 	matchingv1 "github.com/uber/cadence/.gen/proto/matching/v1"
+	shardmanagerv1 "github.com/uber/cadence/.gen/proto/shardmanager/v1"
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/client/history"
@@ -56,6 +58,7 @@ type (
 	Factory interface {
 		NewHistoryClient() (history.Client, history.PeerResolver, error)
 		NewMatchingClient(domainIDToName DomainIDToNameFunc) (matching.Client, error)
+		NewShardManagerClient() (shardmanagerv1.ShardManagerAPIYARPCClient, error)
 
 		NewHistoryClientWithTimeout(timeout time.Duration) (history.Client, history.PeerResolver, error)
 		NewMatchingClientWithTimeout(domainIDToName DomainIDToNameFunc, timeout time.Duration, longPollTimeout time.Duration) (matching.Client, error)
@@ -102,6 +105,13 @@ func (cf *rpcClientFactory) NewHistoryClient() (history.Client, history.PeerReso
 
 func (cf *rpcClientFactory) NewMatchingClient(domainIDToName DomainIDToNameFunc) (matching.Client, error) {
 	return cf.NewMatchingClientWithTimeout(domainIDToName, timeoutwrapper.MatchingDefaultTimeout, timeoutwrapper.MatchingDefaultLongPollTimeout)
+}
+
+func (cf *rpcClientFactory) NewShardManagerClient() (shardmanagerv1.ShardManagerAPIYARPCClient, error) {
+	outboundConfig := cf.rpcFactory.GetDispatcher().ClientConfig(service.ShardManager)
+	client := shardmanagerv1.NewShardManagerAPIYARPCClient(outboundConfig)
+
+	return client, nil
 }
 
 func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (history.Client, history.PeerResolver, error) {
@@ -151,12 +161,17 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 	}
 
 	peerResolver := matching.NewPeerResolver(cf.resolver, namedPort)
+	shardManagerClient, err := cf.NewShardManagerClient()
+	if err != nil {
+		return nil, fmt.Errorf("creating shardmanager client %w", err)
+	}
 
 	defaultLoadBalancer := matching.NewLoadBalancer(domainIDToName, cf.dynConfig)
 	roundRobinLoadBalancer := matching.NewRoundRobinLoadBalancer(domainIDToName, cf.dynConfig)
 	client := matching.NewClient(
 		rawClient,
 		peerResolver,
+		shardManagerClient,
 		matching.NewMultiLoadBalancer(defaultLoadBalancer, roundRobinLoadBalancer, domainIDToName, cf.dynConfig),
 	)
 	client = timeoutwrapper.NewMatchingClient(client, longPollTimeout, timeout)

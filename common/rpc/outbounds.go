@@ -83,6 +83,8 @@ type publicClientOutbound struct {
 	address        string
 	isGRPC         bool
 	authMiddleware middleware.UnaryOutbound
+	serviceName    string
+	outboundName   string
 }
 
 func newPublicClientOutbound(config *config.Config) (publicClientOutbound, error) {
@@ -103,7 +105,7 @@ func newPublicClientOutbound(config *config.Config) (publicClientOutbound, error
 
 	isGrpc := config.PublicClient.Transport == grpc.TransportName
 
-	return publicClientOutbound{config.PublicClient.HostPort, isGrpc, authMiddleware}, nil
+	return publicClientOutbound{config.PublicClient.HostPort, isGrpc, authMiddleware, service.Frontend, OutboundPublicClient}, nil
 }
 
 func (b publicClientOutbound) Build(grpc *grpc.Transport, tchannel *tchannel.Transport) (yarpc.Outbounds, error) {
@@ -114,8 +116,8 @@ func (b publicClientOutbound) Build(grpc *grpc.Transport, tchannel *tchannel.Tra
 		outbound = tchannel.NewSingleOutbound(b.address)
 	}
 	return yarpc.Outbounds{
-		OutboundPublicClient: {
-			ServiceName: service.Frontend,
+		b.outboundName: {
+			ServiceName: b.serviceName,
 			Unary:       middleware.ApplyUnaryOutbound(outbound, b.authMiddleware),
 		},
 	}, nil

@@ -25,6 +25,7 @@ import (
 
 	"go.uber.org/yarpc"
 
+	shardmanagerv1 "github.com/uber/cadence/.gen/proto/shardmanager/v1"
 	"github.com/uber/cadence/common/future"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
@@ -33,21 +34,24 @@ import (
 var _ Client = (*clientImpl)(nil)
 
 type clientImpl struct {
-	client       Client
-	peerResolver PeerResolver
-	loadBalancer LoadBalancer
+	client             Client
+	shardManagerClient shardmanagerv1.ShardManagerAPIYARPCClient
+	peerResolver       PeerResolver
+	loadBalancer       LoadBalancer
 }
 
 // NewClient creates a new history service TChannel client
 func NewClient(
 	client Client,
 	peerResolver PeerResolver,
+	shardManagerClient shardmanagerv1.ShardManagerAPIYARPCClient,
 	lb LoadBalancer,
 ) Client {
 	return &clientImpl{
-		client:       client,
-		peerResolver: peerResolver,
-		loadBalancer: lb,
+		client:             client,
+		peerResolver:       peerResolver,
+		shardManagerClient: shardManagerClient,
+		loadBalancer:       lb,
 	}
 }
 
@@ -63,7 +67,7 @@ func (c *clientImpl) AddActivityTask(
 		request.GetForwardedFrom(),
 	)
 	request.TaskList.Name = partition
-	peer, err := c.peerResolver.FromTaskList(partition)
+	peer, err := c.getPeerFromTasklist(ctx, partition)
 	if err != nil {
 		return err
 	}
@@ -82,7 +86,7 @@ func (c *clientImpl) AddDecisionTask(
 		request.GetForwardedFrom(),
 	)
 	request.TaskList.Name = partition
-	peer, err := c.peerResolver.FromTaskList(request.TaskList.GetName())
+	peer, err := c.getPeerFromTasklist(ctx, request.TaskList.GetName())
 	if err != nil {
 		return err
 	}
@@ -101,7 +105,7 @@ func (c *clientImpl) PollForActivityTask(
 		request.GetForwardedFrom(),
 	)
 	request.PollRequest.TaskList.Name = partition
-	peer, err := c.peerResolver.FromTaskList(request.PollRequest.TaskList.GetName())
+	peer, err := c.getPeerFromTasklist(ctx, request.PollRequest.TaskList.GetName())
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +124,7 @@ func (c *clientImpl) PollForDecisionTask(
 		request.GetForwardedFrom(),
 	)
 	request.PollRequest.TaskList.Name = partition
-	peer, err := c.peerResolver.FromTaskList(request.PollRequest.TaskList.GetName())
+	peer, err := c.getPeerFromTasklist(ctx, request.PollRequest.TaskList.GetName())
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +143,7 @@ func (c *clientImpl) QueryWorkflow(
 		request.GetForwardedFrom(),
 	)
 	request.TaskList.Name = partition
-	peer, err := c.peerResolver.FromTaskList(request.TaskList.GetName())
+	peer, err := c.getPeerFromTasklist(ctx, request.TaskList.GetName())
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +155,7 @@ func (c *clientImpl) RespondQueryTaskCompleted(
 	request *types.MatchingRespondQueryTaskCompletedRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	peer, err := c.peerResolver.FromTaskList(request.TaskList.GetName())
+	peer, err := c.getPeerFromTasklist(ctx, request.TaskList.GetName())
 	if err != nil {
 		return err
 	}
@@ -163,7 +167,7 @@ func (c *clientImpl) CancelOutstandingPoll(
 	request *types.CancelOutstandingPollRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	peer, err := c.peerResolver.FromTaskList(request.TaskList.GetName())
+	peer, err := c.getPeerFromTasklist(ctx, request.TaskList.GetName())
 	if err != nil {
 		return err
 	}
@@ -175,7 +179,7 @@ func (c *clientImpl) DescribeTaskList(
 	request *types.MatchingDescribeTaskListRequest,
 	opts ...yarpc.CallOption,
 ) (*types.DescribeTaskListResponse, error) {
-	peer, err := c.peerResolver.FromTaskList(request.DescRequest.TaskList.GetName())
+	peer, err := c.getPeerFromTasklist(ctx, request.DescRequest.TaskList.GetName())
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +191,7 @@ func (c *clientImpl) ListTaskListPartitions(
 	request *types.MatchingListTaskListPartitionsRequest,
 	opts ...yarpc.CallOption,
 ) (*types.ListTaskListPartitionsResponse, error) {
-	peer, err := c.peerResolver.FromTaskList(request.TaskList.GetName())
+	peer, err := c.getPeerFromTasklist(ctx, request.TaskList.GetName())
 	if err != nil {
 		return nil, err
 	}
@@ -238,4 +242,19 @@ func (c *clientImpl) GetTaskListsByDomain(
 		DecisionTaskListMap: decisionTaskListMap,
 		ActivityTaskListMap: activityTaskListMap,
 	}, nil
+}
+
+func (c *clientImpl) getPeerFromTasklist(ctx context.Context, taskListName string) (string, error) {
+	if false {
+		return c.peerResolver.FromTaskList(taskListName)
+	}
+
+	resp, err := c.shardManagerClient.GetShardOwner(ctx, &shardmanagerv1.GetShardOwnerRequest{
+		ShardKey: taskListName,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	return resp.Owner, nil
 }
