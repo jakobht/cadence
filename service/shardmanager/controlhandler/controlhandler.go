@@ -20,24 +20,22 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package handler
+package controlhandler
 
 import (
-	"context"
 	"fmt"
 
 	shardmanagerv1 "github.com/uber/cadence/.gen/proto/shardmanager/v1"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/service/shardmanager/datastore"
 )
 
-func NewGrpcHandler(logger log.Logger, peerResolver matching.PeerResolver, datastore datastore.DataStore) shardmanagerv1.ShardManagerAPIYARPCServer {
+func NewGrpcHandler(logger log.Logger, peerResolver matching.PeerResolver, dataStore datastore.DataStore) shardmanagerv1.ShardManagerControlAPIYARPCServer {
 	return handlerImpl{
 		logger:       logger,
 		peerResolver: peerResolver,
-		dataStore:    datastore,
+		dataStore:    dataStore,
 	}
 }
 
@@ -47,26 +45,23 @@ type handlerImpl struct {
 	dataStore    datastore.DataStore
 }
 
-func (h handlerImpl) GetShardOwner(ctx context.Context, request *shardmanagerv1.GetShardOwnerRequest) (*shardmanagerv1.GetShardOwnerResponse, error) {
-	h.logger.Info("GetShardOwner", tag.ShardKey(request.ShardKey))
-	var owner string
-	var err error
+func (h handlerImpl) HearthBeat(server shardmanagerv1.ShardManagerControlAPIServiceHearthBeatYARPCServer) error {
+	for {
+		message, err := server.Recv()
+		if err != nil {
+			return fmt.Errorf("read heartbeat message %w", err)
+		}
 
-	if false {
-		owner, err = h.peerResolver.FromTaskList(request.ShardKey)
-	} else {
-		owner, err = h.dataStore.GetShardOwner(datastore.ShardID(request.ShardKey))
+		for _, shard := range message.ShardLoads {
+			info := datastore.ShardInfo{
+				Owner: message.HostInfo,
+				Load:  shard.Load,
+			}
+
+			err := h.dataStore.PutShardInfo(datastore.ShardID(shard.ShardKey), info)
+			if err != nil {
+				return fmt.Errorf("put shard info %w", err)
+			}
+		}
 	}
-	if err != nil {
-		return nil, fmt.Errorf("get shard owner %w", err)
-	}
-
-	resp := &shardmanagerv1.GetShardOwnerResponse{
-		ShardKey: request.ShardKey,
-		Owner:    owner,
-	}
-
-	h.logger.Info("GetShardOwner response", tag.ShardKey(resp.ShardKey), tag.ShardOwner(resp.Owner))
-
-	return resp, nil
 }

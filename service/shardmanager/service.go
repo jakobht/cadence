@@ -31,6 +31,8 @@ import (
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/service/shardmanager/config"
+	"github.com/uber/cadence/service/shardmanager/controlhandler"
+	"github.com/uber/cadence/service/shardmanager/datastore"
 	"github.com/uber/cadence/service/shardmanager/handler"
 )
 
@@ -38,10 +40,11 @@ import (
 type Service struct {
 	resource.Resource
 
-	status  int32
-	handler shardmanagerv1.ShardManagerAPIYARPCServer
-	stopC   chan struct{}
-	config  *config.Config
+	status         int32
+	handler        shardmanagerv1.ShardManagerAPIYARPCServer
+	controlHandler shardmanagerv1.ShardManagerControlAPIYARPCServer
+	stopC          chan struct{}
+	config         *config.Config
 }
 
 // NewService builds a new task manager service
@@ -93,8 +96,12 @@ func (s *Service) Start() {
 
 	peerResolver := matching.NewPeerResolver(s.GetMembershipResolver(), membership.PortGRPC)
 
-	s.handler = handler.NewGrpcHandler(s.GetLogger(), peerResolver)
+	datastore := datastore.NewDataStore(peerResolver)
+	s.handler = handler.NewGrpcHandler(s.GetLogger(), peerResolver, datastore)
+	s.controlHandler = controlhandler.NewGrpcHandler(s.GetLogger(), peerResolver, datastore)
+
 	s.GetDispatcher().Register(shardmanagerv1.BuildShardManagerAPIYARPCProcedures(s.handler))
+	s.GetDispatcher().Register(shardmanagerv1.BuildShardManagerControlAPIYARPCProcedures(s.controlHandler))
 
 	// TODO: add health check handler
 	s.Resource.Start()
