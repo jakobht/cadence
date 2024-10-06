@@ -20,53 +20,83 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package handler
+package datastore
 
 import (
-	"context"
 	"fmt"
+	"math/rand"
+	"sync"
 
-	shardmanagerv1 "github.com/uber/cadence/.gen/proto/shardmanager/v1"
 	"github.com/uber/cadence/client/matching"
-	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/service/shardmanager/datastore"
 )
 
-func NewGrpcHandler(logger log.Logger, peerResolver matching.PeerResolver, datastore datastore.DataStore) shardmanagerv1.ShardManagerAPIYARPCServer {
-	return handlerImpl{
-		logger:       logger,
+type DataStore interface {
+	GetShardInfo(id ShardID) (ShardInfo, error)
+	PutShardInfo(id ShardID, info ShardInfo) error
+	GetShardOwner(id ShardID) (string, error)
+}
+
+type ShardID string
+type ShardInfo struct {
+	Owner string
+	Load  float64
+}
+
+func NewDataStore(peerResolver matching.PeerResolver) DataStore {
+	return &dataStore{
+		data:         make(map[ShardID]ShardInfo),
 		peerResolver: peerResolver,
-		dataStore:    datastore,
 	}
 }
 
-type handlerImpl struct {
-	logger       log.Logger
+type dataStore struct {
+	sync.Mutex
+	data         map[ShardID]ShardInfo
 	peerResolver matching.PeerResolver
-	dataStore    datastore.DataStore
 }
 
-func (h handlerImpl) GetShardOwner(ctx context.Context, request *shardmanagerv1.GetShardOwnerRequest) (*shardmanagerv1.GetShardOwnerResponse, error) {
-	h.logger.Info("GetShardOwner", tag.ShardKey(request.ShardKey))
-	var owner string
-	var err error
-
-	if false {
-		owner, err = h.peerResolver.FromTaskList(request.ShardKey)
-	} else {
-		owner, err = h.dataStore.GetShardOwner(datastore.ShardID(request.ShardKey))
+func (d *dataStore) GetShardInfo(id ShardID) (ShardInfo, error) {
+	d.Lock()
+	defer d.Unlock()
+	info, ok := d.data[id]
+	if !ok {
+		return ShardInfo{}, fmt.Errorf("shard not found")
 	}
+	return info, nil
+}
+
+func (d *dataStore) PutShardInfo(id ShardID, info ShardInfo) error {
+	d.Lock()
+	defer d.Unlock()
+	d.data[id] = info
+	return nil
+}
+
+func (d *dataStore) GetShardOwner(id ShardID) (string, error) {
+	d.Lock()
+	defer d.Unlock()
+
+	info, ok := d.data[id]
+	if ok {
+		return info.Owner, nil
+	}
+
+	allPeers, err := d.peerResolver.GetAllPeers()
 	if err != nil {
-		return nil, fmt.Errorf("get shard owner %w", err)
+		return "", fmt.Errorf("get all peers %w", err)
 	}
 
-	resp := &shardmanagerv1.GetShardOwnerResponse{
-		ShardKey: request.ShardKey,
-		Owner:    owner,
+	// assign shard to a random peer
+	if len(allPeers) == 0 {
+		return "", fmt.Errorf("no peers available")
 	}
 
-	h.logger.Info("GetShardOwner response", tag.ShardKey(resp.ShardKey), tag.ShardOwner(resp.Owner))
+	owner := allPeers[rand.Intn(len(allPeers))]
 
-	return resp, nil
+	d.data[id] = ShardInfo{
+		Owner: owner,
+		Load:  0,
+	}
+
+	return owner, nil
 }
