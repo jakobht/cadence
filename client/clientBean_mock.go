@@ -31,6 +31,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 
+	v1 "github.com/uber/cadence/.gen/proto/shardmanager/v1"
 	admin "github.com/uber/cadence/client/admin"
 	frontend "github.com/uber/cadence/client/frontend"
 	history "github.com/uber/cadence/client/history"
@@ -143,6 +144,20 @@ func (m *MockBean) GetRemoteFrontendClient(cluster string) frontend.Client {
 func (mr *MockBeanMockRecorder) GetRemoteFrontendClient(cluster interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRemoteFrontendClient", reflect.TypeOf((*MockBean)(nil).GetRemoteFrontendClient), cluster)
+}
+
+// GetShardManagerControlClient mocks base method.
+func (m *MockBean) GetShardManagerControlClient() v1.ShardManagerControlAPIYARPCClient {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetShardManagerControlClient")
+	ret0, _ := ret[0].(v1.ShardManagerControlAPIYARPCClient)
+	return ret0
+}
+
+// GetShardManagerControlClient indicates an expected call of GetShardManagerControlClient.
+func (mr *MockBeanMockRecorder) GetShardManagerControlClient() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetShardManagerControlClient", reflect.TypeOf((*MockBean)(nil).GetShardManagerControlClient))
 }
 
 // SetRemoteAdminClient mocks base method.

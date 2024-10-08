@@ -59,6 +59,7 @@ type (
 		NewHistoryClient() (history.Client, history.PeerResolver, error)
 		NewMatchingClient(domainIDToName DomainIDToNameFunc) (matching.Client, error)
 		NewShardManagerClient() (shardmanagerv1.ShardManagerAPIYARPCClient, error)
+		NewShardManagerControlClient() (shardmanagerv1.ShardManagerControlAPIYARPCClient, error)
 
 		NewHistoryClientWithTimeout(timeout time.Duration) (history.Client, history.PeerResolver, error)
 		NewMatchingClientWithTimeout(domainIDToName DomainIDToNameFunc, timeout time.Duration, longPollTimeout time.Duration) (matching.Client, error)
@@ -110,6 +111,13 @@ func (cf *rpcClientFactory) NewMatchingClient(domainIDToName DomainIDToNameFunc)
 func (cf *rpcClientFactory) NewShardManagerClient() (shardmanagerv1.ShardManagerAPIYARPCClient, error) {
 	outboundConfig := cf.rpcFactory.GetDispatcher().ClientConfig(service.ShardManager)
 	client := shardmanagerv1.NewShardManagerAPIYARPCClient(outboundConfig)
+
+	return client, nil
+}
+
+func (cf *rpcClientFactory) NewShardManagerControlClient() (shardmanagerv1.ShardManagerControlAPIYARPCClient, error) {
+	outboundConfig := cf.rpcFactory.GetDispatcher().ClientConfig(service.ShardManager)
+	client := shardmanagerv1.NewShardManagerControlAPIYARPCClient(outboundConfig)
 
 	return client, nil
 }

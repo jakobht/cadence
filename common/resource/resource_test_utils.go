@@ -30,6 +30,7 @@ import (
 	publicservicetest "go.uber.org/cadence/.gen/go/cadence/workflowservicetest"
 	"go.uber.org/yarpc"
 
+	shardmanagerv1 "github.com/uber/cadence/.gen/proto/shardmanager/v1"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
@@ -112,6 +113,11 @@ type (
 		RatelimiterAggregatorClient rpc.Client
 	}
 )
+
+func (s *Test) GetShardManagerControlClient() shardmanagerv1.ShardManagerControlAPIYARPCClient {
+	//TODO implement me
+	panic("implement me")
+}
 
 var _ Resource = (*Test)(nil)
 

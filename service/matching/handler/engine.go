@@ -33,6 +33,7 @@ import (
 
 	"github.com/pborman/uuid"
 
+	shardmanagerv1 "github.com/uber/cadence/.gen/proto/shardmanager/v1"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
@@ -78,24 +79,25 @@ type (
 	}
 
 	matchingEngineImpl struct {
-		shutdownCompletion   *sync.WaitGroup
-		shutdown             chan struct{}
-		taskManager          persistence.TaskManager
-		clusterMetadata      cluster.Metadata
-		historyService       history.Client
-		matchingClient       matching.Client
-		tokenSerializer      common.TaskTokenSerializer
-		logger               log.Logger
-		metricsClient        metrics.Client
-		taskListsLock        sync.RWMutex                             // locks mutation of taskLists
-		taskLists            map[tasklist.Identifier]tasklist.Manager // Convert to LRU cache
-		config               *config.Config
-		lockableQueryTaskMap lockableQueryTaskMap
-		domainCache          cache.DomainCache
-		versionChecker       client.VersionChecker
-		membershipResolver   membership.Resolver
-		partitioner          partition.Partitioner
-		timeSource           clock.TimeSource
+		shutdownCompletion        *sync.WaitGroup
+		shutdown                  chan struct{}
+		taskManager               persistence.TaskManager
+		clusterMetadata           cluster.Metadata
+		historyService            history.Client
+		matchingClient            matching.Client
+		shardManagerControlClient shardmanagerv1.ShardManagerControlAPIYARPCClient
+		tokenSerializer           common.TaskTokenSerializer
+		logger                    log.Logger
+		metricsClient             metrics.Client
+		taskListsLock             sync.RWMutex                             // locks mutation of taskLists
+		taskLists                 map[tasklist.Identifier]tasklist.Manager // Convert to LRU cache
+		config                    *config.Config
+		lockableQueryTaskMap      lockableQueryTaskMap
+		domainCache               cache.DomainCache
+		versionChecker            client.VersionChecker
+		membershipResolver        membership.Resolver
+		partitioner               partition.Partitioner
+		timeSource                clock.TimeSource
 
 		waitForQueryResultFn func(hCtx *handlerContext, isStrongConsistencyQuery bool, queryResultCh <-chan *queryResult) (*types.QueryWorkflowResponse, error)
 	}
@@ -127,6 +129,7 @@ func NewEngine(
 	clusterMetadata cluster.Metadata,
 	historyService history.Client,
 	matchingClient matching.Client,
+	shardManagerControlClient shardmanagerv1.ShardManagerControlAPIYARPCClient,
 	config *config.Config,
 	logger log.Logger,
 	metricsClient metrics.Client,
@@ -137,23 +140,24 @@ func NewEngine(
 ) Engine {
 
 	e := &matchingEngineImpl{
-		shutdown:             make(chan struct{}),
-		shutdownCompletion:   &sync.WaitGroup{},
-		taskManager:          taskManager,
-		clusterMetadata:      clusterMetadata,
-		historyService:       historyService,
-		tokenSerializer:      common.NewJSONTaskTokenSerializer(),
-		taskLists:            make(map[tasklist.Identifier]tasklist.Manager),
-		logger:               logger.WithTags(tag.ComponentMatchingEngine),
-		metricsClient:        metricsClient,
-		matchingClient:       matchingClient,
-		config:               config,
-		lockableQueryTaskMap: lockableQueryTaskMap{queryTaskMap: make(map[string]chan *queryResult)},
-		domainCache:          domainCache,
-		versionChecker:       client.NewVersionChecker(),
-		membershipResolver:   resolver,
-		partitioner:          partitioner,
-		timeSource:           timeSource,
+		shutdown:                  make(chan struct{}),
+		shutdownCompletion:        &sync.WaitGroup{},
+		taskManager:               taskManager,
+		clusterMetadata:           clusterMetadata,
+		historyService:            historyService,
+		tokenSerializer:           common.NewJSONTaskTokenSerializer(),
+		taskLists:                 make(map[tasklist.Identifier]tasklist.Manager),
+		logger:                    logger.WithTags(tag.ComponentMatchingEngine),
+		metricsClient:             metricsClient,
+		matchingClient:            matchingClient,
+		config:                    config,
+		lockableQueryTaskMap:      lockableQueryTaskMap{queryTaskMap: make(map[string]chan *queryResult)},
+		domainCache:               domainCache,
+		versionChecker:            client.NewVersionChecker(),
+		membershipResolver:        resolver,
+		partitioner:               partitioner,
+		timeSource:                timeSource,
+		shardManagerControlClient: shardManagerControlClient,
 	}
 
 	e.shutdownCompletion.Add(1)
