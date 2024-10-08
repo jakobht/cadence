@@ -26,6 +26,7 @@ import (
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/yarpc"
 
+	shardmanagerv1 "github.com/uber/cadence/.gen/proto/shardmanager/v1"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
@@ -96,6 +97,7 @@ type (
 		GetMatchingClient() matching.Client
 		GetHistoryRawClient() history.Client
 		GetHistoryClient() history.Client
+		GetShardManagerControlClient() shardmanagerv1.ShardManagerControlAPIYARPCClient
 		GetRatelimiterAggregatorsClient() qrpc.Client
 		GetRemoteAdminClient(cluster string) admin.Client
 		GetRemoteFrontendClient(cluster string) frontend.Client

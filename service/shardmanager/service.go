@@ -43,6 +43,7 @@ type Service struct {
 	status         int32
 	handler        shardmanagerv1.ShardManagerAPIYARPCServer
 	controlHandler shardmanagerv1.ShardManagerControlAPIYARPCServer
+	datastore      datastore.DataStore
 	stopC          chan struct{}
 	config         *config.Config
 }
@@ -96,9 +97,10 @@ func (s *Service) Start() {
 
 	peerResolver := matching.NewPeerResolver(s.GetMembershipResolver(), membership.PortGRPC)
 
-	datastore := datastore.NewDataStore(peerResolver)
-	s.handler = handler.NewGrpcHandler(s.GetLogger(), peerResolver, datastore)
-	s.controlHandler = controlhandler.NewGrpcHandler(s.GetLogger(), peerResolver, datastore)
+	s.datastore = datastore.NewDataStore(peerResolver, logger)
+	s.datastore.Start()
+	s.handler = handler.NewGrpcHandler(s.GetLogger(), peerResolver, s.datastore)
+	s.controlHandler = controlhandler.NewGrpcHandler(s.GetLogger(), peerResolver, s.datastore)
 
 	s.GetDispatcher().Register(shardmanagerv1.BuildShardManagerAPIYARPCProcedures(s.handler))
 	s.GetDispatcher().Register(shardmanagerv1.BuildShardManagerControlAPIYARPCProcedures(s.controlHandler))
@@ -119,6 +121,7 @@ func (s *Service) Stop() {
 	close(s.stopC)
 
 	s.Resource.Stop()
+	s.datastore.Stop()
 
 	s.GetLogger().Info("shard manager stopped")
 }

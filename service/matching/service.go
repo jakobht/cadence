@@ -96,6 +96,7 @@ func (s *Service) Start() {
 		s.GetClusterMetadata(),
 		s.GetHistoryClient(),
 		s.GetMatchingRawClient(), // Use non retry client inside matching
+		s.GetShardManagerControlClient(),
 		s.config,
 		s.GetLogger(),
 		s.GetMetricsClient(),

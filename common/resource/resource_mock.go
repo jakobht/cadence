@@ -33,6 +33,7 @@ import (
 	workflowserviceclient "go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	yarpc "go.uber.org/yarpc"
 
+	v1 "github.com/uber/cadence/.gen/proto/shardmanager/v1"
 	client "github.com/uber/cadence/client"
 	admin "github.com/uber/cadence/client/admin"
 	frontend "github.com/uber/cadence/client/frontend"
@@ -623,6 +624,20 @@ func (m *MockResource) GetShardManager() persistence.ShardManager {
 func (mr *MockResourceMockRecorder) GetShardManager() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetShardManager", reflect.TypeOf((*MockResource)(nil).GetShardManager))
+}
+
+// GetShardManagerControlClient mocks base method.
+func (m *MockResource) GetShardManagerControlClient() v1.ShardManagerControlAPIYARPCClient {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetShardManagerControlClient")
+	ret0, _ := ret[0].(v1.ShardManagerControlAPIYARPCClient)
+	return ret0
+}
+
+// GetShardManagerControlClient indicates an expected call of GetShardManagerControlClient.
+func (mr *MockResourceMockRecorder) GetShardManagerControlClient() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetShardManagerControlClient", reflect.TypeOf((*MockResource)(nil).GetShardManagerControlClient))
 }
 
 // GetTaskManager mocks base method.

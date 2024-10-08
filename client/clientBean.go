@@ -29,6 +29,7 @@ import (
 
 	"go.uber.org/yarpc"
 
+	shardmanagerv1 "github.com/uber/cadence/.gen/proto/shardmanager/v1"
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/client/history"
@@ -44,6 +45,7 @@ type (
 		GetHistoryPeers() history.PeerResolver
 		GetMatchingClient(domainIDToName DomainIDToNameFunc) (matching.Client, error)
 		GetFrontendClient() frontend.Client
+		GetShardManagerControlClient() shardmanagerv1.ShardManagerControlAPIYARPCClient
 		GetRemoteAdminClient(cluster string) admin.Client
 		SetRemoteAdminClient(cluster string, client admin.Client)
 		GetRemoteFrontendClient(cluster string) frontend.Client
@@ -51,13 +53,14 @@ type (
 
 	clientBeanImpl struct {
 		sync.Mutex
-		historyClient         history.Client
-		historyPeers          history.PeerResolver
-		matchingClient        atomic.Value
-		frontendClient        frontend.Client
-		remoteAdminClients    map[string]admin.Client
-		remoteFrontendClients map[string]frontend.Client
-		factory               Factory
+		historyClient             history.Client
+		shardManagerControlClient shardmanagerv1.ShardManagerControlAPIYARPCClient
+		historyPeers              history.PeerResolver
+		matchingClient            atomic.Value
+		frontendClient            frontend.Client
+		remoteAdminClients        map[string]admin.Client
+		remoteFrontendClients     map[string]frontend.Client
+		factory                   Factory
 	}
 )
 
@@ -65,6 +68,11 @@ type (
 func NewClientBean(factory Factory, dispatcher *yarpc.Dispatcher, clusterMetadata cluster.Metadata) (Bean, error) {
 
 	historyClient, historyPeers, err := factory.NewHistoryClient()
+	if err != nil {
+		return nil, err
+	}
+
+	shardManagerControlClient, err := factory.NewShardManagerControlClient()
 	if err != nil {
 		return nil, err
 	}
@@ -97,17 +105,22 @@ func NewClientBean(factory Factory, dispatcher *yarpc.Dispatcher, clusterMetadat
 	}
 
 	return &clientBeanImpl{
-		factory:               factory,
-		historyClient:         historyClient,
-		historyPeers:          historyPeers,
-		frontendClient:        remoteFrontendClients[clusterMetadata.GetCurrentClusterName()],
-		remoteAdminClients:    remoteAdminClients,
-		remoteFrontendClients: remoteFrontendClients,
+		factory:                   factory,
+		historyClient:             historyClient,
+		historyPeers:              historyPeers,
+		shardManagerControlClient: shardManagerControlClient,
+		frontendClient:            remoteFrontendClients[clusterMetadata.GetCurrentClusterName()],
+		remoteAdminClients:        remoteAdminClients,
+		remoteFrontendClients:     remoteFrontendClients,
 	}, nil
 }
 
 func (h *clientBeanImpl) GetHistoryClient() history.Client {
 	return h.historyClient
+}
+
+func (h *clientBeanImpl) GetShardManagerControlClient() shardmanagerv1.ShardManagerControlAPIYARPCClient {
+	return h.shardManagerControlClient
 }
 
 func (h *clientBeanImpl) GetHistoryPeers() history.PeerResolver {

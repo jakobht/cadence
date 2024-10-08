@@ -29,6 +29,7 @@ import (
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/yarpc"
 
+	shardmanagerv1 "github.com/uber/cadence/.gen/proto/shardmanager/v1"
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
@@ -116,14 +117,15 @@ type (
 
 		// internal services clients
 
-		sdkClient         workflowserviceclient.Interface
-		frontendRawClient frontend.Client
-		frontendClient    frontend.Client
-		matchingRawClient matching.Client
-		matchingClient    matching.Client
-		historyRawClient  history.Client
-		historyClient     history.Client
-		clientBean        client.Bean
+		sdkClient                 workflowserviceclient.Interface
+		frontendRawClient         frontend.Client
+		frontendClient            frontend.Client
+		matchingRawClient         matching.Client
+		matchingClient            matching.Client
+		historyRawClient          history.Client
+		historyClient             history.Client
+		shardManagerControlClient shardmanagerv1.ShardManagerControlAPIYARPCClient
+		clientBean                client.Bean
 
 		// persistence clients
 		persistenceBean persistenceClient.Bean
@@ -271,6 +273,8 @@ func New(
 		serviceConfig.IsErrorRetryableFunction,
 	)
 
+	shardManagerControlClient := clientBean.GetShardManagerControlClient()
+
 	historyArchiverBootstrapContainer := &archiver.HistoryBootstrapContainer{
 		HistoryV2Manager: persistenceBean.GetHistoryManager(),
 		Logger:           logger,
@@ -340,14 +344,15 @@ func New(
 
 		// internal services clients
 
-		sdkClient:         params.PublicClient,
-		frontendRawClient: frontendRawClient,
-		frontendClient:    frontendClient,
-		matchingRawClient: matchingRawClient,
-		matchingClient:    matchingClient,
-		historyRawClient:  historyRawClient,
-		historyClient:     historyClient,
-		clientBean:        clientBean,
+		sdkClient:                 params.PublicClient,
+		frontendRawClient:         frontendRawClient,
+		frontendClient:            frontendClient,
+		matchingRawClient:         matchingRawClient,
+		matchingClient:            matchingClient,
+		historyRawClient:          historyRawClient,
+		historyClient:             historyClient,
+		shardManagerControlClient: shardManagerControlClient,
+		clientBean:                clientBean,
 
 		// persistence clients
 		persistenceBean: persistenceBean,
@@ -558,6 +563,10 @@ func (h *Impl) GetHistoryRawClient() history.Client {
 // GetHistoryClient return history client with retry policy
 func (h *Impl) GetHistoryClient() history.Client {
 	return h.historyClient
+}
+
+func (h *Impl) GetShardManagerControlClient() shardmanagerv1.ShardManagerControlAPIYARPCClient {
+	return h.shardManagerControlClient
 }
 
 func (h *Impl) GetRatelimiterAggregatorsClient() qrpc.Client {
