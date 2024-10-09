@@ -85,7 +85,7 @@ func (d *dataStore) Stop() {
 }
 
 func (d *dataStore) LoadBalanceDaemon() {
-	ticker := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(5 * time.Minute)
 
 	for {
 		select {
