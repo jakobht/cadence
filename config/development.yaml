@@ -32,9 +32,10 @@ services:
       bindOnLocalHost: true
       grpcMaxMsgSize: 33554432
     metrics:
-      statsd:
-        hostPort: "127.0.0.1:8125"
-        prefix: "cadence"
+      statsd: ~
+      prometheus:
+        timerType: "histogram"
+        listenAddress: "127.0.0.1:8000"
     pprof:
       port: ${FRONTEND_PORT_PPROF:7936}
 
@@ -45,9 +46,10 @@ services:
       bindOnLocalHost: true
       grpcMaxMsgSize: 33554432
     metrics:
-      statsd:
-        hostPort: "127.0.0.1:8125"
-        prefix: "cadence"
+      statsd: ~
+      prometheus:
+        timerType: "histogram"
+        listenAddress: "127.0.0.1:${MATCHING_PORT_PROM:8001}"
     pprof:
       port: ${MATCHING_PORT_PPROF:7938}
 
@@ -58,9 +60,10 @@ services:
       bindOnLocalHost: true
       grpcMaxMsgSize: 33554432
     metrics:
-      statsd:
-        hostPort: "127.0.0.1:8125"
-        prefix: "cadence"
+      statsd: ~
+      prometheus:
+        timerType: "histogram"
+        listenAddress: "127.0.0.1:8002"
     pprof:
       port: ${HISTORY_PORT_PPROF:7937}
 
@@ -69,9 +72,10 @@ services:
       port: ${WORKER_PORT:7939}
       bindOnLocalHost: true
     metrics:
-      statsd:
-        hostPort: "127.0.0.1:8125"
-        prefix: "cadence"
+      statsd: ~
+      prometheus:
+        timerType: "histogram"
+        listenAddress: "127.0.0.1:8003"
     pprof:
       port: ${WORKER_PORT_PPROF:7940}
 
