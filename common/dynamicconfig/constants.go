@@ -2245,6 +2245,15 @@ const (
 
 	MatchingPartitionDownscaleFactor
 
+	// Key for shard distributor
+
+	// ShardDistributorErrorInjectionRate is rate for injecting random error in shard distributor client
+	// KeyName: sharddistributor.errorInjectionRate
+	// Value type: Float64
+	// Default value: 0
+	// Allowed filters: N/A
+	ShardDistributorErrorInjectionRate
+
 	// LastFloatKey must be the last one in this const group
 	LastFloatKey
 )
@@ -4557,6 +4566,11 @@ var FloatKeys = map[FloatKey]DynamicFloat{
 		Description:  "MatchingPartitionDownscaleFactor introduces hysteresis to prevent oscillation by setting a lower QPS threshold for downscaling, ensuring partitions are only removed when the load decreases significantly below the capacity of fewer partitions.",
 		Filters:      []Filter{DomainName, TaskListName, TaskType},
 		DefaultValue: 0.75,
+	},
+	ShardDistributorErrorInjectionRate: {
+		KeyName:      "sharddistributor.errorInjectionRate",
+		Description:  "ShardDistributorInjectionRate is rate for injecting random error in shard distributor client",
+		DefaultValue: 0,
 	},
 }
 
