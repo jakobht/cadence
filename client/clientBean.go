@@ -176,7 +176,7 @@ func (h *clientBeanImpl) lazyInitMatchingClient(domainIDToName DomainIDToNameFun
 	if cached := h.matchingClient.Load(); cached != nil {
 		return cached.(matching.Client), nil
 	}
-	client, err := h.factory.NewMatchingClient(domainIDToName)
+	client, err := h.factory.NewMatchingClient(domainIDToName, h.shardDistributorClient)
 	if err != nil {
 		return nil, err
 	}
