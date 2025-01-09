@@ -154,6 +154,11 @@ func NewParams(serviceName string, config *config.Config, dc *dynamicconfig.Coll
 				NewDirectPeerChooserFactory(service.Matching, logger, metricsCl),
 				dc.GetBoolProperty(dynamicconfig.EnableConnectionRetainingDirectChooser),
 			),
+			NewSingleGRPCOutboundBuilder(
+				service.ShardDistributor,
+				service.ShardDistributor,
+				config.ShardDistributorClient.HostPort,
+			),
 			publicClientOutbound,
 		),
 		InboundTLS:  inboundTLS,
