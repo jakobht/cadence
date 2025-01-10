@@ -82,6 +82,7 @@ func (c *clientImpl) AddActivityTask(
 	originalTaskListName := request.TaskList.GetName()
 	request.TaskList.Name = partition
 	peer, err := c.getShardOwner(request.TaskList.GetName())
+	peer, err := c.getShardOwner(ctx, request.TaskList.GetName())
 	if err != nil {
 		return nil, err
 	}
@@ -111,6 +112,7 @@ func (c *clientImpl) AddDecisionTask(
 	originalTaskListName := request.TaskList.GetName()
 	request.TaskList.Name = partition
 	peer, err := c.getShardOwner(request.TaskList.GetName())
+	peer, err := c.getShardOwner(ctx, request.TaskList.GetName())
 	if err != nil {
 		return nil, err
 	}
@@ -141,6 +143,7 @@ func (c *clientImpl) PollForActivityTask(
 	originalTaskListName := request.PollRequest.GetTaskList().GetName()
 	request.PollRequest.TaskList.Name = partition
 	peer, err := c.getShardOwner(request.PollRequest.TaskList.GetName())
+	peer, err := c.getShardOwner(ctx, request.PollRequest.TaskList.GetName())
 	if err != nil {
 		return nil, err
 	}
@@ -179,6 +182,7 @@ func (c *clientImpl) PollForDecisionTask(
 	originalTaskListName := request.PollRequest.GetTaskList().GetName()
 	request.PollRequest.TaskList.Name = partition
 	peer, err := c.getShardOwner(request.PollRequest.TaskList.GetName())
+	peer, err := c.getShardOwner(ctx, request.PollRequest.TaskList.GetName())
 	if err != nil {
 		return nil, err
 	}
@@ -216,6 +220,7 @@ func (c *clientImpl) QueryWorkflow(
 	)
 	request.TaskList.Name = partition
 	peer, err := c.getShardOwner(request.TaskList.GetName())
+	peer, err := c.getShardOwner(ctx, request.TaskList.GetName())
 	if err != nil {
 		return nil, err
 	}
@@ -228,6 +233,7 @@ func (c *clientImpl) RespondQueryTaskCompleted(
 	opts ...yarpc.CallOption,
 ) error {
 	peer, err := c.getShardOwner(request.TaskList.GetName())
+	peer, err := c.getShardOwner(ctx, request.TaskList.GetName())
 	if err != nil {
 		return err
 	}
@@ -240,6 +246,7 @@ func (c *clientImpl) CancelOutstandingPoll(
 	opts ...yarpc.CallOption,
 ) error {
 	peer, err := c.getShardOwner(request.TaskList.GetName())
+	peer, err := c.getShardOwner(ctx, request.TaskList.GetName())
 	if err != nil {
 		return err
 	}
@@ -252,6 +259,7 @@ func (c *clientImpl) DescribeTaskList(
 	opts ...yarpc.CallOption,
 ) (*types.DescribeTaskListResponse, error) {
 	peer, err := c.getShardOwner(request.DescRequest.TaskList.GetName())
+	peer, err := c.getShardOwner(ctx, request.DescRequest.TaskList.GetName())
 	if err != nil {
 		return nil, err
 	}
@@ -264,6 +272,7 @@ func (c *clientImpl) ListTaskListPartitions(
 	opts ...yarpc.CallOption,
 ) (*types.ListTaskListPartitionsResponse, error) {
 	peer, err := c.getShardOwner(request.TaskList.GetName())
+	peer, err := c.getShardOwner(ctx, request.TaskList.GetName())
 	if err != nil {
 		return nil, err
 	}
@@ -322,6 +331,7 @@ func (c *clientImpl) UpdateTaskListPartitionConfig(
 	opts ...yarpc.CallOption,
 ) (*types.MatchingUpdateTaskListPartitionConfigResponse, error) {
 	peer, err := c.getShardOwner(request.TaskList.GetName())
+	peer, err := c.getShardOwner(ctx, request.TaskList.GetName())
 	if err != nil {
 		return nil, err
 	}
@@ -334,6 +344,7 @@ func (c *clientImpl) RefreshTaskListPartitionConfig(
 	opts ...yarpc.CallOption,
 ) (*types.MatchingRefreshTaskListPartitionConfigResponse, error) {
 	peer, err := c.getShardOwner(request.TaskList.GetName())
+	peer, err := c.getShardOwner(ctx, request.TaskList.GetName())
 	if err != nil {
 		return nil, err
 	}
@@ -342,12 +353,13 @@ func (c *clientImpl) RefreshTaskListPartitionConfig(
 
 func (c *clientImpl) getShardOwner(taskListName string) (string, error) {
 	if c.shardDistributionMode() == common.ShardModeShardDistributor {
+func (c *clientImpl) getShardOwner(ctx context.Context, taskListName string) (string, error) {
 		request := &types.GetShardOwnerRequest{
 			ShardKey:  taskListName,
 			Namespace: constants.MatchingNamespace,
 		}
 
-		resp, err := c.shardDistributorClient.GetShardOwner(context.Background(), request)
+		resp, err := c.shardDistributorClient.GetShardOwner(ctx, request)
 		if err != nil {
 			return "", fmt.Errorf("find shard in shard distributor: %w", err)
 		}
