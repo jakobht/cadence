@@ -356,7 +356,9 @@ func (c *clientImpl) getShardOwner(ctx context.Context, taskListName string) (st
 		return resp.Owner, nil
 	}
 
-	if c.shardDistributionMode() != common.ShardModeHashRing {
+	if sharddistributorMode == common.ShardModeShardDistributor && c.shardDistributorClient == nil {
+		c.logger.Warn("ShardDistributor mode enabled, but shard distributor is not available, falling back to hash-ring")
+	} else if c.shardDistributionMode() != common.ShardModeHashRing {
 		c.logger.Warn("Unknown hash distribution mode, falling back to hash-ring", tag.Mode(c.shardDistributionMode()))
 	}
 
