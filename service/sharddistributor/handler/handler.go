@@ -31,6 +31,7 @@ import (
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/sharddistributor/constants"
@@ -104,6 +105,8 @@ func (h *handlerImpl) GetShardOwner(ctx context.Context, request *types.GetShard
 		Owner:     owner,
 		Namespace: request.Namespace,
 	}
+
+	h.logger.Info("GetShardOwner", tag.Value(request), tag.Value(resp))
 
 	return resp, nil
 }

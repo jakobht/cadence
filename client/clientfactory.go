@@ -247,7 +247,12 @@ func (cf *rpcClientFactory) NewShardDistributorClient() (sharddistributor.Client
 func (cf *rpcClientFactory) NewShardDistributorClientWithTimeout(
 	timeout time.Duration,
 ) (sharddistributor.Client, error) {
-	outboundConfig := cf.rpcFactory.GetDispatcher().ClientConfig(service.ShardDistributor)
+	outboundConfig, ok := cf.rpcFactory.GetDispatcher().OutboundConfig(service.ShardDistributor)
+	// If no outbound config is found, it means the service is not enabled, we just return nil as we don't want to
+	// break existing configs.
+	if !ok {
+		return nil, nil
+	}
 
 	if !rpc.IsGRPCOutbound(outboundConfig) {
 		return nil, fmt.Errorf("shard distributor client does not support non-GRPC outbound")
