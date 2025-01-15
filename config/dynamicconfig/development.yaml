@@ -1,3 +1,6 @@
+matching.shardDistributionMode:
+  - value: "shard-distributor"
+    constraints: {}
 frontend.enableClientVersionCheck:
 - value: true
   constraints: {}
