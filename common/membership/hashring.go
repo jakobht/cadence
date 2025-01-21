@@ -170,6 +170,10 @@ func (r *ring) Lookup(
 		return HostInfo{}, ErrInsufficientHosts
 	}
 
+	return r.addressToHost(addr)
+}
+
+func (r *ring) addressToHost(addr string) (HostInfo, error) {
 	r.members.RLock()
 	defer r.members.RUnlock()
 	host, ok := r.members.keys[addr]

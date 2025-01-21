@@ -88,7 +88,7 @@ type MultiringResolver struct {
 
 	provider PeerProvider
 	mu       sync.Mutex
-	rings    map[string]*ring
+	rings    map[string]SingleProvider
 }
 
 var _ Resolver = (*MultiringResolver)(nil)
@@ -112,7 +112,7 @@ func NewMultiringResolver(
 	rpo := &MultiringResolver{
 		status:   common.DaemonStatusInitialized,
 		provider: provider,
-		rings:    make(map[string]*ring),
+		rings:    make(map[string]SingleProvider),
 		metrics:  metricsClient,
 		mu:       sync.Mutex{},
 	}
@@ -171,7 +171,7 @@ func (rpo *MultiringResolver) EvictSelf() error {
 	return rpo.provider.SelfEvict()
 }
 
-func (rpo *MultiringResolver) getRing(service string) (*ring, error) {
+func (rpo *MultiringResolver) getRing(service string) (SingleProvider, error) {
 	rpo.mu.Lock()
 	defer rpo.mu.Unlock()
 	ring, found := rpo.rings[service]
