@@ -130,6 +130,18 @@ func (s *cliAppSuite) TestDomainRegister() {
 			nil,
 		},
 		{
+			"fail on extra arguments at end",
+			"cadence --do test-domain domain register --global_domain true --retention 5 --desc description --active_cluster c1 --clusters c1,c2 unused_arg",
+			"Domain commands cannot have arguments: <unused_arg>\nClusters are now specified as --clusters c1,c2 see help for more info",
+			nil,
+		},
+		{
+			"fail on extra arguments at in command",
+			"cadence --do test-domain domain register --global_domain true --retention 5 --desc description --active_cluster c1 unused_arg --clusters c1,c2",
+			"Domain commands cannot have arguments: <unused_arg --clusters c1,c2>\nClusters are now specified as --clusters c1,c2 see help for more info",
+			nil,
+		},
+		{
 			"invalid global domain flag",
 			"cadence --do test-domain domain register --global_domain invalid",
 			"format is invalid",
