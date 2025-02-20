@@ -61,10 +61,7 @@ const (
 	domainCacheMinRefreshInterval = 1 * time.Second
 	// DomainCacheRefreshInterval domain cache refresh interval
 	DomainCacheRefreshInterval = 10 * time.Second
-	// DomainCacheRefreshFailureRetryInterval is the wait time
-	// if refreshment encounters error
-	DomainCacheRefreshFailureRetryInterval = 1 * time.Second
-	domainCacheRefreshPageSize             = 200
+	domainCacheRefreshPageSize = 200
 
 	domainCachePersistenceTimeout = 3 * time.Second
 
