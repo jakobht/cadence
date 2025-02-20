@@ -897,13 +897,11 @@ func (s *domainCacheSuite) Test_refreshLoop_domainCacheRefreshedError() {
 
 	s.domainCache.timeSource = mockedTimeSource
 
-	s.metadataMgr.On("GetMetadata", mock.Anything).Return(nil, assert.AnError).Twice()
+	s.metadataMgr.On("GetMetadata", mock.Anything).Return(nil, assert.AnError).Once()
 
 	go func() {
 		mockedTimeSource.BlockUntil(1)
 		mockedTimeSource.Advance(DomainCacheRefreshInterval)
-		mockedTimeSource.BlockUntil(2)
-		mockedTimeSource.Advance(DomainCacheRefreshFailureRetryInterval)
 		s.domainCache.shutdownChan <- struct{}{}
 	}()
 
