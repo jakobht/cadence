@@ -22,19 +22,15 @@ package matching
 
 import (
 	"context"
-	"fmt"
 
 	"go.uber.org/yarpc"
 
 	"github.com/uber/cadence/client/sharddistributor"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/future"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/service/sharddistributor/constants"
 )
 
 var _ Client = (*clientImpl)(nil)
@@ -341,31 +337,5 @@ func (c *clientImpl) RefreshTaskListPartitionConfig(
 }
 
 func (c *clientImpl) getShardOwner(ctx context.Context, taskListName string) (string, error) {
-	sharddistributorMode := c.shardDistributionMode()
-	if sharddistributorMode == common.ShardModeShardDistributor && c.shardDistributorClient != nil {
-		request := &types.GetShardOwnerRequest{
-			ShardKey:  taskListName,
-			Namespace: constants.MatchingNamespace,
-		}
-
-		resp, err := c.shardDistributorClient.GetShardOwner(ctx, request)
-		if err != nil {
-			return "", fmt.Errorf("find shard in shard distributor: %w", err)
-		}
-
-		return resp.Owner, nil
-	}
-
-	if sharddistributorMode == common.ShardModeShardDistributor && c.shardDistributorClient == nil {
-		c.logger.Warn("ShardDistributor mode enabled, but shard distributor is not available, falling back to hash-ring")
-	} else if c.shardDistributionMode() != common.ShardModeHashRing {
-		c.logger.Warn("Unknown hash distribution mode, falling back to hash-ring", tag.Mode(c.shardDistributionMode()))
-	}
-
-	owner, err := c.peerResolver.FromTaskList(taskListName)
-	if err != nil {
-		return "", fmt.Errorf("find shard in hash ring: %w", err)
-	}
-
-	return owner, nil
+	return c.peerResolver.FromTaskList(taskListName)
 }

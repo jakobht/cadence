@@ -62,6 +62,7 @@ type (
 
 		MetricScope        tally.Scope
 		MembershipResolver membership.Resolver
+		HashRings          map[string]*membership.Ring
 		RPCFactory         rpc.Factory
 		PProfInitializer   common.PProfInitializer
 		PersistenceConfig  config.Persistence
@@ -95,5 +96,7 @@ type (
 		// NewPersistenceBeanFn can be used to override the default persistence bean creation in unit tests to avoid DB setup
 		NewPersistenceBeanFn  func(persistenceClient.Factory, *persistenceClient.Params, *service.Config) (persistenceClient.Bean, error)
 		DiagnosticsInvariants []invariant.Invariant
+
+		PeerProvider membership.PeerProvider
 	}
 )

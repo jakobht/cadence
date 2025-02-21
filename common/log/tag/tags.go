@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -1093,10 +1092,10 @@ func Namespace(name string) Tag {
 	return newStringTag("namespace", name)
 }
 
-func HashRingResult(host membership.HostInfo) Tag {
-	return newPredefinedDynamicTag("hashring-result", host)
+func HashRingResult(addr string) Tag {
+	return newStringTag("hashring-result", addr)
 }
 
-func ShardDistributorResult(host membership.HostInfo) Tag {
-	return newPredefinedDynamicTag("shard-distributor-result", host)
+func ShardDistributorResult(addr string) Tag {
+	return newStringTag("shard-distributor-result", addr)
 }
