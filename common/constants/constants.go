@@ -306,10 +306,5 @@ func (v FailoverType) String() string {
 }
 
 const (
-	ShardModeHashRing         = "hash-ring"
-	ShardModeShardDistributor = "shard-distributor"
-)
-
-const (
 	StringSizeOverheadBytes = 16
 )
