@@ -1,5 +1,5 @@
 matching.shardDistributionMode:
-  - value: "shard-distributor"
+  - value: "hash_ring-shadow-shard_distributor"
     constraints: {}
 frontend.enableClientVersionCheck:
 - value: true
