@@ -64,7 +64,7 @@ import (
 	"github.com/uber/cadence/service/history"
 	"github.com/uber/cadence/service/matching"
 	"github.com/uber/cadence/service/sharddistributor"
-	"github.com/uber/cadence/service/sharddistributor/constants"
+	sharddistributorconstants "github.com/uber/cadence/service/sharddistributor/constants"
 	"github.com/uber/cadence/service/worker"
 	diagnosticsInvariant "github.com/uber/cadence/service/worker/diagnostics/invariant"
 	"github.com/uber/cadence/service/worker/diagnostics/invariant/failure"
@@ -319,7 +319,7 @@ func (*server) newMethod(
 	for k, v := range hashRings {
 		if k == service.Matching {
 			wrappedRings[k] = membership.NewShardDistributorResolver(
-				constants.MatchingNamespace,
+				sharddistributorconstants.MatchingNamespace,
 				shardDistributorClient,
 				dc.GetStringProperty(dynamicconfig.MatchingShardDistributionMode),
 				v,
