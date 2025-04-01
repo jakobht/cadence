@@ -26,7 +26,6 @@ import (
 
 	"github.com/startreedata/pinot-client-go/pinot"
 	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
-	cadencelog "github.com/uber/cadence/common/log"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/compatibility"
 
@@ -49,6 +48,7 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig/configstore"
 	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/isolationgroup/isolationgroupapi"
+	cadencelog "github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
