@@ -80,6 +80,7 @@ func (s shardDistributorResolver) Stop() {
 }
 
 func (s shardDistributorResolver) LookupRaw(key string) (string, error) {
+	s.logger.Info("LookupRaw", tag.Value(s.shardDistributionMode()))
 	if s.shardDistributionMode() != "hash_ring" && s.client == nil {
 		// This will avoid panics when the shard distributor is not configured
 		s.logger.Warn("No shard distributor client, defaulting to hash ring", tag.Value(s.shardDistributionMode()))
@@ -95,6 +96,7 @@ func (s shardDistributorResolver) LookupRaw(key string) (string, error) {
 	case modeKeyHashRingShadowShardDistributor:
 		hashRingResult, err := s.ring.LookupRaw(key)
 		if err != nil {
+			s.logger.Warn("Failed to lookup in hash ring", tag.Error(err))
 			return "", err
 		}
 		shardDistributorResult, err := s.lookUpInShardDistributor(key)
@@ -104,6 +106,7 @@ func (s shardDistributorResolver) LookupRaw(key string) (string, error) {
 			s.logger.Warn("Shadow lookup mismatch", tag.HashRingResult(hashRingResult), tag.ShardDistributorResult(shardDistributorResult))
 		}
 
+		s.logger.Info("LookupRaw result", tag.HashRingResult(hashRingResult), tag.ShardDistributorResult(shardDistributorResult))
 		return hashRingResult, nil
 	case modeKeyShardDistributorShadowHashRing:
 		shardDistributorResult, err := s.lookUpInShardDistributor(key)
