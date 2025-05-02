@@ -340,6 +340,7 @@ func NewEngineWithShardContext(
 			shard.GetMetricsClient(),
 			replicationTaskFetcher,
 			replicationTaskExecutor,
+			shard.GetTimeSource(),
 		)
 		replicationTaskProcessors = append(replicationTaskProcessors, replicationTaskProcessor)
 	}

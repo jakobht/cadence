@@ -36,6 +36,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/constants"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -114,6 +115,7 @@ func NewTaskProcessor(
 	metricsClient metrics.Client,
 	taskFetcher TaskFetcher,
 	taskExecutor TaskExecutor,
+	clock clock.TimeSource,
 ) TaskProcessor {
 	shardID := shard.GetShardID()
 	sourceCluster := taskFetcher.GetSourceCluster()
@@ -130,7 +132,7 @@ func NewTaskProcessor(
 	noTaskBackoffPolicy := backoff.NewExponentialRetryPolicy(config.ReplicationTaskProcessorNoTaskRetryWait(shardID))
 	noTaskBackoffPolicy.SetBackoffCoefficient(1)
 	noTaskBackoffPolicy.SetExpirationInterval(backoff.NoInterval)
-	noTaskRetrier := backoff.NewRetrier(noTaskBackoffPolicy, backoff.SystemClock)
+	noTaskRetrier := backoff.NewRetrier(noTaskBackoffPolicy, clock)
 	return &taskProcessorImpl{
 		currentCluster:         shard.GetClusterMetadata().GetCurrentClusterName(),
 		sourceCluster:          sourceCluster,
