@@ -28,6 +28,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/goleak"
 	"go.uber.org/mock/gomock"
 
 	"github.com/uber/cadence/common/backoff"
@@ -37,6 +38,8 @@ import (
 )
 
 func TestNewCQLClientWithRetry(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
 	mockClient, mockSession, mockClock := setUpMocks(t)
 	cfg := configuration()
 	expectedCfg := expectedConfig()
@@ -70,17 +73,25 @@ func TestNewCQLClientWithRetry(t *testing.T) {
 }
 
 func TestNewCQLClientWithRetry_Fail(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
 	mockClient, mockSession, mockClock := setUpMocks(t)
 	cfg := configuration()
 	expectedCfg := expectedConfig()
 
-	mockClient.EXPECT().CreateSession(expectedCfg).Return(mockSession, assert.AnError).AnyTimes()
+	// There is a off by one error in the retrier implementation, so we need to add one more call
+	// if this is fixed, it's fine to remove the +1
+	mockClient.EXPECT().CreateSession(expectedCfg).Return(mockSession, assert.AnError).Times(ClientCreationRetryMaximumAttempts + 1)
 
 	go func() {
+		// We double the wait time each iteration
+		nextAdvance := 1 * time.Second
+
 		// Wait until someone sleeps, then advance the clock more than the backoff would be.
-		for {
+		for i := 0; i < ClientCreationRetryMaximumAttempts; i++ {
 			mockClock.BlockUntil(1)
-			mockClock.Advance(1 * time.Hour)
+			mockClock.Advance(nextAdvance)
+			nextAdvance *= 2
 		}
 	}()
 

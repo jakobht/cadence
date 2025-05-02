@@ -83,6 +83,13 @@ const (
 )
 
 const (
+	// Retry policy constants
+	ClientCreationRetryInitialInterval = time.Second
+	ClientCreationRetryMaximumInterval = 10 * time.Second
+	ClientCreationRetryMaximumAttempts = 3
+)
+
+const (
 	readSchemaVersionCQL        = `SELECT curr_version from schema_version where keyspace_name=?`
 	listTablesCQL               = `SELECT table_name from system_schema.tables where keyspace_name=?`
 	listTypesCQL                = `SELECT type_name from system_schema.types where keyspace_name=?`
@@ -125,7 +132,7 @@ func NewCQLClientWithRetry(cfg *CQLClientConfig, expectedConsistency gocql.Consi
 	cqlClient.cfg = cfg
 	cqlClient.nReplicas = cfg.NumReplicas
 
-	op := func() error {
+	err := retrier.Do(context.Background(), func() error {
 		var err error
 		cqlClient.session, err = cassClient.CreateSession(gocql.ClusterConfig{
 			Hosts:                 cfg.Hosts,
@@ -141,8 +148,7 @@ func NewCQLClientWithRetry(cfg *CQLClientConfig, expectedConsistency gocql.Consi
 			Consistency:           expectedConsistency,
 		})
 		return err
-	}
-	err := retrier.Do(context.Background(), op)
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -304,9 +310,9 @@ func (client *CqlClientImpl) DropAllTablesTypes() error {
 }
 
 func createClientCreationRetrier() *backoff.ThrottleRetry {
-	policy := backoff.NewExponentialRetryPolicy(time.Second)
-	policy.SetMaximumInterval(10 * time.Second)
-	policy.SetMaximumAttempts(3)
+	policy := backoff.NewExponentialRetryPolicy(ClientCreationRetryInitialInterval)
+	policy.SetMaximumInterval(ClientCreationRetryMaximumInterval)
+	policy.SetMaximumAttempts(ClientCreationRetryMaximumAttempts)
 
 	retrier := backoff.NewThrottleRetry(
 		backoff.WithRetryPolicy(policy),
