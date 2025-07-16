@@ -870,6 +870,9 @@ const (
 	// ShardDistributorClientGetShardOwnerScope tracks GetShardOwner calls made by service to shard distributor
 	ShardDistributorClientGetShardOwnerScope
 
+	// ShardDistributorExecutorClientHeartbeatScope tracks Heartbeat calls made by executor to shard distributor
+	ShardDistributorExecutorClientHeartbeatScope
+
 	// LoadBalancerScope is the metrics scope for Round Robin load balancer
 	LoadBalancerScope
 
@@ -1810,7 +1813,8 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		P2PRPCPeerChooserScope:       {operation: "P2PRPCPeerChooser"},
 		PartitionConfigProviderScope: {operation: "PartitionConfigProvider"},
 
-		ShardDistributorClientGetShardOwnerScope: {operation: "ShardDistributorClientGetShardOwner"},
+		ShardDistributorClientGetShardOwnerScope:     {operation: "ShardDistributorClientGetShardOwner"},
+		ShardDistributorExecutorClientHeartbeatScope: {operation: "ShardDistributorExecutorHeartbeat"},
 
 		LoadBalancerScope: {operation: "RRLoadBalancer"},
 	},
