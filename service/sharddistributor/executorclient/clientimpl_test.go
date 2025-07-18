@@ -13,6 +13,7 @@ import (
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/sharddistributor/executorclient/syncgeneric"
 )
 
 func TestHeartBeartLoop(t *testing.T) {
@@ -63,7 +64,7 @@ func TestHeartBeartLoop(t *testing.T) {
 		namespace:              "test-namespace",
 		stopC:                  make(chan struct{}),
 		heartBeatInterval:      10 * time.Second,
-		shardProcessors:        make(map[string]*MockShardProcessor),
+		managedProcessors:      syncgeneric.Map[string, *managedProcessor[*MockShardProcessor]]{},
 		executorID:             "test-executor-id",
 		timeSource:             mockTimeSource,
 	}
@@ -79,8 +80,6 @@ func TestHeartBeartLoop(t *testing.T) {
 	mockTimeSource.BlockUntil(1)
 
 	// Assert that the two shards are assigned to the executor
-	assert.Equal(t, 2, len(executor.shardProcessors))
-
 	processor1, err := executor.GetShardProcess("test-shard-id1")
 	assert.NoError(t, err)
 	assert.Equal(t, mockShardProcessor1, processor1)
@@ -128,11 +127,16 @@ func TestHeartbeat(t *testing.T) {
 		shardDistributorClient: shardDistributorClient,
 		namespace:              "test-namespace",
 		executorID:             "test-executor-id",
-		shardProcessors: map[string]*MockShardProcessor{
-			"test-shard-id1": shardProcessorMock1,
-			"test-shard-id2": shardProcessorMock2,
-		},
 	}
+
+	executor.managedProcessors.Store("test-shard-id1", &managedProcessor[*MockShardProcessor]{
+		processor: shardProcessorMock1,
+		state:     processorStateStarted,
+	})
+	executor.managedProcessors.Store("test-shard-id2", &managedProcessor[*MockShardProcessor]{
+		processor: shardProcessorMock2,
+		state:     processorStateStarted,
+	})
 
 	// Do the call to heartbeat
 	shardAssignments, err := executor.heartbeat(context.Background())
@@ -160,11 +164,16 @@ func TestHeartBeartLoop_ShardAssignmentChange(t *testing.T) {
 	executor := &executorImpl[*MockShardProcessor]{
 		logger:                log.NewNoop(),
 		shardProcessorFactory: shardProcessorFactory,
-		shardProcessors: map[string]*MockShardProcessor{
-			"test-shard-id1": shardProcessorMock1,
-			"test-shard-id2": shardProcessorMock2,
-		},
 	}
+
+	executor.managedProcessors.Store("test-shard-id1", &managedProcessor[*MockShardProcessor]{
+		processor: shardProcessorMock1,
+		state:     processorStateStarted,
+	})
+	executor.managedProcessors.Store("test-shard-id2", &managedProcessor[*MockShardProcessor]{
+		processor: shardProcessorMock2,
+		state:     processorStateStarted,
+	})
 
 	// We expect to get a new assignment with shards 2 and 3 assigned to it
 	newAssignment := map[string]*types.ShardAssignment{
@@ -178,7 +187,17 @@ func TestHeartBeartLoop_ShardAssignmentChange(t *testing.T) {
 
 	// Update the shard assignment
 	executor.updateShardAssignment(context.Background(), newAssignment)
+	time.Sleep(10 * time.Millisecond) // Force the updateShardAssignment goroutines to run
 
-	// Assert that we now have 2 shards in the assignment
-	assert.Equal(t, 2, len(executor.shardProcessors))
+	// Assert that we now have the 2 shards in the assignment
+	_, err := executor.GetShardProcess("test-shard-id1")
+	assert.Error(t, err)
+
+	processor2, err := executor.GetShardProcess("test-shard-id2")
+	assert.NoError(t, err)
+	assert.Equal(t, shardProcessorMock2, processor2)
+
+	processor3, err := executor.GetShardProcess("test-shard-id3")
+	assert.NoError(t, err)
+	assert.Equal(t, shardProcessorMock3, processor3)
 }
