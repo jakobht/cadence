@@ -4,43 +4,37 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxtest"
-	"go.uber.org/mock/gomock"
-	"go.uber.org/yarpc"
+	uber_gomock "go.uber.org/mock/gomock"
+	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/yarpctest"
 
+	sharddistributorv1 "github.com/uber/cadence/.gen/proto/sharddistributor/v1"
 	"github.com/uber/cadence/common/clock"
-	"github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/dynamicconfig/dynamicproperties"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/service"
 )
 
 func TestModule(t *testing.T) {
 	// Create mocks
 	ctrl := gomock.NewController(t)
+	uberCtrl := uber_gomock.NewController(t)
 	mockLogger := log.NewNoop()
 
-	dcMock := dynamicconfig.NewMockClient(ctrl)
-	// We call this when creating the yarpc handler for the executor interface
-	dcMock.EXPECT().GetFloatValue(dynamicproperties.ShardDistributorExecutorErrorInjectionRate, gomock.Any()).Return(0.2, nil)
-	mockDCCollection := dynamicconfig.NewCollection(dcMock, mockLogger)
-
 	mockMetricsClient := metrics.NewNoopMetricsClient()
-	mockShardProcessorFactory := NewMockShardProcessorFactory[*MockShardProcessor](ctrl)
+	mockShardProcessorFactory := NewMockShardProcessorFactory[*MockShardProcessor](uberCtrl)
 
-	// Create simple dispatcher
+	// Create shard distributor yarpc client
 	outbound := grpc.NewTransport().NewOutbound(yarpctest.NewFakePeerList())
 
-	testDispatcher := yarpc.NewDispatcher(yarpc.Config{
-		Name: "test-executor",
-		Outbounds: yarpc.Outbounds{service.ShardDistributor: {
-			Unary: outbound,
-		}},
-	})
+	mockClientConfig := transporttest.NewMockClientConfig(ctrl)
+	mockClientConfig.EXPECT().Caller().Return("test-executor")
+	mockClientConfig.EXPECT().Service().Return("shard-distributor")
+	mockClientConfig.EXPECT().GetUnaryOutbound().Return(outbound)
+	yarpcClient := sharddistributorv1.NewShardDistributorExecutorAPIYARPCClient(mockClientConfig)
 
 	// Example config
 	config := Config{
@@ -51,7 +45,7 @@ func TestModule(t *testing.T) {
 	// Create a test app with the library, check that it starts and stops
 	fxtest.New(t,
 		fx.Supply(
-			mockDCCollection,
+			fx.Annotate(yarpcClient, fx.As(new(sharddistributorv1.ShardDistributorExecutorAPIYARPCClient))),
 			fx.Annotate(mockMetricsClient, fx.As(new(metrics.Client))),
 			fx.Annotate(mockLogger, fx.As(new(log.Logger))),
 			fx.Annotate(mockShardProcessorFactory, fx.As(new(ShardProcessorFactory[*MockShardProcessor]))),
@@ -59,8 +53,5 @@ func TestModule(t *testing.T) {
 			config,
 		),
 		Module[*MockShardProcessor](),
-		fx.Provide(func() *yarpc.Dispatcher {
-			return testDispatcher
-		}),
 	).RequireStart().RequireStop()
 }

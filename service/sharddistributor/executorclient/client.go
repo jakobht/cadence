@@ -6,21 +6,15 @@ import (
 
 	"github.com/google/uuid"
 	"go.uber.org/fx"
-	"go.uber.org/yarpc"
 
 	sharddistributorv1 "github.com/uber/cadence/.gen/proto/sharddistributor/v1"
 	"github.com/uber/cadence/client/sharddistributorexecutor"
-	"github.com/uber/cadence/client/wrappers/errorinjectors"
 	"github.com/uber/cadence/client/wrappers/grpc"
 	"github.com/uber/cadence/client/wrappers/metered"
 	timeoutwrapper "github.com/uber/cadence/client/wrappers/timeout"
 	"github.com/uber/cadence/common/clock"
-	"github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/dynamicconfig/dynamicproperties"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/rpc"
-	"github.com/uber/cadence/common/service"
 )
 
 //go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination interface_mock.go . ShardProcessorFactory,ShardProcessor,Executor
@@ -45,8 +39,7 @@ type Executor[SP ShardProcessor] interface {
 type Params[SP ShardProcessor] struct {
 	fx.In
 
-	Dispatcher            *yarpc.Dispatcher
-	DC                    *dynamicconfig.Collection
+	YarpcClient           sharddistributorv1.ShardDistributorExecutorAPIYARPCClient
 	MetricsClient         metrics.Client
 	Logger                log.Logger
 	ShardProcessorFactory ShardProcessorFactory[SP]
@@ -55,7 +48,7 @@ type Params[SP ShardProcessor] struct {
 }
 
 func NewExecutor[SP ShardProcessor](params Params[SP]) (Executor[SP], error) {
-	shardDistributorClient, err := createShardDistributorExecutorClient(params.Dispatcher, params.DC, params.MetricsClient, params.Logger)
+	shardDistributorClient, err := createShardDistributorExecutorClient(params.YarpcClient, params.MetricsClient, params.Logger)
 	if err != nil {
 		return nil, fmt.Errorf("create shard distributor executor client: %w", err)
 	}
@@ -75,23 +68,11 @@ func NewExecutor[SP ShardProcessor](params Params[SP]) (Executor[SP], error) {
 	}, nil
 }
 
-func createShardDistributorExecutorClient(dispatcher *yarpc.Dispatcher, dc *dynamicconfig.Collection, metricsClient metrics.Client, logger log.Logger) (sharddistributorexecutor.Client, error) {
-	shardDistributorClientConfig, ok := dispatcher.OutboundConfig(service.ShardDistributor)
-	if !ok {
-		return nil, fmt.Errorf("no outbound config for shard distributor")
-	}
-	if !rpc.IsGRPCOutbound(shardDistributorClientConfig) {
-		return nil, fmt.Errorf("shard distributor client does not support non-GRPC outbound")
-	}
-
-	shardDistributorExecutorClient := grpc.NewShardDistributorExecutorClient(
-		sharddistributorv1.NewShardDistributorExecutorAPIYARPCClient(shardDistributorClientConfig),
-	)
+func createShardDistributorExecutorClient(yarpcClient sharddistributorv1.ShardDistributorExecutorAPIYARPCClient, metricsClient metrics.Client, logger log.Logger) (sharddistributorexecutor.Client, error) {
+	shardDistributorExecutorClient := grpc.NewShardDistributorExecutorClient(yarpcClient)
 
 	shardDistributorExecutorClient = timeoutwrapper.NewShardDistributorExecutorClient(shardDistributorExecutorClient, timeoutwrapper.ShardDistributorExecutorDefaultTimeout)
-	if errorRate := dc.GetFloat64Property(dynamicproperties.ShardDistributorExecutorErrorInjectionRate)(); errorRate != 0 {
-		shardDistributorExecutorClient = errorinjectors.NewShardDistributorExecutorClient(shardDistributorExecutorClient, errorRate, logger)
-	}
+
 	if metricsClient != nil {
 		shardDistributorExecutorClient = metered.NewShardDistributorExecutorClient(shardDistributorExecutorClient, metricsClient)
 	}
