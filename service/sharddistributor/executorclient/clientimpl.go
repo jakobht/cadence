@@ -37,14 +37,17 @@ type executorImpl[SP ShardProcessor] struct {
 	managedProcessors      syncgeneric.Map[string, *managedProcessor[SP]]
 	executorID             string
 	timeSource             clock.TimeSource
+	processLoopWG          sync.WaitGroup
 }
 
 func (e *executorImpl[SP]) Start(ctx context.Context) {
+	e.processLoopWG.Add(1)
 	go e.heartbeatloop(ctx)
 }
 
 func (e *executorImpl[SP]) Stop() {
 	close(e.stopC)
+	e.processLoopWG.Wait()
 }
 
 func (e *executorImpl[SP]) GetShardProcess(shardID string) (SP, error) {
@@ -57,12 +60,17 @@ func (e *executorImpl[SP]) GetShardProcess(shardID string) (SP, error) {
 }
 
 func (e *executorImpl[SP]) heartbeatloop(ctx context.Context) {
+	defer e.processLoopWG.Done()
+
 	heartBeatTicker := e.timeSource.NewTicker(e.heartBeatInterval)
 	defer heartBeatTicker.Stop()
 
 	for {
 		select {
 		case <-ctx.Done():
+			e.logger.Info("shard distributorexecutor context done, stopping")
+			e.stopShardProcessors()
+			return
 		case <-e.stopC:
 			e.logger.Info("shard distributorexecutor stopped")
 			e.stopShardProcessors()
