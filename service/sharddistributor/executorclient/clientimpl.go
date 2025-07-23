@@ -81,7 +81,7 @@ func (e *executorImpl[SP]) heartbeatloop(ctx context.Context) {
 				e.logger.Error("failed to heartbeat", tag.Error(err))
 				continue // TODO: should we stop the executor, and drop all the shards?
 			}
-			e.updateShardAssignment(ctx, shardAssignment)
+			go e.updateShardAssignment(ctx, shardAssignment)
 		}
 	}
 }
@@ -117,10 +117,14 @@ func (e *executorImpl[SP]) heartbeat(ctx context.Context) (shardAssignments map[
 }
 
 func (e *executorImpl[SP]) updateShardAssignment(ctx context.Context, shardAssignments map[string]*types.ShardAssignment) {
+	wg := sync.WaitGroup{}
+
 	// Stop shard processing for shards not assigned to this executor
 	e.managedProcessors.Range(func(shardID string, managedProcessor *managedProcessor[SP]) bool {
 		if assignment, ok := shardAssignments[shardID]; !ok || assignment.Status != types.AssignmentStatusREADY {
+			wg.Add(1)
 			go func() {
+				defer wg.Done()
 				managedProcessor.state = processorStateStopping
 				managedProcessor.processor.Stop()
 				e.managedProcessors.Delete(shardID)
@@ -133,7 +137,9 @@ func (e *executorImpl[SP]) updateShardAssignment(ctx context.Context, shardAssig
 	for shardID, assignment := range shardAssignments {
 		if assignment.Status == types.AssignmentStatusREADY {
 			if _, ok := e.managedProcessors.Load(shardID); !ok {
+				wg.Add(1)
 				go func() {
+					defer wg.Done()
 					processor, err := e.shardProcessorFactory.NewShardProcessor(shardID)
 					if err != nil {
 						e.logger.Error("failed to create shard processor", tag.Error(err))
@@ -148,6 +154,8 @@ func (e *executorImpl[SP]) updateShardAssignment(ctx context.Context, shardAssig
 			}
 		}
 	}
+
+	wg.Wait()
 }
 
 func (e *executorImpl[SP]) stopShardProcessors() {
