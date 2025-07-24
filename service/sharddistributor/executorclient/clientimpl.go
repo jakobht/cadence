@@ -36,6 +36,16 @@ func (mp *managedProcessor[SP]) getState() processorState {
 	return processorState(mp.state.Load())
 }
 
+func newManagedProcessor[SP ShardProcessor](processor SP, state processorState) *managedProcessor[SP] {
+	managed := &managedProcessor[SP]{
+		processor: processor,
+		state:     atomic.Int32{},
+	}
+
+	managed.setState(state)
+	return managed
+}
+
 type executorImpl[SP ShardProcessor] struct {
 	logger                 log.Logger
 	shardDistributorClient sharddistributorexecutor.Client
@@ -162,10 +172,7 @@ func (e *executorImpl[SP]) updateShardAssignment(ctx context.Context, shardAssig
 						e.logger.Error("failed to create shard processor", tag.Error(err))
 						return
 					}
-					managedProcessor := &managedProcessor[SP]{
-						processor: processor,
-					}
-					managedProcessor.setState(processorStateStarting)
+					managedProcessor := newManagedProcessor(processor, processorStateStarting)
 					e.managedProcessors.Store(shardID, managedProcessor)
 
 					processor.Start(ctx)
