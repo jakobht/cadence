@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/uber/cadence/client/sharddistributorexecutor"
@@ -14,7 +15,7 @@ import (
 	"github.com/uber/cadence/service/sharddistributor/executorclient/syncgeneric"
 )
 
-type processorState int
+type processorState int32
 
 const (
 	processorStateStarting processorState = iota
@@ -24,7 +25,15 @@ const (
 
 type managedProcessor[SP ShardProcessor] struct {
 	processor SP
-	state     processorState
+	state     atomic.Int32
+}
+
+func (mp *managedProcessor[SP]) setState(state processorState) {
+	mp.state.Store(int32(state))
+}
+
+func (mp *managedProcessor[SP]) getState() processorState {
+	return processorState(mp.state.Load())
 }
 
 type executorImpl[SP ShardProcessor] struct {
@@ -38,6 +47,7 @@ type executorImpl[SP ShardProcessor] struct {
 	executorID             string
 	timeSource             clock.TimeSource
 	processLoopWG          sync.WaitGroup
+	assignmentMutex        sync.Mutex
 }
 
 func (e *executorImpl[SP]) Start(ctx context.Context) {
@@ -81,7 +91,14 @@ func (e *executorImpl[SP]) heartbeatloop(ctx context.Context) {
 				e.logger.Error("failed to heartbeat", tag.Error(err))
 				continue // TODO: should we stop the executor, and drop all the shards?
 			}
-			go e.updateShardAssignment(ctx, shardAssignment)
+			if !e.assignmentMutex.TryLock() {
+				e.logger.Warn("already doing shard assignment, will skip this assignment")
+				continue
+			}
+			go func() {
+				defer e.assignmentMutex.Unlock()
+				e.updateShardAssignment(ctx, shardAssignment)
+			}()
 		}
 	}
 }
@@ -90,7 +107,7 @@ func (e *executorImpl[SP]) heartbeat(ctx context.Context) (shardAssignments map[
 	// Fill in the shard status reports
 	shardStatusReports := make(map[string]*types.ShardStatusReport)
 	e.managedProcessors.Range(func(shardID string, managedProcessor *managedProcessor[SP]) bool {
-		if managedProcessor.state == processorStateStarted {
+		if managedProcessor.getState() == processorStateStarted {
 			shardStatusReports[shardID] = &types.ShardStatusReport{
 				ShardLoad: managedProcessor.processor.GetShardLoad(),
 				Status:    types.ShardStatusREADY,
@@ -125,7 +142,7 @@ func (e *executorImpl[SP]) updateShardAssignment(ctx context.Context, shardAssig
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				managedProcessor.state = processorStateStopping
+				managedProcessor.setState(processorStateStopping)
 				managedProcessor.processor.Stop()
 				e.managedProcessors.Delete(shardID)
 			}()
@@ -145,11 +162,15 @@ func (e *executorImpl[SP]) updateShardAssignment(ctx context.Context, shardAssig
 						e.logger.Error("failed to create shard processor", tag.Error(err))
 						return
 					}
-					processor.Start(ctx)
-					e.managedProcessors.Store(shardID, &managedProcessor[SP]{
+					managedProcessor := &managedProcessor[SP]{
 						processor: processor,
-						state:     processorStateStarted,
-					})
+					}
+					managedProcessor.setState(processorStateStarting)
+					e.managedProcessors.Store(shardID, managedProcessor)
+
+					processor.Start(ctx)
+
+					managedProcessor.setState(processorStateStarted)
 				}()
 			}
 		}
@@ -163,7 +184,7 @@ func (e *executorImpl[SP]) stopShardProcessors() {
 
 	e.managedProcessors.Range(func(shardID string, managedProcessor *managedProcessor[SP]) bool {
 		// If the processor is already stopping, skip it
-		if managedProcessor.state == processorStateStopping {
+		if managedProcessor.getState() == processorStateStopping {
 			return true
 		}
 
@@ -171,7 +192,7 @@ func (e *executorImpl[SP]) stopShardProcessors() {
 		go func() {
 			defer wg.Done()
 
-			managedProcessor.state = processorStateStopping
+			managedProcessor.setState(processorStateStopping)
 			managedProcessor.processor.Stop()
 			e.managedProcessors.Delete(shardID)
 		}()
