@@ -62,7 +62,10 @@ type executorImpl[SP ShardProcessor] struct {
 
 func (e *executorImpl[SP]) Start(ctx context.Context) {
 	e.processLoopWG.Add(1)
-	go e.heartbeatloop(ctx)
+	go func() {
+		defer e.processLoopWG.Done()
+		e.heartbeatloop(ctx)
+	}()
 }
 
 func (e *executorImpl[SP]) Stop() {
@@ -80,8 +83,6 @@ func (e *executorImpl[SP]) GetShardProcess(shardID string) (SP, error) {
 }
 
 func (e *executorImpl[SP]) heartbeatloop(ctx context.Context) {
-	defer e.processLoopWG.Done()
-
 	heartBeatTicker := e.timeSource.NewTicker(e.heartBeatInterval)
 	defer heartBeatTicker.Stop()
 
