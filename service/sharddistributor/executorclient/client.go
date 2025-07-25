@@ -56,6 +56,8 @@ func NewExecutor[SP ShardProcessor](params Params[SP]) (Executor[SP], error) {
 	// TODO: get executor ID from environment
 	executorID := uuid.New().String()
 
+	metricsScope := params.MetricsClient.Scope(metrics.ShardDistributorExecutorScope).Tagged(metrics.NamespaceTag(params.Config.Namespace))
+
 	return &executorImpl[SP]{
 		logger:                 params.Logger,
 		shardDistributorClient: shardDistributorClient,
@@ -65,6 +67,7 @@ func NewExecutor[SP ShardProcessor](params Params[SP]) (Executor[SP], error) {
 		executorID:             executorID,
 		timeSource:             params.TimeSource,
 		stopC:                  make(chan struct{}),
+		metrics:                metricsScope,
 	}, nil
 }
 
