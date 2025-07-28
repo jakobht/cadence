@@ -12,6 +12,7 @@ import (
 	"github.com/uber/cadence/client/sharddistributorexecutor"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/sharddistributor/executorclient/syncgeneric"
 )
@@ -59,6 +60,7 @@ func TestHeartBeartLoop(t *testing.T) {
 	// Create the executor
 	executor := &executorImpl[*MockShardProcessor]{
 		logger:                 log.NewNoop(),
+		metrics:                metrics.NewNoopMetricsClient().Scope(metrics.ShardDistributorExecutorScope),
 		shardDistributorClient: mockShardDistributorClient,
 		shardProcessorFactory:  mockShardProcessorFactory,
 		namespace:              "test-namespace",
@@ -127,6 +129,7 @@ func TestHeartbeat(t *testing.T) {
 		shardDistributorClient: shardDistributorClient,
 		namespace:              "test-namespace",
 		executorID:             "test-executor-id",
+		metrics:                metrics.NewNoopMetricsClient().Scope(metrics.ShardDistributorExecutorScope),
 	}
 
 	executor.managedProcessors.Store("test-shard-id1", newManagedProcessor(shardProcessorMock1, processorStateStarted))
@@ -158,6 +161,7 @@ func TestHeartBeartLoop_ShardAssignmentChange(t *testing.T) {
 	executor := &executorImpl[*MockShardProcessor]{
 		logger:                log.NewNoop(),
 		shardProcessorFactory: shardProcessorFactory,
+		metrics:               metrics.NewNoopMetricsClient().Scope(metrics.ShardDistributorExecutorScope),
 	}
 
 	executor.managedProcessors.Store("test-shard-id1", newManagedProcessor(shardProcessorMock1, processorStateStarted))
