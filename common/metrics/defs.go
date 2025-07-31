@@ -2870,13 +2870,6 @@ const (
 	ShardDistributorAssignLoopSuccess
 	ShardDistributorAssignLoopFail
 
-	ShardDistributorExecutorAssignLoopLatency
-	ShardDistributorExecutorOwnedShards
-	ShardDistributorExecutorShardsStarted
-	ShardDistributorExecutorShardsStopped
-	ShardDistributorExecutorAssignmentSkipped
-	ShardDistributorExecutorProcessorCreationFailures
-
 	ShardDistributorStoreExecutorNotFound
 	ShardDistributorStoreFailuresPerNamespace
 	ShardDistributorStoreRequestsPerNamespace
@@ -3629,13 +3622,6 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ShardDistributorAssignLoopAttempts:              {metricName: "shard_distrubutor_shard_assign_attempt", metricType: Counter},
 		ShardDistributorAssignLoopSuccess:               {metricName: "shard_distrubutor_shard_assign_success", metricType: Counter},
 		ShardDistributorAssignLoopFail:                  {metricName: "shard_distrubutor_shard_assign_fail", metricType: Counter},
-
-		ShardDistributorExecutorAssignLoopLatency:         {metricName: "shard_distributor_executor_assign_loop_latency", metricType: Histogram, buckets: ShardDistributorExecutorAssignLoopLatencyBuckets},
-		ShardDistributorExecutorOwnedShards:               {metricName: "shard_distributor_executor_owned_shards", metricType: Gauge},
-		ShardDistributorExecutorShardsStarted:             {metricName: "shard_distributor_executor_shards_started", metricType: Counter},
-		ShardDistributorExecutorShardsStopped:             {metricName: "shard_distributor_executor_shards_stopped", metricType: Counter},
-		ShardDistributorExecutorAssignmentSkipped:         {metricName: "shard_distributor_executor_assignment_skipped", metricType: Counter},
-		ShardDistributorExecutorProcessorCreationFailures: {metricName: "shard_distributor_executor_processor_creation_failures", metricType: Counter},
 
 		ShardDistributorStoreExecutorNotFound:             {metricName: "shard_distributor_store_executor_not_found", metricType: Counter},
 		ShardDistributorStoreFailuresPerNamespace:         {metricName: "shard_distributor_store_failures_per_namespace", metricType: Counter},
