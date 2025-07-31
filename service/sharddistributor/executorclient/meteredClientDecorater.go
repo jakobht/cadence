@@ -3,9 +3,9 @@ package executorclient
 import (
 	"context"
 
+	"github.com/uber-go/tally"
 	"go.uber.org/yarpc"
 
-	"github.com/uber-go/tally"
 	"github.com/uber/cadence/client/sharddistributorexecutor"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
