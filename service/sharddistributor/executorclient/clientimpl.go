@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber-go/tally"
 	"github.com/uber/cadence/client/sharddistributorexecutor"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
@@ -59,7 +60,7 @@ type executorImpl[SP ShardProcessor] struct {
 	timeSource             clock.TimeSource
 	processLoopWG          sync.WaitGroup
 	assignmentMutex        sync.Mutex
-	metrics                metrics.Scope
+	metrics                tally.Scope
 }
 
 func (e *executorImpl[SP]) Start(ctx context.Context) {
@@ -106,14 +107,16 @@ func (e *executorImpl[SP]) heartbeatloop(ctx context.Context) {
 			}
 			if !e.assignmentMutex.TryLock() {
 				e.logger.Warn("already doing shard assignment, will skip this assignment")
-				e.metrics.IncCounter(metrics.ShardDistributorExecutorAssignmentSkipped)
+				e.metrics.Counter("shard_distributor_executor_assignment_skipped").Inc(1)
 				continue
 			}
 			go func() {
 				defer e.assignmentMutex.Unlock()
 
 				startTime := e.timeSource.Now()
-				defer e.metrics.RecordHistogramDuration(metrics.ShardDistributorExecutorAssignLoopLatency, e.timeSource.Since(startTime))
+				defer e.metrics.
+					Histogram("shard_distributor_executor_assign_loop_latency", metrics.ShardDistributorExecutorAssignLoopLatencyBuckets).
+					RecordDuration(e.timeSource.Since(startTime))
 
 				e.updateShardAssignment(ctx, shardAssignment)
 			}()
@@ -134,7 +137,7 @@ func (e *executorImpl[SP]) heartbeat(ctx context.Context) (shardAssignments map[
 		return true
 	})
 
-	e.metrics.UpdateGauge(metrics.ShardDistributorExecutorOwnedShards, float64(len(shardStatusReports)))
+	e.metrics.Gauge("shard_distributor_executor_owned_shards").Update(float64(len(shardStatusReports)))
 
 	// Create the request
 	request := &types.ExecutorHeartbeatRequest{
@@ -159,7 +162,7 @@ func (e *executorImpl[SP]) updateShardAssignment(ctx context.Context, shardAssig
 	// Stop shard processing for shards not assigned to this executor
 	e.managedProcessors.Range(func(shardID string, managedProcessor *managedProcessor[SP]) bool {
 		if assignment, ok := shardAssignments[shardID]; !ok || assignment.Status != types.AssignmentStatusREADY {
-			e.metrics.IncCounter(metrics.ShardDistributorExecutorShardsStopped)
+			e.metrics.Counter("shard_distributor_executor_shards_stopped").Inc(1)
 
 			wg.Add(1)
 			go func() {
@@ -176,7 +179,7 @@ func (e *executorImpl[SP]) updateShardAssignment(ctx context.Context, shardAssig
 	for shardID, assignment := range shardAssignments {
 		if assignment.Status == types.AssignmentStatusREADY {
 			if _, ok := e.managedProcessors.Load(shardID); !ok {
-				e.metrics.IncCounter(metrics.ShardDistributorExecutorShardsStarted)
+				e.metrics.Counter("shard_distributor_executor_shards_started").Inc(1)
 
 				wg.Add(1)
 				go func() {
@@ -184,7 +187,7 @@ func (e *executorImpl[SP]) updateShardAssignment(ctx context.Context, shardAssig
 					processor, err := e.shardProcessorFactory.NewShardProcessor(shardID)
 					if err != nil {
 						e.logger.Error("failed to create shard processor", tag.Error(err))
-						e.metrics.IncCounter(metrics.ShardDistributorExecutorProcessorCreationFailures)
+						e.metrics.Counter("shard_distributor_executor_processor_creation_failures").Inc(1)
 						return
 					}
 					managedProcessor := newManagedProcessor(processor, processorStateStarting)

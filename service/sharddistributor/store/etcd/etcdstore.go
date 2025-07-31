@@ -253,6 +253,7 @@ func (s *Store) Subscribe(ctx context.Context, namespace string) (<-chan int64, 
 		watchChan := s.client.Watch(ctx, watchPrefix, clientv3.WithPrefix())
 		for watchResp := range watchChan {
 			if err := watchResp.Err(); err != nil {
+				// TODO: log error
 				return
 			}
 			isSignificantChange := false
