@@ -3690,8 +3690,6 @@ var (
 		60 * time.Second,
 	})
 
-	ShardDistributorExecutorAssignLoopLatencyBuckets = PersistenceLatencyBuckets
-
 	ShardDistributorExecutorStoreLatencyBuckets = tally.DurationBuckets([]time.Duration{
 		0,
 		5 * time.Millisecond,

@@ -9,6 +9,7 @@ import (
 	"github.com/uber/cadence/client/sharddistributorexecutor"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/sharddistributor/executorclient/metricsconstants"
 )
 
 // TODO: consider using gowrap to generate this code
@@ -28,17 +29,17 @@ func NewMeteredShardDistributorExecutorClient(client sharddistributorexecutor.Cl
 func (c *meteredShardDistributorExecutorClient) Heartbeat(ctx context.Context, ep1 *types.ExecutorHeartbeatRequest, p1 ...yarpc.CallOption) (ep2 *types.ExecutorHeartbeatResponse, err error) {
 	var scope tally.Scope
 	scope = c.metricsScope.Tagged(map[string]string{
-		metrics.OperationTagName: "ShardDistributorExecutorHeartbeat",
+		metrics.OperationTagName: metricsconstants.ShardDistributorExecutorHeartbeatOperationTagName,
 	})
 
-	scope.Counter("shard_distributor_executor_client_requests").Inc(1)
+	scope.Counter(metricsconstants.ShardDistributorExecutorClientRequests).Inc(1)
 
-	sw := scope.Timer("shard_distributor_executor_client_latency").Start()
+	sw := scope.Timer(metricsconstants.ShardDistributorExecutorClientLatency).Start()
 	ep2, err = c.client.Heartbeat(ctx, ep1, p1...)
 	sw.Stop()
 
 	if err != nil {
-		scope.Counter("shard_distributor_executor_client_failures").Inc(1)
+		scope.Counter(metricsconstants.ShardDistributorExecutorClientFailures).Inc(1)
 	}
 	return ep2, err
 }

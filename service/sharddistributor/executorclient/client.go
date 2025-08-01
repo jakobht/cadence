@@ -15,6 +15,7 @@ import (
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/service/sharddistributor/executorclient/metricsconstants"
 )
 
 //go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination interface_mock.go . ShardProcessorFactory,ShardProcessor,Executor
@@ -57,7 +58,7 @@ func NewExecutor[SP ShardProcessor](params Params[SP]) (Executor[SP], error) {
 	executorID := uuid.New().String()
 
 	metricsScope := params.MetricsScope.Tagged(map[string]string{
-		metrics.OperationTagName: "ShardDistributorExecutor",
+		metrics.OperationTagName: metricsconstants.ShardDistributorExecutorOperationTagName,
 		"namespace":              params.Config.Namespace,
 	})
 
