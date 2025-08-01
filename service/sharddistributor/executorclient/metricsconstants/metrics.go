@@ -1,8 +1,10 @@
 package metricsconstants
 
-import "time"
+import (
+	"time"
 
-import "github.com/uber-go/tally"
+	"github.com/uber-go/tally"
+)
 
 const (
 	// Operation tag names for ShardDistributorExecutor metrics
