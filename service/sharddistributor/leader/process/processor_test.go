@@ -3,6 +3,7 @@ package process
 import (
 	"context"
 	"errors"
+	"slices"
 	"sync"
 	"testing"
 	"time"
@@ -465,8 +466,19 @@ func TestAssignShardsToEmptyExecutors(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			actualDistributionChanged := assignShardsToEmptyExecutors(c.inputAssignments)
+
+			//Sort the assignments, so the test is stable
+			sortAssignments(c.expectedAssignments)
+			sortAssignments(c.inputAssignments)
+
 			assert.Equal(t, c.expectedAssignments, c.inputAssignments)
 			assert.Equal(t, c.expectedDistributonChanged, actualDistributionChanged)
 		})
+	}
+}
+
+func sortAssignments(assignments map[string][]string) {
+	for _, assignment := range assignments {
+		slices.Sort(assignment)
 	}
 }

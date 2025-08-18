@@ -417,22 +417,24 @@ func assignShardsToEmptyExecutors(currentAssignments map[string][]string) bool {
 		return false
 	}
 
-	numExecutors := len(currentAssignments)
-	numEmptyExecutors := len(emptyExecutors)
-	numExecutorsWithShards := numExecutors - numEmptyExecutors
+	// We calculate the number of shards to assign each of the empty executors. The idea is to assume all current executors have
+	// the same number of shards `minShardsCurrentlyAssigned`. We use the minimum so when steeling we don't have to worry about
+	// steeling more shards that the executors have.
+	// We then calculate the total number of assumed shards `minShardsCurrentlyAssigned * len(executorsWithShards)` and divide it by the
+	// number of current executors. This gives us the number of shards per executor, thus the number of shards to assign to each of the
+	// empty executors.
+	numShardsToAssignEmptyExecutors := minShardsCurrentlyAssigned * len(executorsWithShards) / len(currentAssignments)
 
-	numShardsToAssignEmptyExecutors := minShardsCurrentlyAssigned * numExecutorsWithShards / numExecutors
-
-	indexOfExecutorToSteelFrom := 0
+	stealRound := 0
 	for i := 0; i < numShardsToAssignEmptyExecutors; i++ {
 		for _, emptyExecutor := range emptyExecutors {
-			executorToSteelFrom := executorsWithShards[indexOfExecutorToSteelFrom]
+			executorToSteelFrom := executorsWithShards[stealRound%len(executorsWithShards)]
+			stealRound++
+
 			stolenShard := currentAssignments[executorToSteelFrom][0]
 
 			currentAssignments[executorToSteelFrom] = currentAssignments[executorToSteelFrom][1:]
 			currentAssignments[emptyExecutor] = append(currentAssignments[emptyExecutor], stolenShard)
-
-			indexOfExecutorToSteelFrom = (indexOfExecutorToSteelFrom + 1) % len(executorsWithShards)
 		}
 	}
 
