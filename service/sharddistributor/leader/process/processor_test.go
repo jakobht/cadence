@@ -467,7 +467,7 @@ func TestAssignShardsToEmptyExecutors(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			actualDistributionChanged := assignShardsToEmptyExecutors(c.inputAssignments)
 
-			//Sort the assignments, so the test is stable
+			// Sort the assignments, so the test is stable
 			sortAssignments(c.expectedAssignments)
 			sortAssignments(c.inputAssignments)
 
