@@ -51,6 +51,25 @@ func (h *metricsHandler) Health(ctx context.Context) (hp1 *types.HealthStatus, e
 	return h.handler.Health(ctx)
 }
 
+func (h *metricsHandler) NewEphemeralShard(ctx context.Context, np1 *types.NewEphemeralShardRequest) (np2 *types.NewEphemeralShardResponse, err error) {
+	defer func() { log.CapturePanic(recover(), h.logger, &err) }()
+
+	scope := h.metricsClient.Scope(metrics.ShardDistributorNewEphemeralShardScope)
+	scope = scope.Tagged(metrics.NamespaceTag(np1.GetNamespace()))
+	scope.IncCounter(metrics.ShardDistributorRequests)
+	sw := scope.StartTimer(metrics.ShardDistributorLatency)
+	defer sw.Stop()
+	logger := h.logger.WithTags(tag.ShardNamespace(np1.GetNamespace()))
+
+	np2, err = h.handler.NewEphemeralShard(ctx, np1)
+
+	if err != nil {
+		handleErr(err, scope, logger)
+	}
+
+	return np2, err
+}
+
 func (h *metricsHandler) Start() {
 	h.handler.Start()
 	return

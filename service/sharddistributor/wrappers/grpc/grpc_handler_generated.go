@@ -24,3 +24,8 @@ func (g GRPCHandler) GetShardOwner(ctx context.Context, request *sharddistributo
 	response, err := g.h.GetShardOwner(ctx, proto.ToShardDistributorGetShardOwnerRequest(request))
 	return proto.FromShardDistributorGetShardOwnerResponse(response), proto.FromError(err)
 }
+
+func (g GRPCHandler) NewEphemeralShard(ctx context.Context, request *sharddistributorv1.NewEphemeralShardRequest) (*sharddistributorv1.NewEphemeralShardResponse, error) {
+	response, err := g.h.NewEphemeralShard(ctx, proto.ToShardDistributorNewEphemeralShardRequest(request))
+	return proto.FromShardDistributorNewEphemeralShardResponse(response), proto.FromError(err)
+}

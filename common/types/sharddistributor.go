@@ -87,6 +87,44 @@ func (n *ShardNotFoundError) Error() (o string) {
 	return
 }
 
+type NewEphemeralShardRequest struct {
+	ShardKey  string
+	Namespace string
+}
+
+func (v *NewEphemeralShardRequest) GetShardKey() (o string) {
+	if v != nil {
+		return v.ShardKey
+	}
+	return
+}
+
+func (v *NewEphemeralShardRequest) GetNamespace() (o string) {
+	if v != nil {
+		return v.Namespace
+	}
+	return
+}
+
+type NewEphemeralShardResponse struct {
+	Owner     string
+	Namespace string
+}
+
+func (v *NewEphemeralShardResponse) GetOwner() (o string) {
+	if v != nil {
+		return v.Owner
+	}
+	return
+}
+
+func (v *NewEphemeralShardResponse) GetNamespace() (o string) {
+	if v != nil {
+		return v.Namespace
+	}
+	return
+}
+
 type ExecutorHeartbeatRequest struct {
 	Namespace          string
 	ExecutorID         string

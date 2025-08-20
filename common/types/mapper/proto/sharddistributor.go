@@ -71,6 +71,51 @@ func ToShardDistributorGetShardOwnerResponse(t *sharddistributorv1.GetShardOwner
 	}
 }
 
+// FromShardDistributorNewEphemeralShardRequest converts a types.NewEphemeralShardRequest to a sharddistributor.NewEphemeralShardRequest
+func FromShardDistributorNewEphemeralShardRequest(t *types.NewEphemeralShardRequest) *sharddistributorv1.NewEphemeralShardRequest {
+	if t == nil {
+		return nil
+	}
+	return &sharddistributorv1.NewEphemeralShardRequest{
+		ShardKey:  t.GetShardKey(),
+		Namespace: t.GetNamespace(),
+	}
+}
+
+// ToShardDistributorNewEphemeralShardRequest converts a sharddistributor.NewEphemeralShardRequest to a types.NewEphemeralShardRequest
+
+func ToShardDistributorNewEphemeralShardRequest(t *sharddistributorv1.NewEphemeralShardRequest) *types.NewEphemeralShardRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.NewEphemeralShardRequest{
+		ShardKey:  t.GetShardKey(),
+		Namespace: t.GetNamespace(),
+	}
+}
+
+// FromShardDistributorNewEphemeralShardResponse converts a types.NewEphemeralShardResponse to a sharddistributor.NewEphemeralShardResponse
+func FromShardDistributorNewEphemeralShardResponse(t *types.NewEphemeralShardResponse) *sharddistributorv1.NewEphemeralShardResponse {
+	if t == nil {
+		return nil
+	}
+	return &sharddistributorv1.NewEphemeralShardResponse{
+		Owner:     t.GetOwner(),
+		Namespace: t.GetNamespace(),
+	}
+}
+
+// ToShardDistributorNewEphemeralShardResponse converts a sharddistributor.NewEphemeralShardResponse to a types.NewEphemeralShardResponse
+func ToShardDistributorNewEphemeralShardResponse(t *sharddistributorv1.NewEphemeralShardResponse) *types.NewEphemeralShardResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.NewEphemeralShardResponse{
+		Owner:     t.GetOwner(),
+		Namespace: t.GetNamespace(),
+	}
+}
+
 func FromShardDistributorExecutorHeartbeatRequest(t *types.ExecutorHeartbeatRequest) *sharddistributorv1.HeartbeatRequest {
 	if t == nil {
 		return nil

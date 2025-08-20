@@ -43,6 +43,12 @@ func TestFromShardDistributorGetShardOwnerResponse(t *testing.T) {
 	}
 }
 
+func TestFromShardDistributorNewEphemeralShardRequest(t *testing.T) {
+	for _, item := range []*types.NewEphemeralShardRequest{nil, {}, &testdata.ShardDistributorNewEphemeralShardRequest} {
+		assert.Equal(t, item, ToShardDistributorNewEphemeralShardRequest(FromShardDistributorNewEphemeralShardRequest(item)))
+	}
+}
+
 func TestFromShardDistributorExecutorHeartbeatRequest(t *testing.T) {
 	for _, item := range []*types.ExecutorHeartbeatRequest{nil, {}, &testdata.ShardDistributorExecutorHeartbeatRequest} {
 		assert.Equal(t, item, ToShardDistributorExecutorHeartbeatRequest(FromShardDistributorExecutorHeartbeatRequest(item)))

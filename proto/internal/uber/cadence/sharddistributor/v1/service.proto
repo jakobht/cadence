@@ -28,7 +28,11 @@ option go_package = "github.com/uber/cadence/.gen/proto/sharddistributor/v1;shar
 service ShardDistributorAPI {
 
   // GetShardOwner returns the owner of a specific shard
+  // for ephemeral shards, if the shard is not known, it will be created and assigned to an executor
   rpc GetShardOwner(GetShardOwnerRequest) returns (GetShardOwnerResponse);
+
+  // NewEphemeralShard creates a new ephemeral shard, assigns it to an executor, and returns the owner
+  rpc NewEphemeralShard(NewEphemeralShardRequest) returns (NewEphemeralShardResponse);
 }
 
 message GetShardOwnerRequest {
@@ -48,4 +52,14 @@ message NamespaceNotFoundError {
 message ShardNotFoundError {
   string namespace = 1;
   string shard_key = 2;
+}
+
+message NewEphemeralShardRequest {
+  string shard_key = 1;
+  string namespace = 2;
+}
+
+message NewEphemeralShardResponse {
+  string owner = 1;
+  string namespace = 2;
 }

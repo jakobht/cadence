@@ -151,3 +151,127 @@ func TestGetShardOwnerResponse_GetNamespace(t *testing.T) {
 		})
 	}
 }
+
+func TestNewEphemeralShardRequest_GetShardKey(t *testing.T) {
+	tests := []struct {
+		name string
+		req  *NewEphemeralShardRequest
+		want string
+	}{
+		{
+			name: "nil request",
+			req:  nil,
+			want: "",
+		},
+		{
+			name: "empty request",
+			req:  &NewEphemeralShardRequest{},
+			want: "",
+		},
+		{
+			name: "has shard key",
+			req:  &NewEphemeralShardRequest{ShardKey: "shard-key"},
+			want: "shard-key",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.req.GetShardKey()
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestNewEphemeralShardRequest_GetNamespace(t *testing.T) {
+	tests := []struct {
+		name string
+		req  *NewEphemeralShardRequest
+		want string
+	}{
+		{
+			name: "nil request",
+			req:  nil,
+			want: "",
+		},
+		{
+			name: "empty request",
+			req:  &NewEphemeralShardRequest{},
+			want: "",
+		},
+		{
+			name: "has namespace",
+			req:  &NewEphemeralShardRequest{Namespace: "namespace"},
+			want: "namespace",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.req.GetNamespace()
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestNewEphemeralShardResponse_GetOwner(t *testing.T) {
+	tests := []struct {
+		name string
+		resp *NewEphemeralShardResponse
+		want string
+	}{
+		{
+			name: "nil response",
+			resp: nil,
+			want: "",
+		},
+		{
+			name: "empty response",
+			resp: &NewEphemeralShardResponse{},
+			want: "",
+		},
+		{
+			name: "has owner",
+			resp: &NewEphemeralShardResponse{Owner: "owner"},
+			want: "owner",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.resp.GetOwner()
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestNewEphemeralShardResponse_GetNamespace(t *testing.T) {
+	tests := []struct {
+		name string
+		resp *NewEphemeralShardResponse
+		want string
+	}{
+		{
+			name: "nil response",
+			resp: nil,
+			want: "",
+		},
+		{
+			name: "empty response",
+			resp: &NewEphemeralShardResponse{},
+			want: "",
+		},
+		{
+			name: "has namespace",
+			resp: &NewEphemeralShardResponse{Namespace: "namespace"},
+			want: "namespace",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.resp.GetNamespace()
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}

@@ -108,3 +108,7 @@ func (h *handlerImpl) GetShardOwner(ctx context.Context, request *types.GetShard
 
 	return resp, nil
 }
+
+func (h *handlerImpl) NewEphemeralShard(ctx context.Context, request *types.NewEphemeralShardRequest) (resp *types.NewEphemeralShardResponse, retError error) {
+	return nil, fmt.Errorf("not implemented")
+}

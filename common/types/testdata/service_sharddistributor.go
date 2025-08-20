@@ -33,6 +33,14 @@ var (
 		Owner:     "owner",
 		Namespace: "namespace",
 	}
+	ShardDistributorNewEphemeralShardRequest = types.NewEphemeralShardRequest{
+		ShardKey:  "shard-key",
+		Namespace: "namespace",
+	}
+	ShardDistributorNewEphemeralShardResponse = types.NewEphemeralShardResponse{
+		Owner:     "owner",
+		Namespace: "namespace",
+	}
 	ShardDistributorExecutorHeartbeatRequest = types.ExecutorHeartbeatRequest{
 		Namespace:  "namespace",
 		ExecutorID: "executor-id",

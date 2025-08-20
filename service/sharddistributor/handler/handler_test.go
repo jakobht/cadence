@@ -134,3 +134,13 @@ func TestGetShardOwner(t *testing.T) {
 		})
 	}
 }
+
+func TestNewEphemeralShard(t *testing.T) {
+	handler := &handlerImpl{}
+	_, err := handler.NewEphemeralShard(context.Background(), &types.NewEphemeralShardRequest{
+		Namespace: _testNamespace,
+		ShardKey:  "123",
+	})
+	require.Error(t, err)
+	require.Equal(t, "not implemented", err.Error())
+}

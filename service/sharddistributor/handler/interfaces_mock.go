@@ -72,6 +72,21 @@ func (mr *MockHandlerMockRecorder) Health(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Health", reflect.TypeOf((*MockHandler)(nil).Health), arg0)
 }
 
+// NewEphemeralShard mocks base method.
+func (m *MockHandler) NewEphemeralShard(arg0 context.Context, arg1 *types.NewEphemeralShardRequest) (*types.NewEphemeralShardResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewEphemeralShard", arg0, arg1)
+	ret0, _ := ret[0].(*types.NewEphemeralShardResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// NewEphemeralShard indicates an expected call of NewEphemeralShard.
+func (mr *MockHandlerMockRecorder) NewEphemeralShard(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewEphemeralShard", reflect.TypeOf((*MockHandler)(nil).NewEphemeralShard), arg0, arg1)
+}
+
 // Start mocks base method.
 func (m *MockHandler) Start() {
 	m.ctrl.T.Helper()

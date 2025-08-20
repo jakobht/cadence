@@ -42,6 +42,8 @@ type Handler interface {
 	Health(context.Context) (*types.HealthStatus, error)
 
 	GetShardOwner(context.Context, *types.GetShardOwnerRequest) (*types.GetShardOwnerResponse, error)
+
+	NewEphemeralShard(context.Context, *types.NewEphemeralShardRequest) (*types.NewEphemeralShardResponse, error)
 }
 
 type Executor interface {
