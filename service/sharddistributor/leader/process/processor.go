@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"slices"
 	"sort"
 	"strconv"
 	"sync"
@@ -401,7 +402,14 @@ func assignShardsToEmptyExecutors(currentAssignments map[string][]string) bool {
 	executorsWithShards := make([]string, 0)
 	minShardsCurrentlyAssigned := 0
 
+	// Sort the executors so the distribution is deterministic.
+	sortedExecutors := make([]string, 0, len(currentAssignments))
 	for executorID := range currentAssignments {
+		sortedExecutors = append(sortedExecutors, executorID)
+	}
+	slices.Sort(sortedExecutors)
+
+	for _, executorID := range sortedExecutors {
 		if len(currentAssignments[executorID]) == 0 {
 			emptyExecutors = append(emptyExecutors, executorID)
 		} else {
