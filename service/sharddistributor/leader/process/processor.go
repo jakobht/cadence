@@ -402,14 +402,14 @@ func assignShardsToEmptyExecutors(currentAssignments map[string][]string) bool {
 	executorsWithShards := make([]string, 0)
 	minShardsCurrentlyAssigned := 0
 
-	// Sort the executors so the distribution is deterministic.
-	sortedExecutors := make([]string, 0, len(currentAssignments))
+	// Ensure the iteration is deterministic.
+	executors := make([]string, 0, len(currentAssignments))
 	for executorID := range currentAssignments {
-		sortedExecutors = append(sortedExecutors, executorID)
+		executors = append(executors, executorID)
 	}
-	slices.Sort(sortedExecutors)
+	slices.Sort(executors)
 
-	for _, executorID := range sortedExecutors {
+	for _, executorID := range executors {
 		if len(currentAssignments[executorID]) == 0 {
 			emptyExecutors = append(emptyExecutors, executorID)
 		} else {
