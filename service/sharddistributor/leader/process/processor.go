@@ -297,8 +297,11 @@ func (p *namespaceProcessor) rebalanceShardsImpl(ctx context.Context, metricsLoo
 
 	metricsLoopScope.UpdateGauge(metrics.ShardDistributorAssignLoopNumRebalancedShards, float64(len(shardsToReassign)))
 
-	distributionChanged := assignShardsToEmptyExecutors(currentAssignments)
+	// If there are deleted shards, we have removed them from the shard assignments, so the distribution has changed.
+	distributionChanged := len(deletedShards) > 0
+	distributionChanged = distributionChanged || assignShardsToEmptyExecutors(currentAssignments)
 	distributionChanged = distributionChanged || p.updateAssignments(shardsToReassign, activeExecutors, currentAssignments)
+
 	if !distributionChanged {
 		return nil
 	}

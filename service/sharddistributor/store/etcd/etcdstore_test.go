@@ -256,6 +256,34 @@ func TestAssignShards_WithRevisions(t *testing.T) {
 		assert.ErrorIs(t, err, store.ErrVersionConflict)
 	})
 
+	t.Run("DeletedShards", func(t *testing.T) {
+		shardID := "shard-to-delete"
+
+		// 1. Setup: Assign the shard to executor1
+		setupState, err := tc.store.GetState(ctx, tc.namespace)
+		require.NoError(t, err)
+		setupState.ShardAssignments = map[string]store.AssignedState{
+			executorID1: {AssignedShards: map[string]*types.ShardAssignment{shardID: {}}},
+		}
+		require.NoError(t, tc.store.AssignShards(ctx, tc.namespace, setupState, nil, store.NopGuard()))
+
+		// 2. Delete the shard
+		stateAfterAssign, err := tc.store.GetState(ctx, tc.namespace)
+		require.NoError(t, err)
+
+		deletedShards := map[string]store.ShardState{shardID: stateAfterAssign.Shards[shardID]}
+		stateAfterAssign.ShardAssignments = map[string]store.AssignedState{
+			executorID1: {AssignedShards: map[string]*types.ShardAssignment{}},
+		}
+		err = tc.store.AssignShards(ctx, tc.namespace, stateAfterAssign, deletedShards, store.NopGuard())
+		require.NoError(t, err)
+
+		// 3. Verify the shard is deleted
+		owner, err := tc.store.GetShardOwner(ctx, tc.namespace, shardID)
+		assert.ErrorIs(t, err, store.ErrShardNotFound)
+		assert.Equal(t, "", owner)
+	})
+
 	t.Run("NoChanges", func(t *testing.T) {
 		// Get the current state
 		state, err := tc.store.GetState(ctx, tc.namespace)
