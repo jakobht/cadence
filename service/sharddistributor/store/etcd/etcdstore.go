@@ -282,7 +282,7 @@ func (s *Store) Subscribe(ctx context.Context, namespace string) (<-chan int64, 
 	return revisionChan, nil
 }
 
-func (s *Store) AssignShards(ctx context.Context, namespace string, newState *store.NamespaceState, guard store.GuardFunc) error {
+func (s *Store) AssignShards(ctx context.Context, namespace string, newState *store.NamespaceState, deletedShards map[string]store.ShardState, guard store.GuardFunc) error {
 	var ops []clientv3.Op
 	var comparisons []clientv3.Cmp
 
@@ -314,6 +314,12 @@ func (s *Store) AssignShards(ctx context.Context, namespace string, newState *st
 				comparisons = append(comparisons, clientv3.Compare(clientv3.ModRevision(shardOwnerKey), "=", 0))
 			}
 		}
+	}
+
+	for shardID, shardState := range deletedShards {
+		shardOwnerKey := s.buildShardKey(namespace, shardID, shardAssignedKey)
+		ops = append(ops, clientv3.OpDelete(shardOwnerKey))
+		comparisons = append(comparisons, clientv3.Compare(clientv3.ModRevision(shardOwnerKey), "=", shardState.Revision))
 	}
 
 	if len(ops) == 0 {

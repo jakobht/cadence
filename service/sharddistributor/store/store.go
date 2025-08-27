@@ -44,7 +44,7 @@ func NopGuard() GuardFunc {
 // Store is a composite interface that combines all storage capabilities.
 type Store interface {
 	GetState(ctx context.Context, namespace string) (*NamespaceState, error)
-	AssignShards(ctx context.Context, namespace string, newState *NamespaceState, guard GuardFunc) error
+	AssignShards(ctx context.Context, namespace string, newState *NamespaceState, deletedShards map[string]ShardState, guard GuardFunc) error
 	Subscribe(ctx context.Context, namespace string) (<-chan int64, error)
 	DeleteExecutors(ctx context.Context, namespace string, executorIDs []string, guard GuardFunc) error
 

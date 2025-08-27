@@ -49,9 +49,9 @@ func (c *meteredStore) AssignShard(ctx context.Context, namespace string, shardI
 	return
 }
 
-func (c *meteredStore) AssignShards(ctx context.Context, namespace string, newState *store.NamespaceState, guard store.GuardFunc) (err error) {
+func (c *meteredStore) AssignShards(ctx context.Context, namespace string, newState *store.NamespaceState, deletedShards map[string]store.ShardState, guard store.GuardFunc) (err error) {
 	op := func() error {
-		err = c.wrapped.AssignShards(ctx, namespace, newState, guard)
+		err = c.wrapped.AssignShards(ctx, namespace, newState, deletedShards, guard)
 		return err
 	}
 

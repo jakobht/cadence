@@ -92,7 +92,7 @@ func TestRebalanceShards_InitialDistribution(t *testing.T) {
 	}
 	mocks.store.EXPECT().GetState(gomock.Any(), mocks.cfg.Name).Return(&store.NamespaceState{Executors: state, GlobalRevision: 1}, nil)
 	mocks.election.EXPECT().Guard().Return(store.NopGuard())
-	mocks.store.EXPECT().AssignShards(gomock.Any(), mocks.cfg.Name, gomock.Any(), gomock.Any()).DoAndReturn(
+	mocks.store.EXPECT().AssignShards(gomock.Any(), mocks.cfg.Name, gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, _ string, newState *store.NamespaceState, _ store.GuardFunc) error {
 			assert.Len(t, newState.ShardAssignments, 2)
 			assert.Len(t, newState.ShardAssignments["exec-1"].AssignedShards, 1)
@@ -130,7 +130,7 @@ func TestRebalanceShards_ExecutorRemoved(t *testing.T) {
 		GlobalRevision:   1,
 	}, nil)
 	mocks.election.EXPECT().Guard().Return(store.NopGuard())
-	mocks.store.EXPECT().AssignShards(gomock.Any(), mocks.cfg.Name, gomock.Any(), gomock.Any()).DoAndReturn(
+	mocks.store.EXPECT().AssignShards(gomock.Any(), mocks.cfg.Name, gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, _ string, newState *store.NamespaceState, _ store.GuardFunc) error {
 			assert.Len(t, newState.ShardAssignments["exec-1"].AssignedShards, 2)
 			assert.Len(t, newState.ShardAssignments["exec-2"].AssignedShards, 0)
@@ -177,7 +177,7 @@ func TestRebalanceShards_UpdatesShardStateOnReassign(t *testing.T) {
 	mocks.election.EXPECT().Guard().Return(store.NopGuard())
 
 	// We expect AssignShards to be called with the updated state.
-	mocks.store.EXPECT().AssignShards(gomock.Any(), mocks.cfg.Name, gomock.Any(), gomock.Any()).DoAndReturn(
+	mocks.store.EXPECT().AssignShards(gomock.Any(), mocks.cfg.Name, gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, _ string, newState *store.NamespaceState, _ store.GuardFunc) error {
 			// Assert that the assignments were moved to exec-1.
 			assert.Len(t, newState.ShardAssignments["exec-1"].AssignedShards, 2)
@@ -259,7 +259,7 @@ func TestRebalance_StoreErrors(t *testing.T) {
 		GlobalRevision: 1,
 	}, nil)
 	mocks.election.EXPECT().Guard().Return(store.NopGuard())
-	mocks.store.EXPECT().AssignShards(gomock.Any(), mocks.cfg.Name, gomock.Any(), gomock.Any()).Return(expectedErr)
+	mocks.store.EXPECT().AssignShards(gomock.Any(), mocks.cfg.Name, gomock.Any(), gomock.Any(), gomock.Any()).Return(expectedErr)
 	err = processor.rebalanceShards(context.Background())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), expectedErr.Error())
@@ -375,7 +375,7 @@ func TestRebalanceShards_WithUnassignedShards(t *testing.T) {
 		GlobalRevision:   3,
 	}, nil)
 	mocks.election.EXPECT().Guard().Return(store.NopGuard())
-	mocks.store.EXPECT().AssignShards(gomock.Any(), mocks.cfg.Name, gomock.Any(), gomock.Any()).DoAndReturn(
+	mocks.store.EXPECT().AssignShards(gomock.Any(), mocks.cfg.Name, gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, _ string, newState *store.NamespaceState, _ store.GuardFunc) error {
 			assert.Len(t, newState.ShardAssignments["exec-1"].AssignedShards, 2, "Both shards should now be assigned to exec-1")
 			return nil
@@ -389,7 +389,7 @@ func TestRebalanceShards_WithUnassignedShards(t *testing.T) {
 func TestGetShards_Utility(t *testing.T) {
 	t.Run("Fixed type", func(t *testing.T) {
 		cfg := config.Namespace{Type: config.NamespaceTypeFixed, ShardNum: 5}
-		shards := getShards(cfg, nil)
+		shards := getShards(cfg, nil, nil)
 		assert.Equal(t, []string{"0", "1", "2", "3", "4"}, shards)
 	})
 
@@ -404,15 +404,35 @@ func TestGetShards_Utility(t *testing.T) {
 				"s4": {ExecutorID: "exec-1"},
 			},
 		}
-		shards := getShards(cfg, nsState)
+		shards := getShards(cfg, nsState, nil)
 		slices.Sort(shards)
 		assert.Equal(t, []string{"s0", "s1", "s2", "s3", "s4"}, shards)
+	})
+
+	t.Run("Ephemeral type with deleted shards", func(t *testing.T) {
+		cfg := config.Namespace{Type: config.NamespaceTypeEphemeral}
+		nsState := &store.NamespaceState{
+			Shards: map[string]store.ShardState{
+				"s0": {ExecutorID: "exec-1"},
+				"s1": {ExecutorID: "exec-1"},
+				"s2": {ExecutorID: "exec-1"},
+				"s3": {ExecutorID: "exec-1"},
+				"s4": {ExecutorID: "exec-1"},
+			},
+		}
+		deletedShards := map[string]store.ShardState{
+			"s0": {},
+			"s1": {},
+		}
+		shards := getShards(cfg, nsState, deletedShards)
+		slices.Sort(shards)
+		assert.Equal(t, []string{"s2", "s3", "s4"}, shards)
 	})
 
 	// Unknown type
 	t.Run("Other type", func(t *testing.T) {
 		cfg := config.Namespace{Type: "other"}
-		shards := getShards(cfg, nil)
+		shards := getShards(cfg, nil, nil)
 		assert.Nil(t, shards)
 	})
 }
