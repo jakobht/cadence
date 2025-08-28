@@ -310,7 +310,10 @@ func (p *namespaceProcessor) rebalanceShardsImpl(ctx context.Context, metricsLoo
 
 	p.logger.Info("Applying new shard distribution.")
 	// Use the leader guard for the assign operation.
-	err = p.shardStore.AssignShards(ctx, p.namespaceCfg.Name, namespaceState, deletedShards, p.election.Guard())
+	err = p.shardStore.AssignShards(ctx, p.namespaceCfg.Name, store.AssignShardsRequest{
+		NewState:       namespaceState,
+		ShardsToDelete: deletedShards,
+	}, p.election.Guard())
 	if err != nil {
 		return fmt.Errorf("assign shards: %w", err)
 	}

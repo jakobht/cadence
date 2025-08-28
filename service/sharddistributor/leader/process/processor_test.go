@@ -92,7 +92,7 @@ func TestRebalanceShards_InitialDistribution(t *testing.T) {
 	}
 	mocks.store.EXPECT().GetState(gomock.Any(), mocks.cfg.Name).Return(&store.NamespaceState{Executors: state, GlobalRevision: 1}, nil)
 	mocks.election.EXPECT().Guard().Return(store.NopGuard())
-	mocks.store.EXPECT().AssignShards(gomock.Any(), mocks.cfg.Name, gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+	mocks.store.EXPECT().AssignShards(gomock.Any(), mocks.cfg.Name, gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, _ string, newState *store.NamespaceState, _ map[string]store.ShardState, _ store.GuardFunc) error {
 			assert.Len(t, newState.ShardAssignments, 2)
 			assert.Len(t, newState.ShardAssignments["exec-1"].AssignedShards, 1)
@@ -130,7 +130,7 @@ func TestRebalanceShards_ExecutorRemoved(t *testing.T) {
 		GlobalRevision:   1,
 	}, nil)
 	mocks.election.EXPECT().Guard().Return(store.NopGuard())
-	mocks.store.EXPECT().AssignShards(gomock.Any(), mocks.cfg.Name, gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+	mocks.store.EXPECT().AssignShards(gomock.Any(), mocks.cfg.Name, gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, _ string, newState *store.NamespaceState, _ map[string]store.ShardState, _ store.GuardFunc) error {
 			assert.Len(t, newState.ShardAssignments["exec-1"].AssignedShards, 2)
 			assert.Len(t, newState.ShardAssignments["exec-2"].AssignedShards, 0)
@@ -177,7 +177,7 @@ func TestRebalanceShards_UpdatesShardStateOnReassign(t *testing.T) {
 	mocks.election.EXPECT().Guard().Return(store.NopGuard())
 
 	// We expect AssignShards to be called with the updated state.
-	mocks.store.EXPECT().AssignShards(gomock.Any(), mocks.cfg.Name, gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+	mocks.store.EXPECT().AssignShards(gomock.Any(), mocks.cfg.Name, gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, _ string, newState *store.NamespaceState, _ map[string]store.ShardState, _ store.GuardFunc) error {
 			// Assert that the assignments were moved to exec-1.
 			assert.Len(t, newState.ShardAssignments["exec-1"].AssignedShards, 2)
@@ -259,7 +259,7 @@ func TestRebalance_StoreErrors(t *testing.T) {
 		GlobalRevision: 1,
 	}, nil)
 	mocks.election.EXPECT().Guard().Return(store.NopGuard())
-	mocks.store.EXPECT().AssignShards(gomock.Any(), mocks.cfg.Name, gomock.Any(), gomock.Any(), gomock.Any()).Return(expectedErr)
+	mocks.store.EXPECT().AssignShards(gomock.Any(), mocks.cfg.Name, gomock.Any(), gomock.Any()).Return(expectedErr)
 	err = processor.rebalanceShards(context.Background())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), expectedErr.Error())
@@ -375,7 +375,7 @@ func TestRebalanceShards_WithUnassignedShards(t *testing.T) {
 		GlobalRevision:   3,
 	}, nil)
 	mocks.election.EXPECT().Guard().Return(store.NopGuard())
-	mocks.store.EXPECT().AssignShards(gomock.Any(), mocks.cfg.Name, gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+	mocks.store.EXPECT().AssignShards(gomock.Any(), mocks.cfg.Name, gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, _ string, newState *store.NamespaceState, deletedShards map[string]store.ShardState, _ store.GuardFunc) error {
 			assert.Len(t, newState.ShardAssignments["exec-1"].AssignedShards, 2, "Both shards should now be assigned to exec-1")
 			return nil
@@ -436,7 +436,7 @@ func TestRebalanceShards_WithDeletedShards(t *testing.T) {
 		Shards:           shards,
 	}, nil)
 	mocks.election.EXPECT().Guard().Return(store.NopGuard())
-	mocks.store.EXPECT().AssignShards(gomock.Any(), mocks.cfg.Name, gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+	mocks.store.EXPECT().AssignShards(gomock.Any(), mocks.cfg.Name, gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, _ string, newState *store.NamespaceState, deletedShards map[string]store.ShardState, _ store.GuardFunc) error {
 			assert.Contains(t, deletedShards, "0")
 			assert.Contains(t, deletedShards, "1")
