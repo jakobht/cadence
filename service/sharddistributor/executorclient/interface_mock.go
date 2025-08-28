@@ -40,18 +40,18 @@ func (m *MockShardProcessor) EXPECT() *MockShardProcessorMockRecorder {
 	return m.recorder
 }
 
-// GetShardLoad mocks base method.
-func (m *MockShardProcessor) GetShardLoad() float64 {
+// GetShardStatus mocks base method.
+func (m *MockShardProcessor) GetShardStatus() ShardStatus {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetShardLoad")
-	ret0, _ := ret[0].(float64)
+	ret := m.ctrl.Call(m, "GetShardStatus")
+	ret0, _ := ret[0].(ShardStatus)
 	return ret0
 }
 
-// GetShardLoad indicates an expected call of GetShardLoad.
-func (mr *MockShardProcessorMockRecorder) GetShardLoad() *gomock.Call {
+// GetShardStatus indicates an expected call of GetShardStatus.
+func (mr *MockShardProcessorMockRecorder) GetShardStatus() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetShardLoad", reflect.TypeOf((*MockShardProcessor)(nil).GetShardLoad))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetShardStatus", reflect.TypeOf((*MockShardProcessor)(nil).GetShardStatus))
 }
 
 // Start mocks base method.
