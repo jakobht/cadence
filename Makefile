@@ -557,10 +557,12 @@ go-generate: $(BIN)/mockgen $(BIN)/enumer $(BIN)/mockery  $(BIN)/gowrap ## Run `
 # 	$Q echo "updating copyright headers"
 # 	$Q $(MAKE) --no-print-directory copyright
 
-release: cadence-releasetagger ## Tag all submodules and print the push command
-	$Q ./cadence-releasetagger $(VERSION)
+release: ## Re-generate generated code and run tests
+	$(MAKE) --no-print-directory go-generate
+	$(MAKE) --no-print-directory test
 
-pre-release: cadence-releasetagger ## Tag all submodules with a pre-release version and print the push command
+tag-release: cadence-releasetagger ## Tag all submodules and print the push command
+	$(if $(VERSION),,$(error VERSION is not set))
 	$Q ./cadence-releasetagger $(VERSION)
 
 build: ## `go build` all packages and tests (a quick compile check only, skips all other steps)
