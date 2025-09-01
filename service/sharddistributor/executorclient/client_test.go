@@ -36,9 +36,11 @@ func TestModule(t *testing.T) {
 	yarpcClient := sharddistributorv1.NewShardDistributorExecutorAPIYARPCClient(mockClientConfig)
 
 	// Example config
-	config := Config{
-		Namespace:         "test-namespace",
-		HeartBeatInterval: 5 * time.Second,
+	config := ExecutorManagerConfig{
+		Executors: []ExecutorConfig{
+			{Namespace: "test-namespace", HeartBeatInterval: 5 * time.Second},
+			{Namespace: "test-namespace2", HeartBeatInterval: 5 * time.Second},
+		},
 	}
 
 	// Create a test app with the library, check that it starts and stops

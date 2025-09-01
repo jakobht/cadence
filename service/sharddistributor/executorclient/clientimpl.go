@@ -7,12 +7,14 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/uber-go/tally"
 
 	"github.com/uber/cadence/client/sharddistributorexecutor"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/sharddistributor/executorclient/metricsconstants"
 	"github.com/uber/cadence/service/sharddistributor/executorclient/syncgeneric"
@@ -37,6 +39,33 @@ func (mp *managedProcessor[SP]) setState(state processorState) {
 
 func (mp *managedProcessor[SP]) getState() processorState {
 	return processorState(mp.state.Load())
+}
+
+func NewExecutor[SP ShardProcessor](params Params[SP], executorConfig ExecutorConfig) (Executor[SP], error) {
+	if executorConfig.ExecutorID == "" {
+		executorConfig.ExecutorID = uuid.New().String()
+	}
+
+	metricsScope := params.MetricsScope.Tagged(map[string]string{
+		metrics.OperationTagName: metricsconstants.ShardDistributorExecutorOperationTagName,
+		"namespace":              executorConfig.Namespace,
+	})
+
+	namespaceLogger := params.Logger.WithTags(
+		tag.ShardNamespace(executorConfig.Namespace),
+	)
+
+	return &executorImpl[SP]{
+		logger:                 namespaceLogger,
+		shardDistributorClient: params.ShardDistributorClient,
+		shardProcessorFactory:  params.ShardProcessorFactory,
+		heartBeatInterval:      executorConfig.HeartBeatInterval,
+		namespace:              executorConfig.Namespace,
+		executorID:             executorConfig.ExecutorID,
+		timeSource:             params.TimeSource,
+		stopC:                  make(chan struct{}),
+		metrics:                metricsScope,
+	}, nil
 }
 
 func newManagedProcessor[SP ShardProcessor](processor SP, state processorState) *managedProcessor[SP] {
