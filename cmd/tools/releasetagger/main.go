@@ -11,6 +11,36 @@ import (
 
 const mainModule = "github.com/uber/cadence"
 
+func generateTags(version string, goListOutput string, root string) (string, error) {
+	var tags []string
+	lines := strings.Split(goListOutput, "\n")
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+		parts := strings.Split(line, "\t")
+		if len(parts) != 2 {
+			continue
+		}
+		modulePath := parts[0]
+		moduleDir := parts[1]
+
+		if strings.HasPrefix(modulePath, mainModule+"/") {
+			relPath, err := filepath.Rel(root, moduleDir)
+			if err != nil {
+				return "", fmt.Errorf("error getting relative path for %s: %v", moduleDir, err)
+			}
+			tag := fmt.Sprintf("%s/%s", relPath, version)
+			tags = append(tags, tag)
+		}
+	}
+
+	if len(tags) > 0 {
+		return fmt.Sprintf("git tag %s\ngit push origin %s\n", strings.Join(tags, " "), strings.Join(tags, " ")), nil
+	}
+	return "", nil
+}
+
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Println("Usage: go run main.go <version>")
@@ -27,38 +57,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	var tags []string
 	root, err := os.Getwd()
 	if err != nil {
 		fmt.Printf("Error getting current directory: %v\n", err)
 		os.Exit(1)
 	}
 
-	lines := strings.Split(out.String(), "\n")
-	for _, line := range lines {
-		if line == "" {
-			continue
-		}
-		parts := strings.Split(line, "\t")
-		if len(parts) != 2 {
-			continue
-		}
-		modulePath := parts[0]
-		moduleDir := parts[1]
-
-		if strings.HasPrefix(modulePath, mainModule+"/") {
-			relPath, err := filepath.Rel(root, moduleDir)
-			if err != nil {
-				fmt.Printf("Error getting relative path for %s: %v\n", moduleDir, err)
-				continue
-			}
-			tag := fmt.Sprintf("%s/%s", relPath, version)
-			tags = append(tags, tag)
-		}
+	output, err := generateTags(version, out.String(), root)
+	if err != nil {
+		fmt.Printf("Error generating tags: %v\n", err)
+		os.Exit(1)
 	}
-
-	if len(tags) > 0 {
-		fmt.Printf("git tag %s\n", strings.Join(tags, " "))
-		fmt.Printf("git push origin %s\n", strings.Join(tags, " "))
-	}
+	fmt.Print(output)
 }
