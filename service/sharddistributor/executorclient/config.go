@@ -5,6 +5,11 @@ import (
 	"time"
 )
 
+const (
+	// MinHeartbeatInterval is the minimum allowed heartbeat interval for executors
+	MinHeartbeatInterval = 100 * time.Millisecond
+)
+
 type ExecutorConfig struct {
 	ExecutorID        string        `yaml:"executor_id"` // Optional: if not provided, will be auto-generated
 	Namespace         string        `yaml:"namespace"`
@@ -28,8 +33,8 @@ func (c *ExecutorManagerConfig) Validate() error {
 		if executor.Namespace == "" {
 			return fmt.Errorf("executor %d: namespace is required", i)
 		}
-		if executor.HeartBeatInterval < time.Millisecond*100 {
-			return fmt.Errorf("executor %d: heartbeat_interval must be set and greater than 100ms", i)
+		if executor.HeartBeatInterval < MinHeartbeatInterval {
+			return fmt.Errorf("executor %d: heartbeat_interval must be set and greater than %v", i, MinHeartbeatInterval)
 		}
 
 		if _, ok := namespaceExecutors[executor.Namespace]; ok {

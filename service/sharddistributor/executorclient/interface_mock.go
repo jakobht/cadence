@@ -141,19 +141,19 @@ func (m *MockExecutor[SP]) EXPECT() *MockExecutorMockRecorder[SP] {
 	return m.recorder
 }
 
-// GetShardProcess mocks base method.
-func (m *MockExecutor[SP]) GetShardProcess(shardID string) (SP, error) {
+// GetShardProcessor mocks base method.
+func (m *MockExecutor[SP]) GetShardProcessor(shardID string) (SP, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetShardProcess", shardID)
+	ret := m.ctrl.Call(m, "GetShardProcessor", shardID)
 	ret0, _ := ret[0].(SP)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetShardProcess indicates an expected call of GetShardProcess.
-func (mr *MockExecutorMockRecorder[SP]) GetShardProcess(shardID any) *gomock.Call {
+// GetShardProcessor indicates an expected call of GetShardProcessor.
+func (mr *MockExecutorMockRecorder[SP]) GetShardProcessor(shardID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetShardProcess", reflect.TypeOf((*MockExecutor[SP])(nil).GetShardProcess), shardID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetShardProcessor", reflect.TypeOf((*MockExecutor[SP])(nil).GetShardProcessor), shardID)
 }
 
 // Start mocks base method.
@@ -219,19 +219,19 @@ func (mr *MockExecutorManagerMockRecorder[SP]) GetExecutorForNamespace(namespace
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExecutorForNamespace", reflect.TypeOf((*MockExecutorManager[SP])(nil).GetExecutorForNamespace), namespace)
 }
 
-// GetShardProcess mocks base method.
-func (m *MockExecutorManager[SP]) GetShardProcess(namespace, shardID string) (SP, error) {
+// GetShardProcessor mocks base method.
+func (m *MockExecutorManager[SP]) GetShardProcessor(namespace, shardID string) (SP, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetShardProcess", namespace, shardID)
+	ret := m.ctrl.Call(m, "GetShardProcessor", namespace, shardID)
 	ret0, _ := ret[0].(SP)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetShardProcess indicates an expected call of GetShardProcess.
-func (mr *MockExecutorManagerMockRecorder[SP]) GetShardProcess(namespace, shardID any) *gomock.Call {
+// GetShardProcessor indicates an expected call of GetShardProcessor.
+func (mr *MockExecutorManagerMockRecorder[SP]) GetShardProcessor(namespace, shardID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetShardProcess", reflect.TypeOf((*MockExecutorManager[SP])(nil).GetShardProcess), namespace, shardID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetShardProcessor", reflect.TypeOf((*MockExecutorManager[SP])(nil).GetShardProcessor), namespace, shardID)
 }
 
 // Start mocks base method.

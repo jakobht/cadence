@@ -106,7 +106,7 @@ func (e *executorImpl[SP]) Stop() {
 	e.processLoopWG.Wait()
 }
 
-func (e *executorImpl[SP]) GetShardProcess(shardID string) (SP, error) {
+func (e *executorImpl[SP]) GetShardProcessor(shardID string) (SP, error) {
 	shardProcess, ok := e.managedProcessors.Load(shardID)
 	if !ok {
 		var zero SP

@@ -82,15 +82,15 @@ func TestHeartBeartLoop(t *testing.T) {
 	mockTimeSource.BlockUntil(1)
 
 	// Assert that the two shards are assigned to the executor
-	processor1, err := executor.GetShardProcess("test-shard-id1")
+	processor1, err := executor.GetShardProcessor("test-shard-id1")
 	assert.NoError(t, err)
 	assert.Equal(t, mockShardProcessor1, processor1)
 
-	processor2, err := executor.GetShardProcess("test-shard-id2")
+	processor2, err := executor.GetShardProcessor("test-shard-id2")
 	assert.NoError(t, err)
 	assert.Equal(t, mockShardProcessor2, processor2)
 
-	nonOwned, err := executor.GetShardProcess("non-owned-shard-id")
+	nonOwned, err := executor.GetShardProcessor("non-owned-shard-id")
 	assert.Error(t, err)
 	assert.Nil(t, nonOwned)
 }
@@ -182,14 +182,14 @@ func TestHeartBeartLoop_ShardAssignmentChange(t *testing.T) {
 	time.Sleep(10 * time.Millisecond) // Force the updateShardAssignment goroutines to run
 
 	// Assert that we now have the 2 shards in the assignment
-	_, err := executor.GetShardProcess("test-shard-id1")
+	_, err := executor.GetShardProcessor("test-shard-id1")
 	assert.Error(t, err)
 
-	processor2, err := executor.GetShardProcess("test-shard-id2")
+	processor2, err := executor.GetShardProcessor("test-shard-id2")
 	assert.NoError(t, err)
 	assert.Equal(t, shardProcessorMock2, processor2)
 
-	processor3, err := executor.GetShardProcess("test-shard-id3")
+	processor3, err := executor.GetShardProcessor("test-shard-id3")
 	assert.NoError(t, err)
 	assert.Equal(t, shardProcessorMock3, processor3)
 }

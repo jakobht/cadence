@@ -36,14 +36,14 @@ type Executor[SP ShardProcessor] interface {
 	Start(ctx context.Context)
 	Stop()
 
-	GetShardProcess(shardID string) (SP, error)
+	GetShardProcessor(shardID string) (SP, error)
 }
 
 type ExecutorManager[SP ShardProcessor] interface {
 	Start(ctx context.Context)
 	Stop()
 
-	GetShardProcess(namespace, shardID string) (SP, error)
+	GetShardProcessor(namespace, shardID string) (SP, error)
 	GetExecutorForNamespace(namespace string) (Executor[SP], error)
 }
 

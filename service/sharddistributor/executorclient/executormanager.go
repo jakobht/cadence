@@ -55,14 +55,14 @@ func (em *executorManager[SP]) Stop() {
 
 }
 
-func (em *executorManager[SP]) GetShardProcess(namespace, shardID string) (SP, error) {
+func (em *executorManager[SP]) GetShardProcessor(namespace, shardID string) (SP, error) {
 	executor, ok := em.executors[namespace]
 	if !ok {
 		var zero SP
 		return zero, fmt.Errorf("no executor found for namespace: %s", namespace)
 	}
 
-	return executor.GetShardProcess(shardID)
+	return executor.GetShardProcessor(shardID)
 }
 
 func (em *executorManager[SP]) GetExecutorForNamespace(namespace string) (Executor[SP], error) {

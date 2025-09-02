@@ -72,7 +72,7 @@ func TestExecutorManagerConfig_Validate(t *testing.T) {
 			name: "too low heartbeat interval",
 			config: ExecutorManagerConfig{
 				Executors: []ExecutorConfig{
-					{ExecutorID: "executor1", Namespace: "namespace1", HeartBeatInterval: 50 * time.Millisecond},
+					{ExecutorID: "executor1", Namespace: "namespace1", HeartBeatInterval: MinHeartbeatInterval / 2},
 				},
 			},
 			expectError: true,
