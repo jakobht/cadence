@@ -42,7 +42,7 @@ func (c *Config) Validate() error {
 	if len(c.Namespaces) == 0 {
 		return fmt.Errorf("at least one namespace must be configured")
 	}
-	
+
 	seenNamespaces := make(map[string]bool)
 	for i, ns := range c.Namespaces {
 		if ns.Namespace == "" {
