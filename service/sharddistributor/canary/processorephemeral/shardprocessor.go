@@ -67,7 +67,6 @@ func (p *ShardProcessor) Start(ctx context.Context) {
 
 // Stop implements executorclient.ShardProcessor.
 func (p *ShardProcessor) Stop() {
-	p.logger.Info("Stopping shard processor, closing stop channel", zap.String("shardID", p.shardID), zap.Int("steps", p.processSteps), zap.String("status", p.status.String()))
 	close(p.stopChan)
 	p.goRoutineWg.Wait()
 }
@@ -86,6 +85,7 @@ func (p *ShardProcessor) process(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-p.stopChan:
+			p.logger.Info("Stopping shard processor", zap.String("shardID", p.shardID), zap.Int("steps", p.processSteps), zap.String("status", p.status.String()))
 			return
 		case <-ticker.Chan():
 			p.logger.Info("Processing shard", zap.String("shardID", p.shardID), zap.Int("steps", p.processSteps), zap.String("status", p.status.String()))

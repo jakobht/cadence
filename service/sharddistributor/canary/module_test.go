@@ -30,7 +30,7 @@ func TestModule(t *testing.T) {
 	mockClientConfig.EXPECT().GetUnaryOutbound().Return(outbound).Times(2)
 
 	mockClientConfigProvider := transporttest.NewMockClientConfigProvider(ctrl)
-	mockClientConfigProvider.EXPECT().ClientConfig("shard-distributor").Return(mockClientConfig).Times(2)
+	mockClientConfigProvider.EXPECT().ClientConfig("cadence-shard-distributor").Return(mockClientConfig).Times(2)
 
 	config := executorclient.Config{
 		Namespaces: []executorclient.NamespaceConfig{
