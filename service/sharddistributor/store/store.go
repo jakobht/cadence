@@ -43,10 +43,6 @@ func NopGuard() GuardFunc {
 type AssignShardsRequest struct {
 	// NewState is the new state of the namespace, containing the new assignments of shards to executors.
 	NewState *NamespaceState
-
-	// ShardsToDelete is a map of shards to delete. These shards are not present in the NewState, as they
-	// should be deleted, so we need to pass them explicitly.
-	ShardsToDelete map[string]ShardState
 }
 
 // Store is a composite interface that combines all storage capabilities.
