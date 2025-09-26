@@ -1,4 +1,4 @@
-package etcd
+package executorstore
 
 import (
 	"context"
@@ -18,9 +18,14 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/types"
 	shardDistributorCfg "github.com/uber/cadence/service/sharddistributor/config"
 	"github.com/uber/cadence/service/sharddistributor/store"
+	"github.com/uber/cadence/service/sharddistributor/store/etcd"
+	"github.com/uber/cadence/service/sharddistributor/store/etcd/etcdkeys"
+	"github.com/uber/cadence/service/sharddistributor/store/etcd/executorstore/shardcache"
+	"github.com/uber/cadence/service/sharddistributor/store/etcd/leaderstore"
 	"github.com/uber/cadence/testflags"
 )
 
@@ -45,9 +50,9 @@ func TestRecordHeartbeat(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify directly in etcd
-	heartbeatKey := tc.store.buildExecutorKey(tc.namespace, executorID, executorHeartbeatKey)
-	stateKey := tc.store.buildExecutorKey(tc.namespace, executorID, executorStatusKey)
-	reportedShardsKey := tc.store.buildExecutorKey(tc.namespace, executorID, executorReportedShardsKey)
+	heartbeatKey := etcdkeys.BuildExecutorKey(tc.etcdPrefix, tc.namespace, executorID, executorHeartbeatKey)
+	stateKey := etcdkeys.BuildExecutorKey(tc.etcdPrefix, tc.namespace, executorID, executorStatusKey)
+	reportedShardsKey := etcdkeys.BuildExecutorKey(tc.etcdPrefix, tc.namespace, executorID, executorReportedShardsKey)
 
 	resp, err := tc.client.Get(ctx, heartbeatKey)
 	require.NoError(t, err)
@@ -264,7 +269,7 @@ func TestGuardedOperations(t *testing.T) {
 
 	// 1. Create two potential leaders
 	// FIX: Use the correct constructor for the leader elector.
-	elector, err := NewLeaderStore(StoreParams{Client: tc.client, Cfg: tc.leaderCfg, Lifecycle: tc.lifecycle})
+	elector, err := leaderstore.NewLeaderStore(leaderstore.StoreParams{Client: tc.client, Cfg: tc.leaderCfg, Lifecycle: tc.lifecycle})
 	require.NoError(t, err)
 	election1, err := elector.CreateElection(ctx, namespace)
 	require.NoError(t, err)
@@ -315,7 +320,7 @@ func TestSubscribe(t *testing.T) {
 	require.NoError(t, err)
 
 	// Manually put a heartbeat update, which is an insignificant change
-	heartbeatKey := tc.store.buildExecutorKey(tc.namespace, executorID, "heartbeat")
+	heartbeatKey := etcdkeys.BuildExecutorKey(tc.etcdPrefix, tc.namespace, executorID, "heartbeat")
 	_, err = tc.client.Put(ctx, heartbeatKey, "timestamp")
 	require.NoError(t, err)
 
@@ -327,7 +332,7 @@ func TestSubscribe(t *testing.T) {
 	}
 
 	// Now update the reported shards, which IS a significant change
-	reportedShardsKey := tc.store.buildExecutorKey(tc.namespace, executorID, "reported_shards")
+	reportedShardsKey := etcdkeys.BuildExecutorKey(tc.etcdPrefix, tc.namespace, executorID, "reported_shards")
 	_, err = tc.client.Put(ctx, reportedShardsKey, `{"shard-1":{"status":"running"}}`)
 	require.NoError(t, err)
 
@@ -436,12 +441,12 @@ func TestDeleteExecutors(t *testing.T) {
 func TestParseExecutorKey_Errors(t *testing.T) {
 	tc := setupStoreTestCluster(t)
 
-	_, _, err := tc.store.parseExecutorKey(tc.namespace, "/wrong/prefix/exec/heartbeat")
+	_, _, err := etcdkeys.ParseExecutorKey(tc.etcdPrefix, tc.namespace, "/wrong/prefix/exec/heartbeat")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "does not have expected prefix")
 
-	key := tc.store.buildExecutorPrefix(tc.namespace) + "too/many/parts"
-	_, _, err = tc.store.parseExecutorKey(tc.namespace, key)
+	key := etcdkeys.BuildExecutorPrefix(tc.etcdPrefix, tc.namespace) + "too/many/parts"
+	_, _, err = etcdkeys.ParseExecutorKey(tc.etcdPrefix, tc.namespace, key)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "unexpected key format")
 }
@@ -519,11 +524,12 @@ func TestGetShardOwnerErrors(t *testing.T) {
 // --- Test Setup ---
 
 type storeTestCluster struct {
-	store     *Store // Use concrete type to access buildExecutorKey
-	namespace string
-	leaderCfg shardDistributorCfg.ShardDistribution
-	client    *clientv3.Client
-	lifecycle *fxtest.Lifecycle
+	store      store.Store
+	etcdPrefix string
+	namespace  string
+	leaderCfg  shardDistributorCfg.ShardDistribution
+	client     *clientv3.Client
+	lifecycle  *fxtest.Lifecycle
 }
 
 func setupStoreTestCluster(t *testing.T) *storeTestCluster {
@@ -539,10 +545,11 @@ func setupStoreTestCluster(t *testing.T) *storeTestCluster {
 	}
 	t.Logf("ETCD endpoints: %v", endpoints)
 
+	etcdPrefix := fmt.Sprintf("/test-shard-store/%s", t.Name())
 	etcdConfigRaw := map[string]interface{}{
 		"endpoints":   endpoints,
 		"dialTimeout": "5s",
-		"prefix":      fmt.Sprintf("/test-shard-store/%s", t.Name()),
+		"prefix":      etcdPrefix,
 		"electionTTL": "5s", // Needed for leader config part
 	}
 
@@ -565,21 +572,24 @@ func setupStoreTestCluster(t *testing.T) *storeTestCluster {
 	})
 	require.NoError(t, err)
 
+	shardcache := shardcache.NewShardToExecutorCache(shardcache.ShardToExecutorCacheParams{Store: s, Logger: log.NewNoop()})
+
+	combined := etcd.NewCombined(etcd.CombinedParams{Store: s, ShardToExecutorCache: shardcache})
+
 	client, err := clientv3.New(clientv3.Config{Endpoints: endpoints, DialTimeout: 5 * time.Second})
 	require.NoError(t, err)
 	t.Cleanup(func() { client.Close() })
 
-	rawStore := s.(*Store)
-
-	_, err = client.Delete(context.Background(), rawStore.buildNamespacePrefix(namespace), clientv3.WithPrefix())
+	_, err = client.Delete(context.Background(), etcdkeys.BuildNamespacePrefix(etcdPrefix, namespace), clientv3.WithPrefix())
 	require.NoError(t, err)
 
 	return &storeTestCluster{
-		namespace: namespace,
-		store:     rawStore,
-		leaderCfg: leaderCfg,
-		client:    client,
-		lifecycle: lifecycle,
+		namespace:  namespace,
+		store:      combined,
+		etcdPrefix: etcdPrefix,
+		leaderCfg:  leaderCfg,
+		client:     client,
+		lifecycle:  lifecycle,
 	}
 }
 
