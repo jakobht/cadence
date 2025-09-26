@@ -146,19 +146,12 @@ func TestGetState(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verification:
-	// 1. Check Executors
+	// Check Executors
 	require.Len(t, namespaceState.Executors, 2, "Should retrieve two heartbeat states")
 	assert.Equal(t, types.ExecutorStatusACTIVE, namespaceState.Executors[executorID1].Status)
 	assert.Equal(t, types.ExecutorStatusDRAINING, namespaceState.Executors[executorID2].Status)
 
-	// 2. Check Shard ownership and revisions
-	require.Len(t, namespaceState.Shards, 2, "Should retrieve two shard states")
-	assert.Equal(t, executorID1, namespaceState.Shards[shardID1].ExecutorID)
-	assert.Greater(t, namespaceState.Shards[shardID1].Revision, int64(0))
-	assert.Equal(t, executorID2, namespaceState.Shards[shardID2].ExecutorID)
-	assert.Greater(t, namespaceState.Shards[shardID2].Revision, int64(0))
-
-	// 3. Check ShardAssignments (from executor records)
+	// Check ShardAssignments (from executor records)
 	require.Len(t, namespaceState.ShardAssignments, 2, "Should retrieve two assignment states")
 	assert.Contains(t, namespaceState.ShardAssignments[executorID1].AssignedShards, shardID1)
 	assert.Contains(t, namespaceState.ShardAssignments[executorID2].AssignedShards, shardID2)
@@ -176,54 +169,43 @@ func TestAssignShards_WithRevisions(t *testing.T) {
 	require.NoError(t, tc.store.RecordHeartbeat(ctx, tc.namespace, executorID2, store.HeartbeatState{Status: types.ExecutorStatusACTIVE}))
 
 	t.Run("Success", func(t *testing.T) {
-		// 1. Get initial state (empty)
-		initialState, err := tc.store.GetState(ctx, tc.namespace)
-		require.NoError(t, err)
-
-		// 2. Define a new state: assign shard1 to exec1
+		// Define a new state: assign shard1 to exec1
 		newState := &store.NamespaceState{
-			Shards: initialState.Shards, // Pass the read revisions
 			ShardAssignments: map[string]store.AssignedState{
 				executorID1: {AssignedShards: map[string]*types.ShardAssignment{"shard-1": {}}},
 			},
 		}
 
-		// 3. Assign - should succeed
-		err = tc.store.AssignShards(ctx, tc.namespace, store.AssignShardsRequest{NewState: newState}, store.NopGuard())
+		// Assign - should succeed
+		err := tc.store.AssignShards(ctx, tc.namespace, store.AssignShardsRequest{NewState: newState}, store.NopGuard())
 		require.NoError(t, err)
 
-		// 4. Verify the assignment
+		// Verify the assignment
 		owner, err := tc.store.GetShardOwner(ctx, tc.namespace, "shard-1")
 		require.NoError(t, err)
 		assert.Equal(t, executorID1, owner)
 	})
 
 	t.Run("ConflictOnNewShard", func(t *testing.T) {
-		// 1. Get initial state
-		initialState, err := tc.store.GetState(ctx, tc.namespace)
-		require.NoError(t, err)
-
-		// 2. Process A defines its desired state: assign shard-new to exec1
+		// Process A defines its desired state: assign shard-new to exec1
 		processAState := &store.NamespaceState{
-			Shards: initialState.Shards,
 			ShardAssignments: map[string]store.AssignedState{
 				executorID1: {AssignedShards: map[string]*types.ShardAssignment{"shard-new": {}}},
 			},
 		}
 
-		// 3. Process B defines its desired state: assign shard-new to exec2
+		// Process B defines its desired state: assign shard-new to exec2
 		processBState := &store.NamespaceState{
-			Shards: initialState.Shards,
 			ShardAssignments: map[string]store.AssignedState{
 				executorID2: {AssignedShards: map[string]*types.ShardAssignment{"shard-new": {}}},
 			},
 		}
 
-		// 4. Process A succeeds
-		err = tc.store.AssignShards(ctx, tc.namespace, store.AssignShardsRequest{NewState: processAState}, store.NopGuard())
+		// Process A succeeds
+		err := tc.store.AssignShards(ctx, tc.namespace, store.AssignShardsRequest{NewState: processAState}, store.NopGuard())
 		require.NoError(t, err)
 
-		// 5. Process B tries to commit, but its revision check for shard-new (rev=0) will fail.
+		// Process B tries to commit, but its revision check for shard-new (rev=0) will fail.
 		err = tc.store.AssignShards(ctx, tc.namespace, store.AssignShardsRequest{NewState: processBState}, store.NopGuard())
 		require.Error(t, err)
 		assert.ErrorIs(t, err, store.ErrVersionConflict)
@@ -258,34 +240,6 @@ func TestAssignShards_WithRevisions(t *testing.T) {
 		err = tc.store.AssignShards(ctx, tc.namespace, store.AssignShardsRequest{NewState: stateForProcA}, store.NopGuard())
 		require.Error(t, err)
 		assert.ErrorIs(t, err, store.ErrVersionConflict)
-	})
-
-	t.Run("DeletedShards", func(t *testing.T) {
-		shardID := "shard-to-delete"
-
-		// 1. Setup: Assign the shard to executor1
-		setupState, err := tc.store.GetState(ctx, tc.namespace)
-		require.NoError(t, err)
-		setupState.ShardAssignments = map[string]store.AssignedState{
-			executorID1: {AssignedShards: map[string]*types.ShardAssignment{shardID: {}}},
-		}
-		require.NoError(t, tc.store.AssignShards(ctx, tc.namespace, store.AssignShardsRequest{NewState: setupState}, store.NopGuard()))
-
-		// 2. Delete the shard
-		stateAfterAssign, err := tc.store.GetState(ctx, tc.namespace)
-		require.NoError(t, err)
-
-		deletedShards := map[string]store.ShardState{shardID: stateAfterAssign.Shards[shardID]}
-		stateAfterAssign.ShardAssignments = map[string]store.AssignedState{
-			executorID1: {AssignedShards: map[string]*types.ShardAssignment{}},
-		}
-		err = tc.store.AssignShards(ctx, tc.namespace, store.AssignShardsRequest{NewState: stateAfterAssign, ShardsToDelete: deletedShards}, store.NopGuard())
-		require.NoError(t, err)
-
-		// 3. Verify the shard is deleted
-		owner, err := tc.store.GetShardOwner(ctx, tc.namespace, shardID)
-		assert.ErrorIs(t, err, store.ErrShardNotFound)
-		assert.Equal(t, "", owner)
 	})
 
 	t.Run("NoChanges", func(t *testing.T) {

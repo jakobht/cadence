@@ -311,8 +311,7 @@ func (p *namespaceProcessor) rebalanceShardsImpl(ctx context.Context, metricsLoo
 	p.logger.Info("Applying new shard distribution.")
 	// Use the leader guard for the assign operation.
 	err = p.shardStore.AssignShards(ctx, p.namespaceCfg.Name, store.AssignShardsRequest{
-		NewState:       namespaceState,
-		ShardsToDelete: deletedShards,
+		NewState: namespaceState,
 	}, p.election.Guard())
 	if err != nil {
 		return fmt.Errorf("assign shards: %w", err)
@@ -329,7 +328,6 @@ func (p *namespaceProcessor) findDeletedShards(namespaceState *store.NamespaceSt
 			if shardState.Status == types.ShardStatusDONE {
 				deletedShards[shardID] = store.ShardState{
 					ExecutorID: executorID,
-					Revision:   namespaceState.Shards[shardID].Revision,
 				}
 			}
 		}
@@ -385,19 +383,11 @@ func (*namespaceProcessor) updateAssignments(shardsToReassign []string, activeEx
 }
 
 func (p *namespaceProcessor) addAssignmentsToNamespaceState(namespaceState *store.NamespaceState, currentAssignments map[string][]string) {
-	if namespaceState.Shards == nil {
-		namespaceState.Shards = make(map[string]store.ShardState)
-	}
-
 	newState := make(map[string]store.AssignedState)
 	for executorID, shards := range currentAssignments {
 		assignedShardsMap := make(map[string]*types.ShardAssignment)
 		for _, shardID := range shards {
 			assignedShardsMap[shardID] = &types.ShardAssignment{Status: types.AssignmentStatusREADY}
-			namespaceState.Shards[shardID] = store.ShardState{
-				ExecutorID: executorID,
-				Revision:   namespaceState.Shards[shardID].Revision,
-			}
 		}
 		newState[executorID] = store.AssignedState{
 			AssignedShards: assignedShardsMap,
@@ -477,12 +467,14 @@ func getShards(cfg config.Namespace, namespaceState *store.NamespaceState, delet
 		return makeShards(cfg.ShardNum)
 	} else if cfg.Type == config.NamespaceTypeEphemeral {
 		shards := make([]string, 0)
-		for shardID := range namespaceState.Shards {
-			// If the shard is deleted, we don't include it in the shards.
-			if _, ok := deletedShards[shardID]; !ok {
-				shards = append(shards, shardID)
+		for _, state := range namespaceState.ShardAssignments {
+			for shardID := range state.AssignedShards {
+				if _, ok := deletedShards[shardID]; !ok {
+					shards = append(shards, shardID)
+				}
 			}
 		}
+
 		return shards
 	}
 	return nil
