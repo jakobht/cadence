@@ -17,12 +17,10 @@ type AssignedState struct {
 
 type NamespaceState struct {
 	Executors        map[string]HeartbeatState
-	Shards           map[string]ShardState
 	ShardAssignments map[string]AssignedState
 	GlobalRevision   int64
 }
 
 type ShardState struct {
 	ExecutorID string
-	Revision   int64
 }
