@@ -1,0 +1,40 @@
+package etcd
+
+import (
+	"go.uber.org/fx"
+
+	"github.com/uber/cadence/service/sharddistributor/store"
+	"github.com/uber/cadence/service/sharddistributor/store/etcd/executorstore"
+	"github.com/uber/cadence/service/sharddistributor/store/etcd/executorstore/shardcache"
+	"github.com/uber/cadence/service/sharddistributor/store/etcd/leaderstore"
+)
+
+type Combined struct {
+	*executorstore.Store
+	*shardcache.ShardToExecutorCache
+}
+
+type CombinedParams struct {
+	fx.In
+
+	Store                *executorstore.Store
+	ShardToExecutorCache *shardcache.ShardToExecutorCache
+}
+
+func NewCombined(p CombinedParams) store.Store {
+	return &Combined{
+		Store:                p.Store,
+		ShardToExecutorCache: p.ShardToExecutorCache,
+	}
+}
+
+var Module = fx.Module("etcd",
+	fx.Provide(executorstore.NewStore),
+	fx.Provide(shardcache.NewShardToExecutorCache),
+	fx.Provide(leaderstore.NewLeaderStore),
+	fx.Provide(NewCombined),
+	fx.Invoke(func(store *executorstore.Store, cache *shardcache.ShardToExecutorCache, lc fx.Lifecycle) {
+		lc.Append(fx.StartStopHook(cache.Start, cache.Stop))
+		lc.Append(fx.StartStopHook(store.Start, store.Stop))
+	}),
+)
