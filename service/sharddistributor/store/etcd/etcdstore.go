@@ -11,6 +11,7 @@ import (
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.uber.org/fx"
 
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/sharddistributor/config"
 	"github.com/uber/cadence/service/sharddistributor/store"
@@ -32,6 +33,8 @@ var (
 type Store struct {
 	client *clientv3.Client
 	prefix string
+	logger log.Logger
+	cache  *ShardToExecutorCache
 }
 
 // StoreParams defines the dependencies for the etcd store, for use with fx.
@@ -41,6 +44,7 @@ type StoreParams struct {
 	Client    *clientv3.Client `optional:"true"`
 	Cfg       config.ShardDistribution
 	Lifecycle fx.Lifecycle
+	Logger    log.Logger
 }
 
 // NewStore creates a new etcd-backed store and provides it to the fx application.
@@ -71,12 +75,26 @@ func NewStore(p StoreParams) (store.Store, error) {
 		}
 	}
 
-	p.Lifecycle.Append(fx.StopHook(etcdClient.Close))
-
-	return &Store{
+	store := &Store{
 		client: etcdClient,
 		prefix: etcdCfg.Prefix,
-	}, nil
+		logger: p.Logger,
+	}
+	cache := NewShardToExecutorCache(store, p.Logger)
+	store.cache = cache
+
+	p.Lifecycle.Append(fx.StartStopHook(store.Start, store.Stop))
+
+	return store, nil
+}
+
+func (s *Store) Start() {
+	s.cache.Start()
+}
+
+func (s *Store) Stop() {
+	s.client.Close()
+	s.cache.Stop()
 }
 
 // --- HeartbeatStore Implementation ---
@@ -213,29 +231,8 @@ func (s *Store) GetState(ctx context.Context, namespace string) (*store.Namespac
 		assignedStates[executorID] = assigned
 	}
 
-	shardStates := make(map[string]store.ShardState)
-	shardsPrefix := s.buildShardsPrefix(namespace)
-	shardResp, err := s.client.Get(ctx, shardsPrefix, clientv3.WithPrefix())
-	if err != nil {
-		return nil, fmt.Errorf("get shard ownership data: %w", err)
-	}
-	for _, kv := range shardResp.Kvs {
-		key := string(kv.Key)
-		remainder := strings.TrimPrefix(key, shardsPrefix)
-		parts := strings.Split(remainder, "/")
-		if len(parts) < 2 || parts[1] != shardAssignedKey {
-			continue
-		}
-		shardID := parts[0]
-		shardStates[shardID] = store.ShardState{
-			ExecutorID: string(kv.Value),
-			Revision:   kv.ModRevision,
-		}
-	}
-
 	return &store.NamespaceState{
 		Executors:        heartbeatStates,
-		Shards:           shardStates,
 		ShardAssignments: assignedStates,
 		GlobalRevision:   resp.Header.Revision,
 	}, nil
@@ -261,7 +258,7 @@ func (s *Store) Subscribe(ctx context.Context, namespace string) (<-chan int64, 
 				if err != nil {
 					continue
 				}
-				if keyType != executorHeartbeatKey && keyType != executorAssignedStateKey {
+				if keyType != executorHeartbeatKey {
 					isSignificantChange = true
 					break
 				}
@@ -292,30 +289,6 @@ func (s *Store) AssignShards(ctx context.Context, namespace string, request stor
 			return fmt.Errorf("marshal assigned shards for executor %s: %w", executorID, err)
 		}
 		ops = append(ops, clientv3.OpPut(executorStateKey, string(value)))
-
-		// For each shard in the new assignment, add a Put operation and a revision check.
-		for shardID := range state.AssignedShards {
-			shardOwnerKey := s.buildShardKey(namespace, shardID, shardAssignedKey)
-			ops = append(ops, clientv3.OpPut(shardOwnerKey, executorID))
-
-			// Check the revision of the shard from the state we read in GetState.
-			previousShardState, ok := request.NewState.Shards[shardID]
-			if ok {
-				// The shard existed before. Check that its revision has not changed.
-				// This handles moves and re-assignments to the same executor.
-				comparisons = append(comparisons, clientv3.Compare(clientv3.ModRevision(shardOwnerKey), "=", previousShardState.Revision))
-			} else {
-				// The shard is new. Check that it has not been created by another process.
-				// A non-existent key has a ModRevision of 0.
-				comparisons = append(comparisons, clientv3.Compare(clientv3.ModRevision(shardOwnerKey), "=", 0))
-			}
-		}
-	}
-
-	for shardID, shardState := range request.ShardsToDelete {
-		shardOwnerKey := s.buildShardKey(namespace, shardID, shardAssignedKey)
-		ops = append(ops, clientv3.OpDelete(shardOwnerKey))
-		comparisons = append(comparisons, clientv3.Compare(clientv3.ModRevision(shardOwnerKey), "=", shardState.Revision))
 	}
 
 	if len(ops) == 0 {
@@ -368,22 +341,9 @@ func (s *Store) AssignShards(ctx context.Context, namespace string, request stor
 	return nil
 }
 
-func (s *Store) GetShardOwner(ctx context.Context, namespace, shardID string) (string, error) {
-	key := s.buildShardKey(namespace, shardID, shardAssignedKey)
-	resp, err := s.client.Get(ctx, key)
-	if err != nil {
-		return "", fmt.Errorf("etcd get for shard %s: %w", shardID, err)
-	}
-	if resp.Count == 0 {
-		return "", store.ErrShardNotFound
-	}
-	return string(resp.Kvs[0].Value), nil
-}
-
 func (s *Store) AssignShard(ctx context.Context, namespace, shardID, executorID string) error {
 	assignedState := s.buildExecutorKey(namespace, executorID, executorAssignedStateKey)
 	statusKey := s.buildExecutorKey(namespace, executorID, executorStatusKey)
-	shardOwnerKey := s.buildShardKey(namespace, shardID, shardAssignedKey)
 
 	// Use a read-modify-write loop to handle concurrent updates safely.
 	for {
@@ -419,19 +379,16 @@ func (s *Store) AssignShard(ctx context.Context, namespace, shardID, executorID 
 		}
 
 		// 3. Prepare and commit the transaction with three atomic checks.
-		// a) Check that the shard is not already assigned (its key revision must be 0).
-		cmpShardUnassigned := clientv3.Compare(clientv3.ModRevision(shardOwnerKey), "=", 0)
-		// b) Check that the executor's status is ACTIVE.
+		// a) Check that the executor's status is ACTIVE.
 		cmpStatus := clientv3.Compare(clientv3.Value(statusKey), "=", _executorStatusRunningJSON)
-		// c) Check that the assigned_state key hasn't been changed by another process.
+		// b) Check that the assigned_state key hasn't been changed by another process.
 		cmpAssignedState := clientv3.Compare(clientv3.ModRevision(assignedState), "=", modRevision)
 
 		opUpdateExecutorState := clientv3.OpPut(assignedState, string(newStateValue))
-		opUpdateShardOwner := clientv3.OpPut(shardOwnerKey, executorID)
 
 		txnResp, err := s.client.Txn(ctx).
-			If(cmpShardUnassigned, cmpStatus, cmpAssignedState). // All conditions must be true.
-			Then(opUpdateExecutorState, opUpdateShardOwner).
+			If(cmpStatus, cmpAssignedState). // All conditions must be true.
+			Then(opUpdateExecutorState).
 			Commit()
 
 		if err != nil {
@@ -440,17 +397,6 @@ func (s *Store) AssignShard(ctx context.Context, namespace, shardID, executorID 
 
 		if txnResp.Succeeded {
 			return nil
-		}
-
-		// If the transaction failed, diagnose the reason to return a specific error.
-		// Check for the new failure condition first.
-		shardResp, err := s.client.Get(ctx, shardOwnerKey)
-		if err != nil {
-			return fmt.Errorf("check shard owner after failed transaction: %w", err)
-		}
-		if len(shardResp.Kvs) > 0 {
-			// The shard key exists, meaning it's already assigned. This was the reason for failure.
-			return fmt.Errorf("%w: shard is already owned by %s", store.ErrVersionConflict, shardResp.Kvs[0].Value)
 		}
 
 		// If the transaction failed, another process interfered.
@@ -505,18 +451,14 @@ func (s *Store) DeleteExecutors(ctx context.Context, namespace string, executorI
 	return nil
 }
 
+func (s *Store) GetShardOwner(ctx context.Context, namespace, shardID string) (string, error) {
+	return s.cache.GetShardOwner(ctx, namespace, shardID)
+}
+
 // --- Key Management Utilities ---
 
 func (s *Store) buildNamespacePrefix(namespace string) string {
 	return fmt.Sprintf("%s/%s", s.prefix, namespace)
-}
-
-func (s *Store) buildShardsPrefix(namespace string) string {
-	return fmt.Sprintf("%s/shards/", s.buildNamespacePrefix(namespace))
-}
-
-func (s *Store) buildShardKey(namespace, shardID string, keyType string) string {
-	return fmt.Sprintf("%s%s/%s", s.buildShardsPrefix(namespace), shardID, keyType)
 }
 
 func (s *Store) buildExecutorPrefix(namespace string) string {

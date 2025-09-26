@@ -9,22 +9,12 @@ import (
 	"go.etcd.io/etcd/client/v3/concurrency"
 	"go.uber.org/fx"
 
-	"github.com/uber/cadence/service/sharddistributor/config"
 	"github.com/uber/cadence/service/sharddistributor/store"
 )
 
 type LeaderStore struct {
 	client         *clientv3.Client
 	electionConfig etcdCfg
-}
-
-type LeaderStoreParams struct {
-	fx.In
-
-	// Client could be provided externally.
-	Client    *clientv3.Client `optional:"true"`
-	Cfg       config.ShardDistribution
-	Lifecycle fx.Lifecycle
 }
 
 type etcdCfg struct {
