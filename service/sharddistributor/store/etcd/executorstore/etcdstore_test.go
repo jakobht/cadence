@@ -18,13 +18,10 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/uber/cadence/common/config"
-	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/types"
 	shardDistributorCfg "github.com/uber/cadence/service/sharddistributor/config"
 	"github.com/uber/cadence/service/sharddistributor/store"
-	"github.com/uber/cadence/service/sharddistributor/store/etcd"
 	"github.com/uber/cadence/service/sharddistributor/store/etcd/etcdkeys"
-	"github.com/uber/cadence/service/sharddistributor/store/etcd/executorstore/shardcache"
 	"github.com/uber/cadence/service/sharddistributor/store/etcd/leaderstore"
 	"github.com/uber/cadence/testflags"
 )
@@ -186,9 +183,9 @@ func TestAssignShards_WithRevisions(t *testing.T) {
 		require.NoError(t, err)
 
 		// Verify the assignment
-		owner, err := tc.store.GetShardOwner(ctx, tc.namespace, "shard-1")
+		state, err := tc.store.GetState(ctx, tc.namespace)
 		require.NoError(t, err)
-		assert.Equal(t, executorID1, owner)
+		assert.Contains(t, state.ShardAssignments[executorID1].AssignedShards, "shard-1")
 	})
 
 	t.Run("ConflictOnNewShard", func(t *testing.T) {
@@ -368,25 +365,6 @@ func TestDeleteExecutors(t *testing.T) {
 	require.NoError(t, tc.store.RecordHeartbeat(ctx, tc.namespace, executorID2, store.HeartbeatState{Status: types.ExecutorStatusACTIVE}))
 	require.NoError(t, tc.store.RecordHeartbeat(ctx, tc.namespace, survivingExecutorID, store.HeartbeatState{Status: types.ExecutorStatusACTIVE}))
 
-	t.Run("DoesNotDeleteAssignedShards", func(t *testing.T) {
-		shardID := "shard-assigned"
-		require.NoError(t, tc.store.AssignShard(ctx, tc.namespace, shardID, executorID1), "Setup: Assign shard")
-
-		// Action: Delete the executor.
-		err := tc.store.DeleteExecutors(ctx, tc.namespace, []string{executorID1}, store.NopGuard())
-		require.NoError(t, err)
-
-		// Verification:
-		// 1. Check that the executor is gone.
-		_, _, err = tc.store.GetHeartbeat(ctx, tc.namespace, executorID1)
-		assert.ErrorIs(t, err, store.ErrExecutorNotFound, "Executor should be deleted")
-
-		// 2. Check that its assigned shard is not deleted.
-		owner, err := tc.store.GetShardOwner(ctx, tc.namespace, shardID)
-		assert.NoError(t, err)
-		assert.Equal(t, executorID1, owner)
-	})
-
 	t.Run("SucceedsForNonExistentExecutor", func(t *testing.T) {
 		// Action: Delete a non-existent executor.
 		err := tc.store.DeleteExecutors(ctx, tc.namespace, []string{"non-existent-executor"}, store.NopGuard())
@@ -416,25 +394,16 @@ func TestDeleteExecutors(t *testing.T) {
 		require.NoError(t, err)
 
 		// Verification:
-		// 1. Check deleted executors are gone, but their shards are not.
+		// 1. Check deleted executors are gone.
 		_, _, err = tc.store.GetHeartbeat(ctx, tc.namespace, execToDelete1)
 		assert.ErrorIs(t, err, store.ErrExecutorNotFound, "Executor 1 should be gone")
-		owner, err := tc.store.GetShardOwner(ctx, tc.namespace, shardOfDeletedExecutor1)
-		assert.NoError(t, err)
-		assert.Equal(t, execToDelete1, owner)
 
 		_, _, err = tc.store.GetHeartbeat(ctx, tc.namespace, execToDelete2)
 		assert.ErrorIs(t, err, store.ErrExecutorNotFound, "Executor 2 should be gone")
-		owner, err = tc.store.GetShardOwner(ctx, tc.namespace, shardOfDeletedExecutor2)
-		assert.NoError(t, err)
-		assert.Equal(t, execToDelete2, owner)
 
-		// 2. Check that the surviving executor and its shard remain.
+		// 2. Check that the surviving executor remain.
 		_, _, err = tc.store.GetHeartbeat(ctx, tc.namespace, execToKeep)
 		assert.NoError(t, err, "Surviving executor should still exist")
-		owner, err = tc.store.GetShardOwner(ctx, tc.namespace, shardOfSurvivingExecutor)
-		assert.NoError(t, err, "Surviving shard should still exist")
-		assert.Equal(t, execToKeep, owner, "Surviving shard should retain its owner")
 	})
 }
 
@@ -469,9 +438,9 @@ func TestAssignAndGetShardOwnerRoundtrip(t *testing.T) {
 	require.NoError(t, err, "Should successfully assign shard to an active executor")
 
 	// 2. Get the owner and verify it's the correct executor.
-	owner, err := tc.store.GetShardOwner(ctx, tc.namespace, shardID)
-	require.NoError(t, err, "Should successfully get the shard owner after assignment")
-	assert.Equal(t, executorID, owner, "Owner should be the executor it was assigned to")
+	state, err := tc.store.GetState(ctx, tc.namespace)
+	require.NoError(t, err)
+	assert.Contains(t, state.ShardAssignments[executorID].AssignedShards, shardID)
 }
 
 // TestAssignShardErrors tests the various error conditions when assigning a shard.
@@ -509,22 +478,10 @@ func TestAssignShardErrors(t *testing.T) {
 	assert.ErrorIs(t, err, store.ErrVersionConflict, "Error should be ErrVersionConflict for non-active executor")
 }
 
-// TestGetShardOwnerErrors tests error conditions for getting a shard owner.
-func TestGetShardOwnerErrors(t *testing.T) {
-	tc := setupStoreTestCluster(t)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	// Try to get the owner of a shard that has not been assigned.
-	_, err := tc.store.GetShardOwner(ctx, tc.namespace, "non-existent-shard")
-	require.Error(t, err, "Should return an error for a non-existent shard")
-	assert.ErrorIs(t, err, store.ErrShardNotFound, "Error should be ErrShardNotFound")
-}
-
 // --- Test Setup ---
 
 type storeTestCluster struct {
-	store      store.Store
+	store      *Store
 	etcdPrefix string
 	namespace  string
 	leaderCfg  shardDistributorCfg.ShardDistribution
@@ -572,10 +529,6 @@ func setupStoreTestCluster(t *testing.T) *storeTestCluster {
 	})
 	require.NoError(t, err)
 
-	shardcache := shardcache.NewShardToExecutorCache(shardcache.ShardToExecutorCacheParams{Store: s, Logger: log.NewNoop()})
-
-	combined := etcd.NewCombined(etcd.CombinedParams{Store: s, ShardToExecutorCache: shardcache})
-
 	client, err := clientv3.New(clientv3.Config{Endpoints: endpoints, DialTimeout: 5 * time.Second})
 	require.NoError(t, err)
 	t.Cleanup(func() { client.Close() })
@@ -585,7 +538,7 @@ func setupStoreTestCluster(t *testing.T) *storeTestCluster {
 
 	return &storeTestCluster{
 		namespace:  namespace,
-		store:      combined,
+		store:      s,
 		etcdPrefix: etcdPrefix,
 		leaderCfg:  leaderCfg,
 		client:     client,
