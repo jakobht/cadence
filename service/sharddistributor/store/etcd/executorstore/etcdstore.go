@@ -29,15 +29,15 @@ var (
 	_executorStatusRunningJSON = fmt.Sprintf(`"%s"`, types.ExecutorStatusACTIVE)
 )
 
-// Store implements the generic store.Store interface using etcd as the backend.
-type Store struct {
+// ExecutorStore implements the generic store.ExecutorStore interface using etcd as the backend.
+type ExecutorStore struct {
 	client *clientv3.Client
 	prefix string
 	logger log.Logger
 }
 
-// StoreParams defines the dependencies for the etcd store, for use with fx.
-type StoreParams struct {
+// ExecutorStoreParams defines the dependencies for the etcd store, for use with fx.
+type ExecutorStoreParams struct {
 	fx.In
 
 	Client    *clientv3.Client `optional:"true"`
@@ -47,7 +47,7 @@ type StoreParams struct {
 }
 
 // NewStore creates a new etcd-backed store and provides it to the fx application.
-func NewStore(p StoreParams) (*Store, error) {
+func NewStore(p ExecutorStoreParams) (*ExecutorStore, error) {
 	if !p.Cfg.Enabled {
 		return nil, nil
 	}
@@ -74,7 +74,7 @@ func NewStore(p StoreParams) (*Store, error) {
 		}
 	}
 
-	store := &Store{
+	store := &ExecutorStore{
 		client: etcdClient,
 		prefix: etcdCfg.Prefix,
 		logger: p.Logger,
@@ -85,16 +85,16 @@ func NewStore(p StoreParams) (*Store, error) {
 	return store, nil
 }
 
-func (s *Store) Start() {
+func (s *ExecutorStore) Start() {
 }
 
-func (s *Store) Stop() {
+func (s *ExecutorStore) Stop() {
 	s.client.Close()
 }
 
 // --- HeartbeatStore Implementation ---
 
-func (s *Store) RecordHeartbeat(ctx context.Context, namespace, executorID string, request store.HeartbeatState) error {
+func (s *ExecutorStore) RecordHeartbeat(ctx context.Context, namespace, executorID string, request store.HeartbeatState) error {
 	heartbeatETCDKey := etcdkeys.BuildExecutorKey(s.prefix, namespace, executorID, executorHeartbeatKey)
 	stateETCDKey := etcdkeys.BuildExecutorKey(s.prefix, namespace, executorID, executorStatusKey)
 	reportedShardsETCDKey := etcdkeys.BuildExecutorKey(s.prefix, namespace, executorID, executorReportedShardsKey)
@@ -123,7 +123,7 @@ func (s *Store) RecordHeartbeat(ctx context.Context, namespace, executorID strin
 }
 
 // GetHeartbeat retrieves the last known heartbeat state for a single executor.
-func (s *Store) GetHeartbeat(ctx context.Context, namespace string, executorID string) (*store.HeartbeatState, *store.AssignedState, error) {
+func (s *ExecutorStore) GetHeartbeat(ctx context.Context, namespace string, executorID string) (*store.HeartbeatState, *store.AssignedState, error) {
 	// The prefix for all keys related to a single executor.
 	executorPrefix := etcdkeys.BuildExecutorKey(s.prefix, namespace, executorID, "")
 	resp, err := s.client.Get(ctx, executorPrefix, clientv3.WithPrefix())
@@ -183,7 +183,7 @@ func (s *Store) GetHeartbeat(ctx context.Context, namespace string, executorID s
 
 // --- ShardStore Implementation ---
 
-func (s *Store) GetState(ctx context.Context, namespace string) (*store.NamespaceState, error) {
+func (s *ExecutorStore) GetState(ctx context.Context, namespace string) (*store.NamespaceState, error) {
 	heartbeatStates := make(map[string]store.HeartbeatState)
 	assignedStates := make(map[string]store.AssignedState)
 
@@ -233,7 +233,7 @@ func (s *Store) GetState(ctx context.Context, namespace string) (*store.Namespac
 	}, nil
 }
 
-func (s *Store) Subscribe(ctx context.Context, namespace string) (<-chan int64, error) {
+func (s *ExecutorStore) Subscribe(ctx context.Context, namespace string) (<-chan int64, error) {
 	revisionChan := make(chan int64, 1)
 	watchPrefix := etcdkeys.BuildExecutorPrefix(s.prefix, namespace)
 	go func() {
@@ -270,7 +270,7 @@ func (s *Store) Subscribe(ctx context.Context, namespace string) (<-chan int64, 
 	return revisionChan, nil
 }
 
-func (s *Store) AssignShards(ctx context.Context, namespace string, request store.AssignShardsRequest, guard store.GuardFunc) error {
+func (s *ExecutorStore) AssignShards(ctx context.Context, namespace string, request store.AssignShardsRequest, guard store.GuardFunc) error {
 	var ops []clientv3.Op
 	var comparisons []clientv3.Cmp
 
@@ -336,7 +336,7 @@ func (s *Store) AssignShards(ctx context.Context, namespace string, request stor
 	return nil
 }
 
-func (s *Store) AssignShard(ctx context.Context, namespace, shardID, executorID string) error {
+func (s *ExecutorStore) AssignShard(ctx context.Context, namespace, shardID, executorID string) error {
 	assignedState := etcdkeys.BuildExecutorKey(s.prefix, namespace, executorID, executorAssignedStateKey)
 	statusKey := etcdkeys.BuildExecutorKey(s.prefix, namespace, executorID, executorStatusKey)
 
@@ -410,7 +410,7 @@ func (s *Store) AssignShard(ctx context.Context, namespace, shardID, executorID 
 
 // DeleteExecutors deletes the given executors from the store. It does not delete the shards owned by the executors, this
 // should be handled by the namespace processor loop as we want to reassign, not delete the shards.
-func (s *Store) DeleteExecutors(ctx context.Context, namespace string, executorIDs []string, guard store.GuardFunc) error {
+func (s *ExecutorStore) DeleteExecutors(ctx context.Context, namespace string, executorIDs []string, guard store.GuardFunc) error {
 	if len(executorIDs) == 0 {
 		return nil
 	}

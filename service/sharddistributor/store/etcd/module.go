@@ -9,21 +9,21 @@ import (
 	"github.com/uber/cadence/service/sharddistributor/store/etcd/leaderstore"
 )
 
-type Combined struct {
-	*executorstore.Store
+type Store struct {
+	*executorstore.ExecutorStore
 	*shardcache.ShardToExecutorCache
 }
 
-type CombinedParams struct {
+type StoreParams struct {
 	fx.In
 
-	Store                *executorstore.Store
+	Store                *executorstore.ExecutorStore
 	ShardToExecutorCache *shardcache.ShardToExecutorCache
 }
 
-func NewCombined(p CombinedParams) store.Store {
-	return &Combined{
-		Store:                p.Store,
+func NewCombined(p StoreParams) store.Store {
+	return &Store{
+		ExecutorStore:        p.Store,
 		ShardToExecutorCache: p.ShardToExecutorCache,
 	}
 }
@@ -33,7 +33,7 @@ var Module = fx.Module("etcd",
 	fx.Provide(shardcache.NewShardToExecutorCache),
 	fx.Provide(leaderstore.NewLeaderStore),
 	fx.Provide(NewCombined),
-	fx.Invoke(func(store *executorstore.Store, cache *shardcache.ShardToExecutorCache, lc fx.Lifecycle) {
+	fx.Invoke(func(store *executorstore.ExecutorStore, cache *shardcache.ShardToExecutorCache, lc fx.Lifecycle) {
 		lc.Append(fx.StartStopHook(cache.Start, cache.Stop))
 		lc.Append(fx.StartStopHook(store.Start, store.Stop))
 	}),

@@ -481,7 +481,7 @@ func TestAssignShardErrors(t *testing.T) {
 // --- Test Setup ---
 
 type storeTestCluster struct {
-	store      *Store
+	store      *ExecutorStore
 	etcdPrefix string
 	namespace  string
 	leaderCfg  shardDistributorCfg.ShardDistribution
@@ -523,7 +523,7 @@ func setupStoreTestCluster(t *testing.T) *storeTestCluster {
 	}
 
 	lifecycle := fxtest.NewLifecycle(t)
-	s, err := NewStore(StoreParams{
+	s, err := NewStore(ExecutorStoreParams{
 		Cfg:       leaderCfg,
 		Lifecycle: lifecycle,
 	})
