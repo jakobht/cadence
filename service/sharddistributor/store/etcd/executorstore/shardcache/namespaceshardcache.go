@@ -18,11 +18,11 @@ type namespaceShardToExecutor struct {
 	namespace           string
 	changeUpdateChannel <-chan int64
 	stopCh              chan struct{}
-	store               *executorstore.Store
+	store               *executorstore.ExecutorStore
 	logger              log.Logger
 }
 
-func newNamespaceShardToExecutor(namespace string, store *executorstore.Store, stopCh chan struct{}, logger log.Logger) (*namespaceShardToExecutor, error) {
+func newNamespaceShardToExecutor(namespace string, store *executorstore.ExecutorStore, stopCh chan struct{}, logger log.Logger) (*namespaceShardToExecutor, error) {
 	// Start listening
 	changeUpdateChannel, err := store.Subscribe(context.Background(), namespace)
 	if err != nil {
