@@ -2,7 +2,6 @@ package shardcache
 
 import (
 	"context"
-	"github.com/uber/cadence/common/types"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,6 +9,7 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/uber/cadence/common/log/testlogger"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/sharddistributor/store"
 	"github.com/uber/cadence/service/sharddistributor/store/etcd/executorstore"
 )

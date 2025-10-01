@@ -3,13 +3,11 @@ package shardcache
 import (
 	"context"
 	"testing"
-
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/goleak"
 	"go.uber.org/mock/gomock"
-
-	"github.com/stretchr/testify/assert"
 
 	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/types"
