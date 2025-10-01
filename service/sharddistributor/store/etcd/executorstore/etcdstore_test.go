@@ -481,7 +481,7 @@ func TestAssignShardErrors(t *testing.T) {
 // --- Test Setup ---
 
 type storeTestCluster struct {
-	store      *ExecutorStore
+	store      ExecutorStore
 	etcdPrefix string
 	namespace  string
 	leaderCfg  shardDistributorCfg.ShardDistribution

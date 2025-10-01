@@ -10,14 +10,14 @@ import (
 )
 
 type Store struct {
-	*executorstore.ExecutorStore
+	executorstore.ExecutorStore
 	*shardcache.ShardToExecutorCache
 }
 
 type StoreParams struct {
 	fx.In
 
-	Store                *executorstore.ExecutorStore
+	Store                executorstore.ExecutorStore
 	ShardToExecutorCache *shardcache.ShardToExecutorCache
 }
 
@@ -33,7 +33,7 @@ var Module = fx.Module("etcd",
 	fx.Provide(shardcache.NewShardToExecutorCache),
 	fx.Provide(leaderstore.NewLeaderStore),
 	fx.Provide(NewCombined),
-	fx.Invoke(func(store *executorstore.ExecutorStore, cache *shardcache.ShardToExecutorCache, lc fx.Lifecycle) {
+	fx.Invoke(func(store executorstore.ExecutorStore, cache *shardcache.ShardToExecutorCache, lc fx.Lifecycle) {
 		lc.Append(fx.StartStopHook(cache.Start, cache.Stop))
 		lc.Append(fx.StartStopHook(store.Start, store.Stop))
 	}),
