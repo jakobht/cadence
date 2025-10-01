@@ -18,11 +18,11 @@ type namespaceShardToExecutor struct {
 	namespace           string
 	changeUpdateChannel <-chan int64
 	stopCh              chan struct{}
-	store               *executorstore.ExecutorStore
+	store               executorstore.ExecutorStore
 	logger              log.Logger
 }
 
-func newNamespaceShardToExecutor(namespace string, store *executorstore.ExecutorStore, stopCh chan struct{}, logger log.Logger) (*namespaceShardToExecutor, error) {
+func newNamespaceShardToExecutor(namespace string, store executorstore.ExecutorStore, stopCh chan struct{}, logger log.Logger) (*namespaceShardToExecutor, error) {
 	// Start listening
 	changeUpdateChannel, err := store.Subscribe(context.Background(), namespace)
 	if err != nil {
@@ -77,7 +77,7 @@ func (n *namespaceShardToExecutor) nameSpaceRefreashLoop() {
 		case <-n.changeUpdateChannel:
 			err := n.refresh(context.Background())
 			if err != nil {
-				n.logger.Error("refresh", tag.ShardNamespace(n.namespace), tag.Error(err))
+				n.logger.Error("failed to refresh namespace shard to executor", tag.ShardNamespace(n.namespace), tag.Error(err))
 			}
 		}
 	}

@@ -15,7 +15,7 @@ type NamespaceToShards map[string]*namespaceShardToExecutor
 type ShardToExecutorCache struct {
 	sync.RWMutex
 	namespaceToShards NamespaceToShards
-	store             *executorstore.ExecutorStore
+	store             executorstore.ExecutorStore
 	stopC             chan struct{}
 	logger            log.Logger
 }
@@ -23,7 +23,7 @@ type ShardToExecutorCache struct {
 type ShardToExecutorCacheParams struct {
 	fx.In
 
-	Store  *executorstore.ExecutorStore
+	Store  executorstore.ExecutorStore
 	Logger log.Logger
 }
 
