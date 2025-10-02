@@ -248,6 +248,7 @@ func (s *executorStoreImpl) GetState(ctx context.Context, namespace string) (*st
 	}, nil
 }
 
+// TODO this is too naive we need to be more specific about what changes different components need to react to
 func (s *executorStoreImpl) Subscribe(ctx context.Context, namespace string) (<-chan int64, error) {
 	revisionChan := make(chan int64, 1)
 	watchPrefix := etcdkeys.BuildExecutorPrefix(s.prefix, namespace)
