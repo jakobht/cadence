@@ -45,11 +45,34 @@ type AssignShardsRequest struct {
 	NewState *NamespaceState
 }
 
+type EventType int32
+
+const (
+	ExecutorStatusChanged EventType = iota
+	ExecutorReportShardsChanged
+	ExecutorAssignedShardsChanged
+	DeleteExecutors
+)
+
+type NameSpaceEvent struct {
+	Events   []EventType
+	Revision int64
+}
+
+func (e NameSpaceEvent) HasEvent(event EventType) bool {
+	for _, reportedEvent := range e.Events {
+		if reportedEvent == event {
+			return true
+		}
+	}
+	return false
+}
+
 // Store is a composite interface that combines all storage capabilities.
 type Store interface {
 	GetState(ctx context.Context, namespace string) (*NamespaceState, error)
 	AssignShards(ctx context.Context, namespace string, request AssignShardsRequest, guard GuardFunc) error
-	Subscribe(ctx context.Context, namespace string) (<-chan int64, error)
+	Subscribe(ctx context.Context, namespace string) (<-chan NameSpaceEvent, error)
 	DeleteExecutors(ctx context.Context, namespace string, executorIDs []string, guard GuardFunc) error
 
 	GetShardOwner(ctx context.Context, namespace, shardID string) (string, error)

@@ -109,7 +109,7 @@ func (c *meteredStore) RecordHeartbeat(ctx context.Context, namespace string, ex
 	return
 }
 
-func (c *meteredStore) Subscribe(ctx context.Context, namespace string) (ch1 <-chan int64, err error) {
+func (c *meteredStore) Subscribe(ctx context.Context, namespace string) (ch1 <-chan store.NameSpaceEvent, err error) {
 	op := func() error {
 		ch1, err = c.wrapped.Subscribe(ctx, namespace)
 		return err

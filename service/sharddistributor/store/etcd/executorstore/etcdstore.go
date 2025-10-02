@@ -38,7 +38,7 @@ type ExecutorStore interface {
 	RecordHeartbeat(ctx context.Context, namespace, executorID string, request store.HeartbeatState) error
 	GetHeartbeat(ctx context.Context, namespace string, executorID string) (*store.HeartbeatState, *store.AssignedState, error)
 	GetState(ctx context.Context, namespace string) (*store.NamespaceState, error)
-	Subscribe(ctx context.Context, namespace string) (<-chan int64, error)
+	Subscribe(ctx context.Context, namespace string) (<-chan store.NameSpaceEvent, error)
 	AssignShards(ctx context.Context, namespace string, request store.AssignShardsRequest, guard store.GuardFunc) error
 	AssignShard(ctx context.Context, namespace, shardID, executorID string) error
 	DeleteExecutors(ctx context.Context, namespace string, executorIDs []string, guard store.GuardFunc) error
@@ -248,38 +248,47 @@ func (s *executorStoreImpl) GetState(ctx context.Context, namespace string) (*st
 	}, nil
 }
 
-// TODO this is too naive we need to be more specific about what changes different components need to react to
-func (s *executorStoreImpl) Subscribe(ctx context.Context, namespace string) (<-chan int64, error) {
-	revisionChan := make(chan int64, 1)
+func (s *executorStoreImpl) Subscribe(ctx context.Context, namespace string) (<-chan store.NameSpaceEvent, error) {
+	revisionChan := make(chan store.NameSpaceEvent, 1)
 	watchPrefix := etcdkeys.BuildExecutorPrefix(s.prefix, namespace)
 	go func() {
 		defer close(revisionChan)
 		watchChan := s.client.Watch(ctx, watchPrefix, clientv3.WithPrefix())
+
 		for watchResp := range watchChan {
 			if err := watchResp.Err(); err != nil {
 				return
 			}
-			isSignificantChange := false
+
+			var nameSpaceEvent store.NameSpaceEvent
+			nameSpaceEvent.Revision = watchResp.Header.Revision
+
 			for _, event := range watchResp.Events {
-				if !event.IsCreate() && !event.IsModify() {
-					isSignificantChange = true
-					break
+				if event.Type == clientv3.EventTypeDelete {
+					nameSpaceEvent.Events = append(nameSpaceEvent.Events, store.DeleteExecutors)
+					continue
 				}
 				_, keyType, err := etcdkeys.ParseExecutorKey(s.prefix, namespace, string(event.Kv.Key))
 				if err != nil {
 					continue
 				}
-				if keyType != executorHeartbeatKey {
-					isSignificantChange = true
-					break
+				switch keyType {
+				case executorHeartbeatKey:
+					// Do nothing
+				case executorStatusKey:
+					nameSpaceEvent.Events = append(nameSpaceEvent.Events, store.ExecutorStatusChanged)
+				case executorReportedShardsKey:
+					nameSpaceEvent.Events = append(nameSpaceEvent.Events, store.ExecutorReportShardsChanged)
+				case executorAssignedStateKey:
+					nameSpaceEvent.Events = append(nameSpaceEvent.Events, store.ExecutorAssignedShardsChanged)
 				}
 			}
-			if isSignificantChange {
+			if len(nameSpaceEvent.Events) > 0 {
 				select {
 				case <-revisionChan:
 				default:
 				}
-				revisionChan <- watchResp.Header.Revision
+				revisionChan <- nameSpaceEvent
 			}
 		}
 	}()

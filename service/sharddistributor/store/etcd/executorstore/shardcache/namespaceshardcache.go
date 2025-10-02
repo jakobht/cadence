@@ -16,7 +16,7 @@ type namespaceShardToExecutor struct {
 
 	shardToExecutor     map[string]string
 	namespace           string
-	changeUpdateChannel <-chan int64
+	changeUpdateChannel <-chan store.NameSpaceEvent
 	stopCh              chan struct{}
 	store               executorstore.ExecutorStore
 	logger              log.Logger
@@ -74,7 +74,11 @@ func (n *namespaceShardToExecutor) nameSpaceRefreashLoop() {
 		select {
 		case <-n.stopCh:
 			return
-		case <-n.changeUpdateChannel:
+		case nameSpaceEvent := <-n.changeUpdateChannel:
+			if !nameSpaceEvent.HasEvent(store.ExecutorAssignedShardsChanged) {
+				continue
+			}
+
 			err := n.refresh(context.Background())
 			if err != nil {
 				n.logger.Error("failed to refresh namespace shard to executor", tag.ShardNamespace(n.namespace), tag.Error(err))

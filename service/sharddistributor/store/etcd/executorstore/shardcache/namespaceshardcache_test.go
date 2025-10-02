@@ -22,7 +22,7 @@ func TestNamespaceShardToExecutor_Lifecycle(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	mockStore := executorstore.NewMockExecutorStore(ctrl)
-	mockChan := make(chan int64, 1)
+	mockChan := make(chan store.NameSpaceEvent, 1)
 	stopCh := make(chan struct{})
 
 	mockStore.EXPECT().Subscribe(gomock.Any(), "test-ns").Return(mockChan, nil)
@@ -59,7 +59,9 @@ func TestNamespaceShardToExecutor_Lifecycle(t *testing.T) {
 	assert.Equal(t, "executor-1", owner)
 
 	// Send a message on the channel to trigger a refresh
-	mockChan <- 1
+	mockChan <- store.NameSpaceEvent{
+		Events: []store.EventType{store.ExecutorAssignedShardsChanged},
+	}
 
 	// Sleep a bit to allow the goroutine to refresh
 	time.Sleep(10 * time.Millisecond)

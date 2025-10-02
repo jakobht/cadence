@@ -167,10 +167,10 @@ func (mr *MockStoreMockRecorder) RecordHeartbeat(ctx, namespace, executorID, sta
 }
 
 // Subscribe mocks base method.
-func (m *MockStore) Subscribe(ctx context.Context, namespace string) (<-chan int64, error) {
+func (m *MockStore) Subscribe(ctx context.Context, namespace string) (<-chan NameSpaceEvent, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Subscribe", ctx, namespace)
-	ret0, _ := ret[0].(<-chan int64)
+	ret0, _ := ret[0].(<-chan NameSpaceEvent)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

@@ -40,7 +40,7 @@ func TestShardExecutorCache(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockStore := executorstore.NewMockExecutorStore(ctrl)
 
-	mockChan := make(chan int64, 1)
+	mockChan := make(chan store.NameSpaceEvent, 1)
 
 	// We only expect one call to subscribe and get state, since the cache will then be
 	// populated
@@ -87,7 +87,7 @@ func TestShardExecutorCache_SubscribeFailure(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockStore := executorstore.NewMockExecutorStore(ctrl)
 
-	mockChan := make(chan int64, 1)
+	mockChan := make(chan store.NameSpaceEvent, 1)
 
 	// We only expect one call to subscribe and get state, since the cache will then be
 	// populated

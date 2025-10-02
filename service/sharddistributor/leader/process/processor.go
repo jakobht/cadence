@@ -188,16 +188,18 @@ func (p *namespaceProcessor) runRebalancingLoop(ctx context.Context) {
 		case <-ctx.Done():
 			p.logger.Info("Rebalancing loop cancelled.")
 			return
-		case latestRevision, ok := <-updateChan:
+		case event, ok := <-updateChan:
 			if !ok {
 				p.logger.Info("Update channel closed, stopping rebalancing loop.")
 				return
 			}
-			if latestRevision <= p.lastAppliedRevision {
-				continue
+			if event.Revision > p.lastAppliedRevision &&
+				(event.HasEvent(store.ExecutorStatusChanged) ||
+					event.HasEvent(store.ExecutorReportShardsChanged) ||
+					event.HasEvent(store.DeleteExecutors)) {
+				p.logger.Info("State change detected, triggering rebalance.")
+				err = p.rebalanceShards(ctx)
 			}
-			p.logger.Info("State change detected, triggering rebalance.")
-			err = p.rebalanceShards(ctx)
 		case <-ticker.Chan():
 			p.logger.Info("Periodic reconciliation triggered, rebalancing.")
 			err = p.rebalanceShards(ctx)
