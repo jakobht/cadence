@@ -5,20 +5,19 @@ import (
 
 	"github.com/uber/cadence/service/sharddistributor/store"
 	"github.com/uber/cadence/service/sharddistributor/store/etcd/executorstore"
-	"github.com/uber/cadence/service/sharddistributor/store/etcd/executorstore/shardcache"
 	"github.com/uber/cadence/service/sharddistributor/store/etcd/leaderstore"
 )
 
 type Store struct {
 	executorstore.ExecutorStore
-	*shardcache.ShardToExecutorCache
+	*executorstore.ShardToExecutorCache
 }
 
 type StoreParams struct {
 	fx.In
 
 	Store                executorstore.ExecutorStore
-	ShardToExecutorCache *shardcache.ShardToExecutorCache
+	ShardToExecutorCache *executorstore.ShardToExecutorCache
 }
 
 func NewStore(p StoreParams) store.Store {
@@ -30,10 +29,10 @@ func NewStore(p StoreParams) store.Store {
 
 var Module = fx.Module("etcd",
 	fx.Provide(executorstore.NewStore),
-	fx.Provide(shardcache.NewShardToExecutorCache),
+	fx.Provide(executorstore.NewShardToExecutorCache),
 	fx.Provide(leaderstore.NewLeaderStore),
 	fx.Provide(NewStore),
-	fx.Invoke(func(store executorstore.ExecutorStore, cache *shardcache.ShardToExecutorCache, lc fx.Lifecycle) {
+	fx.Invoke(func(store executorstore.ExecutorStore, cache *executorstore.ShardToExecutorCache, lc fx.Lifecycle) {
 		lc.Append(fx.StartStopHook(cache.Start, cache.Stop))
 		lc.Append(fx.StartStopHook(store.Start, store.Stop))
 	}),

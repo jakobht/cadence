@@ -18,6 +18,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/types"
 	shardDistributorCfg "github.com/uber/cadence/service/sharddistributor/config"
 	"github.com/uber/cadence/service/sharddistributor/store"
@@ -465,7 +466,7 @@ func TestAssignShardErrors(t *testing.T) {
 	// Case 1: Assigning an already-assigned shard.
 	err = tc.store.AssignShard(ctx, tc.namespace, shardID1, activeExecutorID)
 	require.Error(t, err, "Should fail to assign an already-assigned shard")
-	assert.ErrorIs(t, err, store.ErrVersionConflict, "Error should be ErrVersionConflict for duplicate assignment")
+	assert.ErrorAs(t, err, new(store.ErrShardAlreadyAssigned))
 
 	// Case 2: Assigning to a non-existent executor.
 	err = tc.store.AssignShard(ctx, tc.namespace, shardID2, "non-existent-executor")
@@ -492,7 +493,9 @@ type storeTestCluster struct {
 func setupStoreTestCluster(t *testing.T) *storeTestCluster {
 	t.Helper()
 	flag.Parse()
-	testflags.RequireEtcd(t)
+	if false {
+		testflags.RequireEtcd(t)
+	}
 
 	namespace := fmt.Sprintf("ns-%s", strings.ToLower(t.Name()))
 
@@ -524,8 +527,9 @@ func setupStoreTestCluster(t *testing.T) *storeTestCluster {
 
 	lifecycle := fxtest.NewLifecycle(t)
 	s, err := NewStore(ExecutorStoreParams{
-		Cfg:       leaderCfg,
-		Lifecycle: lifecycle,
+		Cfg:        leaderCfg,
+		Lifecycle:  lifecycle,
+		ShardCache: NewShardToExecutorCache(ShardToExecutorCacheParams{Logger: testlogger.New(t)}),
 	})
 	require.NoError(t, err)
 

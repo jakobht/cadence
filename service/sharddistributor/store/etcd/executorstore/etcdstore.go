@@ -5,6 +5,7 @@ package executorstore
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -46,19 +47,21 @@ type ExecutorStore interface {
 
 // executorStoreImpl implements the ExecutorStore interface using etcd as the backend.
 type executorStoreImpl struct {
-	client *clientv3.Client
-	prefix string
-	logger log.Logger
+	client     *clientv3.Client
+	prefix     string
+	logger     log.Logger
+	shardCache *ShardToExecutorCache
 }
 
 // ExecutorStoreParams defines the dependencies for the etcd store, for use with fx.
 type ExecutorStoreParams struct {
 	fx.In
 
-	Client    *clientv3.Client `optional:"true"`
-	Cfg       config.ShardDistribution
-	Lifecycle fx.Lifecycle
-	Logger    log.Logger
+	Client     *clientv3.Client `optional:"true"`
+	Cfg        config.ShardDistribution
+	Lifecycle  fx.Lifecycle
+	Logger     log.Logger
+	ShardCache *ShardToExecutorCache
 }
 
 // NewStore creates a new etcd-backed store and provides it to the fx application.
@@ -90,12 +93,15 @@ func NewStore(p ExecutorStoreParams) (ExecutorStore, error) {
 	}
 
 	store := &executorStoreImpl{
-		client: etcdClient,
-		prefix: etcdCfg.Prefix,
-		logger: p.Logger,
+		client:     etcdClient,
+		prefix:     etcdCfg.Prefix,
+		logger:     p.Logger,
+		shardCache: p.ShardCache,
 	}
 
 	p.Lifecycle.Append(fx.StartStopHook(store.Start, store.Stop))
+	p.ShardCache.prefix = store.prefix
+	p.ShardCache.client = etcdClient
 
 	return store, nil
 }
@@ -236,6 +242,7 @@ func (s *executorStoreImpl) GetState(ctx context.Context, namespace string) (*st
 			if err != nil {
 				return nil, fmt.Errorf("unmarshal assigned shards: %w, %s", err, value)
 			}
+			assigned.ModRevision = kv.ModRevision
 		}
 		heartbeatStates[executorID] = heartbeat
 		assignedStates[executorID] = assigned
@@ -300,6 +307,7 @@ func (s *executorStoreImpl) AssignShards(ctx context.Context, namespace string, 
 			return fmt.Errorf("marshal assigned shards for executor %s: %w", executorID, err)
 		}
 		ops = append(ops, clientv3.OpPut(executorStateKey, string(value)))
+		comparisons = append(comparisons, clientv3.Compare(clientv3.ModRevision(executorStateKey), "=", state.ModRevision))
 	}
 
 	if len(ops) == 0 {
@@ -389,17 +397,35 @@ func (s *executorStoreImpl) AssignShard(ctx context.Context, namespace, shardID,
 			return fmt.Errorf("marshal new assigned state: %w", err)
 		}
 
+		var comparisons []clientv3.Cmp
+
 		// 3. Prepare and commit the transaction with three atomic checks.
 		// a) Check that the executor's status is ACTIVE.
-		cmpStatus := clientv3.Compare(clientv3.Value(statusKey), "=", _executorStatusRunningJSON)
+		comparisons = append(comparisons, clientv3.Compare(clientv3.Value(statusKey), "=", _executorStatusRunningJSON))
 		// b) Check that the assigned_state key hasn't been changed by another process.
-		cmpAssignedState := clientv3.Compare(clientv3.ModRevision(assignedState), "=", modRevision)
+		comparisons = append(comparisons, clientv3.Compare(clientv3.ModRevision(assignedState), "=", modRevision))
+		// c) Check that the cache is up to date.
+		namespaceShardToExecutor, err := s.shardCache.getNamespaceShardToExecutor(ctx, namespace)
+		if err != nil {
+			return fmt.Errorf("get namespace shard to executor: %w", err)
+		}
 
-		opUpdateExecutorState := clientv3.OpPut(assignedState, string(newStateValue))
+		namespaceShardToExecutor.RLock()
+		for executor, revision := range namespaceShardToExecutor.executorRevision {
+			executorAssignedStateKey := etcdkeys.BuildExecutorKey(s.prefix, namespace, executor, executorAssignedStateKey)
+			comparisons = append(comparisons, clientv3.Compare(clientv3.ModRevision(executorAssignedStateKey), "=", revision))
+		}
+		namespaceShardToExecutor.RUnlock()
+
+		// We check the shard cache to see if the shard is already assigned to an executor.
+		owner, err := s.shardCache.GetShardOwner(ctx, namespace, shardID)
+		if !errors.Is(err, store.ErrShardNotFound) {
+			return &store.ErrShardAlreadyAssigned{ShardID: shardID, AssignedTo: owner}
+		}
 
 		txnResp, err := s.client.Txn(ctx).
-			If(cmpStatus, cmpAssignedState). // All conditions must be true.
-			Then(opUpdateExecutorState).
+			If(comparisons...).
+			Then(clientv3.OpPut(assignedState, string(newStateValue))).
 			Commit()
 
 		if err != nil {

@@ -1,45 +1,49 @@
-package shardcache
+package executorstore
 
 import (
 	"context"
 	"fmt"
 	"sync"
 
+	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.uber.org/fx"
 
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/service/sharddistributor/store/etcd/executorstore"
 )
 
 type NamespaceToShards map[string]*namespaceShardToExecutor
 type ShardToExecutorCache struct {
 	sync.RWMutex
 	namespaceToShards NamespaceToShards
-	store             executorstore.ExecutorStore
+	client            *clientv3.Client
 	stopC             chan struct{}
 	logger            log.Logger
+	prefix            string
+	wg                sync.WaitGroup
 }
 
 type ShardToExecutorCacheParams struct {
 	fx.In
 
-	Store  executorstore.ExecutorStore
 	Logger log.Logger
 }
 
 func NewShardToExecutorCache(p ShardToExecutorCacheParams) *ShardToExecutorCache {
-	return &ShardToExecutorCache{
+	shardCache := &ShardToExecutorCache{
 		namespaceToShards: make(NamespaceToShards),
-		store:             p.Store,
 		stopC:             make(chan struct{}),
 		logger:            p.Logger,
+		wg:                sync.WaitGroup{},
 	}
+
+	return shardCache
 }
 
 func (s *ShardToExecutorCache) Start() {}
 
 func (s *ShardToExecutorCache) Stop() {
 	close(s.stopC)
+	s.wg.Wait()
 }
 
 func (s *ShardToExecutorCache) GetShardOwner(ctx context.Context, namespace, shardID string) (string, error) {
@@ -62,10 +66,11 @@ func (s *ShardToExecutorCache) getNamespaceShardToExecutor(ctx context.Context, 
 	s.Lock()
 	defer s.Unlock()
 
-	namespaceShardToExecutor, err := newNamespaceShardToExecutor(namespace, s.store, s.stopC, s.logger)
+	namespaceShardToExecutor, err := newNamespaceShardToExecutor(s.prefix, namespace, s.client, s.stopC, s.logger)
 	if err != nil {
 		return nil, fmt.Errorf("new namespace shard to executor: %w", err)
 	}
+	namespaceShardToExecutor.Start(&s.wg)
 
 	s.namespaceToShards[namespace] = namespaceShardToExecutor
 	return namespaceShardToExecutor, nil

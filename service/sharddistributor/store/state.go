@@ -13,6 +13,7 @@ type HeartbeatState struct {
 type AssignedState struct {
 	AssignedShards map[string]*types.ShardAssignment `json:"assigned_shards"` // What we assigned
 	LastUpdated    int64                             `json:"last_updated"`
+	ModRevision    int64                             `json:"mod_revision"`
 }
 
 type NamespaceState struct {

@@ -22,6 +22,15 @@ var (
 	ErrExecutorNotRunning = fmt.Errorf("executor not running")
 )
 
+type ErrShardAlreadyAssigned struct {
+	ShardID    string
+	AssignedTo string
+}
+
+func (e *ErrShardAlreadyAssigned) Error() string {
+	return fmt.Sprintf("shard %s is already assigned to %s", e.ShardID, e.AssignedTo)
+}
+
 // Txn represents a generic, backend-agnostic transaction.
 // It is used as a vehicle for the GuardFunc to operate on.
 type Txn interface{}

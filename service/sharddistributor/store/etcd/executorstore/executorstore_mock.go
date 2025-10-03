@@ -13,9 +13,8 @@ import (
 	context "context"
 	reflect "reflect"
 
-	gomock "go.uber.org/mock/gomock"
-
 	store "github.com/uber/cadence/service/sharddistributor/store"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockExecutorStore is a mock of ExecutorStore interface.
@@ -127,6 +126,18 @@ func (m *MockExecutorStore) RecordHeartbeat(ctx context.Context, namespace, exec
 func (mr *MockExecutorStoreMockRecorder) RecordHeartbeat(ctx, namespace, executorID, request any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordHeartbeat", reflect.TypeOf((*MockExecutorStore)(nil).RecordHeartbeat), ctx, namespace, executorID, request)
+}
+
+// SetShardCache mocks base method.
+func (m *MockExecutorStore) SetShardCache(shardCache *ShardToExecutorCache) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetShardCache", shardCache)
+}
+
+// SetShardCache indicates an expected call of SetShardCache.
+func (mr *MockExecutorStoreMockRecorder) SetShardCache(shardCache any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetShardCache", reflect.TypeOf((*MockExecutorStore)(nil).SetShardCache), shardCache)
 }
 
 // Start mocks base method.
