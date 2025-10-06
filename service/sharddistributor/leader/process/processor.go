@@ -389,9 +389,15 @@ func (p *namespaceProcessor) addAssignmentsToNamespaceState(namespaceState *stor
 		for _, shardID := range shards {
 			assignedShardsMap[shardID] = &types.ShardAssignment{Status: types.AssignmentStatusREADY}
 		}
+		modRevision := int64(0) // Should be 0 if we have not seen it yet
+		if state, ok := namespaceState.ShardAssignments[executorID]; ok {
+			modRevision = state.ModRevision
+		}
+
 		newState[executorID] = store.AssignedState{
 			AssignedShards: assignedShardsMap,
 			LastUpdated:    p.timeSource.Now().Unix(),
+			ModRevision:    modRevision,
 		}
 	}
 
