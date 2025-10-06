@@ -13,8 +13,9 @@ import (
 	context "context"
 	reflect "reflect"
 
-	store "github.com/uber/cadence/service/sharddistributor/store"
 	gomock "go.uber.org/mock/gomock"
+
+	store "github.com/uber/cadence/service/sharddistributor/store"
 )
 
 // MockExecutorStore is a mock of ExecutorStore interface.
