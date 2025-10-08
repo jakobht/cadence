@@ -3,6 +3,7 @@ package executorclient
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -24,6 +25,10 @@ const (
 	processorStateStarting processorState = iota
 	processorStateStarted
 	processorStateStopping
+)
+
+const (
+	heartbeatJitterMax = 100 * time.Millisecond
 )
 
 type managedProcessor[SP ShardProcessor] struct {
@@ -89,8 +94,8 @@ func (e *executorImpl[SP]) GetShardProcess(shardID string) (SP, error) {
 }
 
 func (e *executorImpl[SP]) heartbeatloop(ctx context.Context) {
-	heartBeatTicker := e.timeSource.NewTicker(e.heartBeatInterval)
-	defer heartBeatTicker.Stop()
+	heartBeatTimer := e.timeSource.NewTimer(getJitteredHeartbeatDuration(e.heartBeatInterval, heartbeatJitterMax))
+	defer heartBeatTimer.Stop()
 
 	for {
 		select {
@@ -102,7 +107,8 @@ func (e *executorImpl[SP]) heartbeatloop(ctx context.Context) {
 			e.logger.Info("shard distributorexecutor stopped")
 			e.stopShardProcessors()
 			return
-		case <-heartBeatTicker.Chan():
+		case <-heartBeatTimer.Chan():
+			heartBeatTimer.Reset(getJitteredHeartbeatDuration(e.heartBeatInterval, heartbeatJitterMax))
 			shardAssignment, err := e.heartbeat(ctx)
 			if err != nil {
 				e.logger.Error("failed to heartbeat", tag.Error(err))
@@ -230,4 +236,11 @@ func (e *executorImpl[SP]) stopShardProcessors() {
 	})
 
 	wg.Wait()
+}
+
+func getJitteredHeartbeatDuration(interval time.Duration, jitterMax time.Duration) time.Duration {
+	jitterMaxNanos := int64(jitterMax)
+	randomJitterNanos := rand.Int63n(jitterMaxNanos)
+	jitter := time.Duration(randomJitterNanos)
+	return interval - jitter
 }
