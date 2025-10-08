@@ -14,6 +14,7 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/sharddistributor/config"
 	"github.com/uber/cadence/service/sharddistributor/store"
@@ -276,7 +277,7 @@ func (s *executorStoreImpl) Subscribe(ctx context.Context, namespace string) (<-
 				if err != nil {
 					continue
 				}
-				if keyType != executorHeartbeatKey {
+				if keyType != executorHeartbeatKey && keyType != executorAssignedStateKey {
 					isSignificantChange = true
 					break
 				}
@@ -419,7 +420,10 @@ func (s *executorStoreImpl) AssignShard(ctx context.Context, namespace, shardID,
 
 		// We check the shard cache to see if the shard is already assigned to an executor.
 		owner, err := s.shardCache.GetShardOwner(ctx, namespace, shardID)
-		if !errors.Is(err, store.ErrShardNotFound) {
+		if err != nil && !errors.Is(err, store.ErrShardNotFound) {
+			return fmt.Errorf("checking shard owner: %w", err)
+		}
+		if err == nil {
 			return &store.ErrShardAlreadyAssigned{ShardID: shardID, AssignedTo: owner}
 		}
 
@@ -446,6 +450,7 @@ func (s *executorStoreImpl) AssignShard(ctx context.Context, namespace, shardID,
 			return fmt.Errorf(`%w: executor status is %s"`, store.ErrVersionConflict, currentStatusResp.Kvs[0].Value)
 		}
 
+		s.logger.Info("Assign shard transaction failed due to a conflict. Retrying...", tag.ShardNamespace(namespace), tag.ShardKey(shardID), tag.ShardExecutor(executorID))
 		// Otherwise, it was a revision mismatch. Loop to retry the operation.
 	}
 }

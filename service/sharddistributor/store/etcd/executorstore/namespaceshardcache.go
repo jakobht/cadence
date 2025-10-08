@@ -114,6 +114,9 @@ func (n *namespaceShardToExecutor) refresh(ctx context.Context) error {
 
 	n.Lock()
 	defer n.Unlock()
+	// Clear the cache, so we don't have any stale data
+	n.shardToExecutor = make(map[string]string)
+	n.executorRevision = make(map[string]int64)
 
 	for _, kv := range resp.Kvs {
 		executorID, keyType, keyErr := etcdkeys.ParseExecutorKey(n.prefix, n.namespace, string(kv.Key))

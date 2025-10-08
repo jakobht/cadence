@@ -282,6 +282,7 @@ func (p *namespaceProcessor) rebalanceShardsImpl(ctx context.Context, metricsLoo
 	}
 
 	if namespaceState.GlobalRevision <= p.lastAppliedRevision {
+		p.logger.Info("No changes detected. Skipping rebalance.")
 		return nil
 	}
 	p.lastAppliedRevision = namespaceState.GlobalRevision
@@ -303,6 +304,7 @@ func (p *namespaceProcessor) rebalanceShardsImpl(ctx context.Context, metricsLoo
 	distributionChanged = distributionChanged || p.updateAssignments(shardsToReassign, activeExecutors, currentAssignments)
 
 	if !distributionChanged {
+		p.logger.Info("No changes to distribution detected. Skipping rebalance.")
 		return nil
 	}
 
