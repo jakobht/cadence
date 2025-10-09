@@ -10,13 +10,13 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	clientv3 "go.etcd.io/etcd/client/v3"
+	"gopkg.in/yaml.v2"
+
 	"github.com/uber/cadence/common/config"
 	shardDistributorCfg "github.com/uber/cadence/service/sharddistributor/config"
 	"github.com/uber/cadence/service/sharddistributor/store/etcd/etcdkeys"
 	"github.com/uber/cadence/testflags"
-
-	clientv3 "go.etcd.io/etcd/client/v3"
-	"gopkg.in/yaml.v2"
 )
 
 type StoreTestCluster struct {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"strconv"
-
 	"testing"
 	"time"
 
@@ -168,7 +167,7 @@ func TestAssignShards_WithRevisions(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		tc := testhelper.SetupStoreTestCluster(t)
 		executorStore := createStore(t, tc)
-		recordHeartbeats(t, executorStore, tc.Namespace, ctx, executorID1, executorID2)
+		recordHeartbeats(ctx, t, executorStore, tc.Namespace, executorID1, executorID2)
 
 		// Define a new state: assign shard1 to exec1
 		newState := &store.NamespaceState{
@@ -190,7 +189,7 @@ func TestAssignShards_WithRevisions(t *testing.T) {
 	t.Run("ConflictOnNewShard", func(t *testing.T) {
 		tc := testhelper.SetupStoreTestCluster(t)
 		executorStore := createStore(t, tc)
-		recordHeartbeats(t, executorStore, tc.Namespace, ctx, executorID1, executorID2)
+		recordHeartbeats(ctx, t, executorStore, tc.Namespace, executorID1, executorID2)
 
 		// Process A defines its desired state: assign shard-new to exec1
 		processAState := &store.NamespaceState{
@@ -221,7 +220,7 @@ func TestAssignShards_WithRevisions(t *testing.T) {
 	t.Run("ConflictOnExistingShard", func(t *testing.T) {
 		tc := testhelper.SetupStoreTestCluster(t)
 		executorStore := createStore(t, tc)
-		recordHeartbeats(t, executorStore, tc.Namespace, ctx, executorID1, executorID2)
+		recordHeartbeats(ctx, t, executorStore, tc.Namespace, executorID1, executorID2)
 
 		shardID := "shard-to-move"
 		// 1. Setup: Assign the shard to executor1
@@ -260,7 +259,7 @@ func TestAssignShards_WithRevisions(t *testing.T) {
 	t.Run("NoChanges", func(t *testing.T) {
 		tc := testhelper.SetupStoreTestCluster(t)
 		executorStore := createStore(t, tc)
-		recordHeartbeats(t, executorStore, tc.Namespace, ctx, executorID1, executorID2)
+		recordHeartbeats(ctx, t, executorStore, tc.Namespace, executorID1, executorID2)
 
 		// Get the current state
 		state, err := executorStore.GetState(ctx, tc.Namespace)
@@ -511,7 +510,7 @@ func stringStatus(s types.ExecutorStatus) string {
 	return string(res)
 }
 
-func recordHeartbeats(t *testing.T, executorStore store.Store, namespace string, ctx context.Context, executorIDs ...string) {
+func recordHeartbeats(ctx context.Context, t *testing.T, executorStore store.Store, namespace string, executorIDs ...string) {
 	t.Helper()
 
 	for _, executorID := range executorIDs {
