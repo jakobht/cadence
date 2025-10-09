@@ -58,7 +58,7 @@ func (s *ShardToExecutorCache) GetExecutorModRevisionCmp(namespace string) ([]cl
 	if err != nil {
 		return nil, fmt.Errorf("get namespace shard to executor: %w", err)
 	}
-	return namespaceShardToExecutor.GetExecutorModRevisionCmp(), nil
+	return namespaceShardToExecutor.GetExecutorModRevisionCmp()
 }
 
 func (s *ShardToExecutorCache) getNamespaceShardToExecutor(namespace string) (*namespaceShardToExecutor, error) {

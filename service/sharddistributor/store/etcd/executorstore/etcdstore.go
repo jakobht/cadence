@@ -98,9 +98,18 @@ func (s *executorStoreImpl) Stop() {
 // --- HeartbeatStore Implementation ---
 
 func (s *executorStoreImpl) RecordHeartbeat(ctx context.Context, namespace, executorID string, request store.HeartbeatState) error {
-	heartbeatETCDKey := etcdkeys.BuildExecutorKey(s.prefix, namespace, executorID, etcdkeys.ExecutorHeartbeatKey)
-	stateETCDKey := etcdkeys.BuildExecutorKey(s.prefix, namespace, executorID, etcdkeys.ExecutorStatusKey)
-	reportedShardsETCDKey := etcdkeys.BuildExecutorKey(s.prefix, namespace, executorID, etcdkeys.ExecutorReportedShardsKey)
+	heartbeatETCDKey, err := etcdkeys.BuildExecutorKey(s.prefix, namespace, executorID, etcdkeys.ExecutorHeartbeatKey)
+	if err != nil {
+		return fmt.Errorf("build executor heartbeat key: %w", err)
+	}
+	stateETCDKey, err := etcdkeys.BuildExecutorKey(s.prefix, namespace, executorID, etcdkeys.ExecutorStatusKey)
+	if err != nil {
+		return fmt.Errorf("build executor status key: %w", err)
+	}
+	reportedShardsETCDKey, err := etcdkeys.BuildExecutorKey(s.prefix, namespace, executorID, etcdkeys.ExecutorReportedShardsKey)
+	if err != nil {
+		return fmt.Errorf("build executor reported shards key: %w", err)
+	}
 
 	reportedShardsData, err := json.Marshal(request.ReportedShards)
 	if err != nil {
@@ -128,7 +137,10 @@ func (s *executorStoreImpl) RecordHeartbeat(ctx context.Context, namespace, exec
 // GetHeartbeat retrieves the last known heartbeat state for a single executor.
 func (s *executorStoreImpl) GetHeartbeat(ctx context.Context, namespace string, executorID string) (*store.HeartbeatState, *store.AssignedState, error) {
 	// The prefix for all keys related to a single executor.
-	executorPrefix := etcdkeys.BuildExecutorKey(s.prefix, namespace, executorID, "")
+	executorPrefix, err := etcdkeys.BuildExecutorKey(s.prefix, namespace, executorID, "")
+	if err != nil {
+		return nil, nil, fmt.Errorf("build executor prefix: %w", err)
+	}
 	resp, err := s.client.Get(ctx, executorPrefix, clientv3.WithPrefix())
 	if err != nil {
 		return nil, nil, fmt.Errorf("etcd get failed for executor %s: %w", executorID, err)
@@ -286,7 +298,10 @@ func (s *executorStoreImpl) AssignShards(ctx context.Context, namespace string, 
 	// and comparisons to check for concurrent modifications.
 	for executorID, state := range request.NewState.ShardAssignments {
 		// Update the executor's assigned_state key.
-		executorStateKey := etcdkeys.BuildExecutorKey(s.prefix, namespace, executorID, etcdkeys.ExecutorAssignedStateKey)
+		executorStateKey, err := etcdkeys.BuildExecutorKey(s.prefix, namespace, executorID, etcdkeys.ExecutorAssignedStateKey)
+		if err != nil {
+			return fmt.Errorf("build executor assigned state key: %w", err)
+		}
 		value, err := json.Marshal(state)
 		if err != nil {
 			return fmt.Errorf("marshal assigned shards for executor %s: %w", executorID, err)
@@ -346,8 +361,14 @@ func (s *executorStoreImpl) AssignShards(ctx context.Context, namespace string, 
 }
 
 func (s *executorStoreImpl) AssignShard(ctx context.Context, namespace, shardID, executorID string) error {
-	assignedState := etcdkeys.BuildExecutorKey(s.prefix, namespace, executorID, etcdkeys.ExecutorAssignedStateKey)
-	statusKey := etcdkeys.BuildExecutorKey(s.prefix, namespace, executorID, etcdkeys.ExecutorStatusKey)
+	assignedState, err := etcdkeys.BuildExecutorKey(s.prefix, namespace, executorID, etcdkeys.ExecutorAssignedStateKey)
+	if err != nil {
+		return fmt.Errorf("build executor assigned state key: %w", err)
+	}
+	statusKey, err := etcdkeys.BuildExecutorKey(s.prefix, namespace, executorID, etcdkeys.ExecutorStatusKey)
+	if err != nil {
+		return fmt.Errorf("build executor status key: %w", err)
+	}
 
 	// Use a read-modify-write loop to handle concurrent updates safely.
 	for {
@@ -442,7 +463,10 @@ func (s *executorStoreImpl) DeleteExecutors(ctx context.Context, namespace strin
 	var ops []clientv3.Op
 
 	for _, executorID := range executorIDs {
-		executorPrefix := etcdkeys.BuildExecutorKey(s.prefix, namespace, executorID, "")
+		executorPrefix, err := etcdkeys.BuildExecutorKey(s.prefix, namespace, executorID, "")
+		if err != nil {
+			return fmt.Errorf("build executor prefix: %w", err)
+		}
 		ops = append(ops, clientv3.OpDelete(executorPrefix, clientv3.WithPrefix()))
 	}
 

@@ -46,7 +46,8 @@ func TestShardExecutorCache(t *testing.T) {
 	assignedStateJSON, err := json.Marshal(assignedState)
 	require.NoError(t, err)
 
-	executorAssignedStateKey := etcdkeys.BuildExecutorKey(testCluster.EtcdPrefix, "test-ns", "executor-1", etcdkeys.ExecutorAssignedStateKey)
+	executorAssignedStateKey, err := etcdkeys.BuildExecutorKey(testCluster.EtcdPrefix, "test-ns", "executor-1", etcdkeys.ExecutorAssignedStateKey)
+	require.NoError(t, err)
 	testCluster.Client.Put(context.Background(), executorAssignedStateKey, string(assignedStateJSON))
 
 	cache := NewShardToExecutorCache(testCluster.EtcdPrefix, testCluster.Client, logger)

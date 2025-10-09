@@ -33,7 +33,8 @@ func TestNamespaceShardToExecutor_Lifecycle(t *testing.T) {
 	assignedStateJSON, err := json.Marshal(assignedState)
 	require.NoError(t, err)
 
-	executor1AssignedStateKey := etcdkeys.BuildExecutorKey(testCluster.EtcdPrefix, "test-ns", "executor-1", etcdkeys.ExecutorAssignedStateKey)
+	executor1AssignedStateKey, err := etcdkeys.BuildExecutorKey(testCluster.EtcdPrefix, "test-ns", "executor-1", etcdkeys.ExecutorAssignedStateKey)
+	require.NoError(t, err)
 	testCluster.Client.Put(context.Background(), executor1AssignedStateKey, string(assignedStateJSON))
 
 	// First call should get the state and return the owner as executor-1
@@ -57,7 +58,8 @@ func TestNamespaceShardToExecutor_Lifecycle(t *testing.T) {
 	assignedStateJSON, err = json.Marshal(assignedState)
 	require.NoError(t, err)
 
-	executor2AssignedStateKey := etcdkeys.BuildExecutorKey(testCluster.EtcdPrefix, "test-ns", "executor-2", etcdkeys.ExecutorAssignedStateKey)
+	executor2AssignedStateKey, err := etcdkeys.BuildExecutorKey(testCluster.EtcdPrefix, "test-ns", "executor-2", etcdkeys.ExecutorAssignedStateKey)
+	require.NoError(t, err)
 	testCluster.Client.Put(context.Background(), executor2AssignedStateKey, string(assignedStateJSON))
 
 	// Sleep a bit to allow the cache to refresh

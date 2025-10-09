@@ -282,7 +282,7 @@ func (p *namespaceProcessor) rebalanceShardsImpl(ctx context.Context, metricsLoo
 	}
 
 	if namespaceState.GlobalRevision <= p.lastAppliedRevision {
-		p.logger.Info("No changes detected. Skipping rebalance.")
+		p.logger.Debug("No changes detected. Skipping rebalance.")
 		return nil
 	}
 	p.lastAppliedRevision = namespaceState.GlobalRevision
@@ -304,7 +304,7 @@ func (p *namespaceProcessor) rebalanceShardsImpl(ctx context.Context, metricsLoo
 	distributionChanged = distributionChanged || p.updateAssignments(shardsToReassign, activeExecutors, currentAssignments)
 
 	if !distributionChanged {
-		p.logger.Info("No changes to distribution detected. Skipping rebalance.")
+		p.logger.Debug("No changes to distribution detected. Skipping rebalance.")
 		return nil
 	}
 
@@ -392,8 +392,8 @@ func (p *namespaceProcessor) addAssignmentsToNamespaceState(namespaceState *stor
 			assignedShardsMap[shardID] = &types.ShardAssignment{Status: types.AssignmentStatusREADY}
 		}
 		modRevision := int64(0) // Should be 0 if we have not seen it yet
-		if state, ok := namespaceState.ShardAssignments[executorID]; ok {
-			modRevision = state.ModRevision
+		if namespaceAssignments, ok := namespaceState.ShardAssignments[executorID]; ok {
+			modRevision = namespaceAssignments.ModRevision
 		}
 
 		newState[executorID] = store.AssignedState{

@@ -13,6 +13,22 @@ const (
 	ShardAssignedKey          = "assigned"
 )
 
+var validKeyTypes = []string{
+	ExecutorHeartbeatKey,
+	ExecutorStatusKey,
+	ExecutorReportedShardsKey,
+	ExecutorAssignedStateKey,
+}
+
+func isValidKeyType(key string) bool {
+	for _, validKey := range validKeyTypes {
+		if key == validKey {
+			return true
+		}
+	}
+	return false
+}
+
 func BuildNamespacePrefix(prefix string, namespace string) string {
 	return fmt.Sprintf("%s/%s", prefix, namespace)
 }
@@ -21,8 +37,12 @@ func BuildExecutorPrefix(prefix string, namespace string) string {
 	return fmt.Sprintf("%s/executors/", BuildNamespacePrefix(prefix, namespace))
 }
 
-func BuildExecutorKey(prefix string, namespace, executorID, keyType string) string {
-	return fmt.Sprintf("%s%s/%s", BuildExecutorPrefix(prefix, namespace), executorID, keyType)
+func BuildExecutorKey(prefix string, namespace, executorID, keyType string) (string, error) {
+	// We allow an empty key, to build the full prefix
+	if !isValidKeyType(keyType) && keyType != "" {
+		return "", fmt.Errorf("invalid key type: %s", keyType)
+	}
+	return fmt.Sprintf("%s%s/%s", BuildExecutorPrefix(prefix, namespace), executorID, keyType), nil
 }
 
 func ParseExecutorKey(prefix string, namespace, key string) (executorID, keyType string, err error) {

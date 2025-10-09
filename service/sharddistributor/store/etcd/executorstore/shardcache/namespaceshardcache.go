@@ -20,23 +20,23 @@ type namespaceShardToExecutor struct {
 	shardToExecutor     map[string]string
 	executorRevision    map[string]int64
 	namespace           string
-	prefix              string
+	etcdPrefix          string
 	changeUpdateChannel clientv3.WatchChan
 	stopCh              chan struct{}
 	logger              log.Logger
 	client              *clientv3.Client
 }
 
-func newNamespaceShardToExecutor(prefix, namespace string, client *clientv3.Client, stopCh chan struct{}, logger log.Logger) (*namespaceShardToExecutor, error) {
+func newNamespaceShardToExecutor(etcdPrefix, namespace string, client *clientv3.Client, stopCh chan struct{}, logger log.Logger) (*namespaceShardToExecutor, error) {
 	// Start listening
-	watchPrefix := etcdkeys.BuildExecutorPrefix(prefix, namespace)
+	watchPrefix := etcdkeys.BuildExecutorPrefix(etcdPrefix, namespace)
 	watchChan := client.Watch(context.Background(), watchPrefix, clientv3.WithPrefix())
 
 	return &namespaceShardToExecutor{
 		shardToExecutor:     make(map[string]string),
 		executorRevision:    make(map[string]int64),
 		namespace:           namespace,
-		prefix:              prefix,
+		etcdPrefix:          etcdPrefix,
 		changeUpdateChannel: watchChan,
 		stopCh:              stopCh,
 		logger:              logger,
@@ -78,16 +78,19 @@ func (n *namespaceShardToExecutor) GetShardOwner(ctx context.Context, shardID st
 	return "", store.ErrShardNotFound
 }
 
-func (n *namespaceShardToExecutor) GetExecutorModRevisionCmp() []clientv3.Cmp {
+func (n *namespaceShardToExecutor) GetExecutorModRevisionCmp() ([]clientv3.Cmp, error) {
 	n.RLock()
 	defer n.RUnlock()
 	comparisons := []clientv3.Cmp{}
 	for executor, revision := range n.executorRevision {
-		executorAssignedStateKey := etcdkeys.BuildExecutorKey(n.prefix, n.namespace, executor, etcdkeys.ExecutorAssignedStateKey)
+		executorAssignedStateKey, err := etcdkeys.BuildExecutorKey(n.etcdPrefix, n.namespace, executor, etcdkeys.ExecutorAssignedStateKey)
+		if err != nil {
+			return nil, fmt.Errorf("build executor assigned state key: %w", err)
+		}
 		comparisons = append(comparisons, clientv3.Compare(clientv3.ModRevision(executorAssignedStateKey), "=", revision))
 	}
 
-	return comparisons
+	return comparisons, nil
 }
 
 func (n *namespaceShardToExecutor) nameSpaceRefreashLoop() {
@@ -98,7 +101,7 @@ func (n *namespaceShardToExecutor) nameSpaceRefreashLoop() {
 		case watchResp := <-n.changeUpdateChannel:
 			shouldRefresh := false
 			for _, event := range watchResp.Events {
-				_, keyType, keyErr := etcdkeys.ParseExecutorKey(n.prefix, n.namespace, string(event.Kv.Key))
+				_, keyType, keyErr := etcdkeys.ParseExecutorKey(n.etcdPrefix, n.namespace, string(event.Kv.Key))
 				if keyErr == nil && keyType == etcdkeys.ExecutorAssignedStateKey {
 					shouldRefresh = true
 					break
@@ -117,7 +120,7 @@ func (n *namespaceShardToExecutor) nameSpaceRefreashLoop() {
 
 func (n *namespaceShardToExecutor) refresh(ctx context.Context) error {
 
-	executorPrefix := etcdkeys.BuildExecutorPrefix(n.prefix, n.namespace)
+	executorPrefix := etcdkeys.BuildExecutorPrefix(n.etcdPrefix, n.namespace)
 
 	resp, err := n.client.Get(ctx, executorPrefix, clientv3.WithPrefix())
 	if err != nil {
@@ -131,7 +134,7 @@ func (n *namespaceShardToExecutor) refresh(ctx context.Context) error {
 	n.executorRevision = make(map[string]int64)
 
 	for _, kv := range resp.Kvs {
-		executorID, keyType, keyErr := etcdkeys.ParseExecutorKey(n.prefix, n.namespace, string(kv.Key))
+		executorID, keyType, keyErr := etcdkeys.ParseExecutorKey(n.etcdPrefix, n.namespace, string(kv.Key))
 		if keyErr != nil || keyType != etcdkeys.ExecutorAssignedStateKey {
 			continue
 		}

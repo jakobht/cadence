@@ -17,8 +17,14 @@ func TestBuildExecutorPrefix(t *testing.T) {
 }
 
 func TestBuildExecutorKey(t *testing.T) {
-	got := BuildExecutorKey("/cadence", "test-ns", "exec-1", "heartbeat")
+	got, err := BuildExecutorKey("/cadence", "test-ns", "exec-1", "heartbeat")
+	assert.NoError(t, err)
 	assert.Equal(t, "/cadence/test-ns/executors/exec-1/heartbeat", got)
+}
+
+func TestBuildExecutorKeyFail(t *testing.T) {
+	_, err := BuildExecutorKey("/cadence", "test-ns", "exec-1", "invalid")
+	assert.ErrorContains(t, err, "invalid key type: invalid")
 }
 
 func TestParseExecutorKey(t *testing.T) {
