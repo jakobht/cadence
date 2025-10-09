@@ -1,4 +1,4 @@
-package executorstore
+package shardcache
 
 import (
 	"context"
@@ -14,10 +14,11 @@ import (
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/sharddistributor/store"
 	"github.com/uber/cadence/service/sharddistributor/store/etcd/etcdkeys"
+	"github.com/uber/cadence/service/sharddistributor/store/etcd/testhelper"
 )
 
 func TestNamespaceShardToExecutor_Lifecycle(t *testing.T) {
-	testCluster := setupStoreTestCluster(t)
+	testCluster := testhelper.SetupStoreTestCluster(t)
 
 	logger := testlogger.New(t)
 
@@ -32,11 +33,11 @@ func TestNamespaceShardToExecutor_Lifecycle(t *testing.T) {
 	assignedStateJSON, err := json.Marshal(assignedState)
 	require.NoError(t, err)
 
-	executor1AssignedStateKey := etcdkeys.BuildExecutorKey(testCluster.etcdPrefix, "test-ns", "executor-1", executorAssignedStateKey)
-	testCluster.client.Put(context.Background(), executor1AssignedStateKey, string(assignedStateJSON))
+	executor1AssignedStateKey := etcdkeys.BuildExecutorKey(testCluster.EtcdPrefix, "test-ns", "executor-1", etcdkeys.ExecutorAssignedStateKey)
+	testCluster.Client.Put(context.Background(), executor1AssignedStateKey, string(assignedStateJSON))
 
 	// First call should get the state and return the owner as executor-1
-	namespaceShardToExecutor, err := newNamespaceShardToExecutor(testCluster.etcdPrefix, "test-ns", testCluster.client, stopCh, logger)
+	namespaceShardToExecutor, err := newNamespaceShardToExecutor(testCluster.EtcdPrefix, "test-ns", testCluster.Client, stopCh, logger)
 	assert.NoError(t, err)
 	namespaceShardToExecutor.Start(&sync.WaitGroup{})
 
@@ -56,8 +57,8 @@ func TestNamespaceShardToExecutor_Lifecycle(t *testing.T) {
 	assignedStateJSON, err = json.Marshal(assignedState)
 	require.NoError(t, err)
 
-	executor2AssignedStateKey := etcdkeys.BuildExecutorKey(testCluster.etcdPrefix, "test-ns", "executor-2", executorAssignedStateKey)
-	testCluster.client.Put(context.Background(), executor2AssignedStateKey, string(assignedStateJSON))
+	executor2AssignedStateKey := etcdkeys.BuildExecutorKey(testCluster.EtcdPrefix, "test-ns", "executor-2", etcdkeys.ExecutorAssignedStateKey)
+	testCluster.Client.Put(context.Background(), executor2AssignedStateKey, string(assignedStateJSON))
 
 	// Sleep a bit to allow the cache to refresh
 	time.Sleep(100 * time.Millisecond)
@@ -69,25 +70,3 @@ func TestNamespaceShardToExecutor_Lifecycle(t *testing.T) {
 
 	close(stopCh)
 }
-
-/*
-func TestNamespaceShardToExecutor_GetShardOwner_RefreshError(t *testing.T) {
-	testCluster := setupStoreTestCluster(t)
-
-	logger := testlogger.New(t)
-
-	nsCache := &namespaceShardToExecutor{
-		shardToExecutor: make(map[string]string), // Empty cache
-		namespace:       "non-existent-ns",
-		client:          testCluster.client,
-		logger:          logger,
-	}
-
-	// GetShardOwner should trigger refresh and return the error
-	owner, err := nsCache.GetShardOwner(context.Background(), "shard-1")
-
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "refresh for namespace non-existent-ns")
-	assert.Empty(t, owner)
-}
-*/

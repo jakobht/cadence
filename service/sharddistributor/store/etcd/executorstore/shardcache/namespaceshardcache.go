@@ -1,4 +1,4 @@
-package executorstore
+package shardcache
 
 import (
 	"context"
@@ -78,6 +78,18 @@ func (n *namespaceShardToExecutor) GetShardOwner(ctx context.Context, shardID st
 	return "", store.ErrShardNotFound
 }
 
+func (n *namespaceShardToExecutor) GetExecutorModRevisionCmp() []clientv3.Cmp {
+	n.RLock()
+	defer n.RUnlock()
+	comparisons := []clientv3.Cmp{}
+	for executor, revision := range n.executorRevision {
+		executorAssignedStateKey := etcdkeys.BuildExecutorKey(n.prefix, n.namespace, executor, etcdkeys.ExecutorAssignedStateKey)
+		comparisons = append(comparisons, clientv3.Compare(clientv3.ModRevision(executorAssignedStateKey), "=", revision))
+	}
+
+	return comparisons
+}
+
 func (n *namespaceShardToExecutor) nameSpaceRefreashLoop() {
 	for {
 		select {
@@ -87,7 +99,7 @@ func (n *namespaceShardToExecutor) nameSpaceRefreashLoop() {
 			shouldRefresh := false
 			for _, event := range watchResp.Events {
 				_, keyType, keyErr := etcdkeys.ParseExecutorKey(n.prefix, n.namespace, string(event.Kv.Key))
-				if keyErr == nil && keyType == executorAssignedStateKey {
+				if keyErr == nil && keyType == etcdkeys.ExecutorAssignedStateKey {
 					shouldRefresh = true
 					break
 				}
@@ -120,7 +132,7 @@ func (n *namespaceShardToExecutor) refresh(ctx context.Context) error {
 
 	for _, kv := range resp.Kvs {
 		executorID, keyType, keyErr := etcdkeys.ParseExecutorKey(n.prefix, n.namespace, string(kv.Key))
-		if keyErr != nil || keyType != executorAssignedStateKey {
+		if keyErr != nil || keyType != etcdkeys.ExecutorAssignedStateKey {
 			continue
 		}
 

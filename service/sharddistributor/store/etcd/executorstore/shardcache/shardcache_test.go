@@ -1,4 +1,4 @@
-package executorstore
+package shardcache
 
 import (
 	"context"
@@ -7,19 +7,20 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	clientv3 "go.etcd.io/etcd/client/v3"
 
 	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/sharddistributor/store"
 	"github.com/uber/cadence/service/sharddistributor/store/etcd/etcdkeys"
+	"github.com/uber/cadence/service/sharddistributor/store/etcd/testhelper"
 )
 
 func TestNewShardToExecutorCache(t *testing.T) {
 	logger := testlogger.New(t)
 
-	cache := NewShardToExecutorCache(ShardToExecutorCacheParams{
-		Logger: logger,
-	})
+	client := &clientv3.Client{}
+	cache := NewShardToExecutorCache("some-prefix", client, logger)
 
 	assert.NotNil(t, cache)
 
@@ -27,10 +28,12 @@ func TestNewShardToExecutorCache(t *testing.T) {
 	assert.NotNil(t, cache.stopC)
 
 	assert.Equal(t, logger, cache.logger)
+	assert.Equal(t, "some-prefix", cache.prefix)
+	assert.Equal(t, client, cache.client)
 }
 
 func TestShardExecutorCache(t *testing.T) {
-	testCluster := setupStoreTestCluster(t)
+	testCluster := testhelper.SetupStoreTestCluster(t)
 
 	logger := testlogger.New(t)
 
@@ -43,14 +46,10 @@ func TestShardExecutorCache(t *testing.T) {
 	assignedStateJSON, err := json.Marshal(assignedState)
 	require.NoError(t, err)
 
-	executorAssignedStateKey := etcdkeys.BuildExecutorKey(testCluster.etcdPrefix, "test-ns", "executor-1", executorAssignedStateKey)
-	testCluster.client.Put(context.Background(), executorAssignedStateKey, string(assignedStateJSON))
+	executorAssignedStateKey := etcdkeys.BuildExecutorKey(testCluster.EtcdPrefix, "test-ns", "executor-1", etcdkeys.ExecutorAssignedStateKey)
+	testCluster.Client.Put(context.Background(), executorAssignedStateKey, string(assignedStateJSON))
 
-	cache := NewShardToExecutorCache(ShardToExecutorCacheParams{
-		Logger: logger,
-	})
-	cache.prefix = testCluster.etcdPrefix
-	cache.client = testCluster.client
+	cache := NewShardToExecutorCache(testCluster.EtcdPrefix, testCluster.Client, logger)
 
 	cache.Start()
 	defer cache.Stop()
@@ -64,32 +63,3 @@ func TestShardExecutorCache(t *testing.T) {
 	assert.Greater(t, cache.namespaceToShards["test-ns"].executorRevision["executor-1"], int64(0))
 	assert.Equal(t, "executor-1", cache.namespaceToShards["test-ns"].shardToExecutor["shard-1"])
 }
-
-/*
-func TestShardExecutorCache_SubscribeFailure(t *testing.T) {
-	goleak.VerifyNone(t)
-
-	logger := testlogger.New(t)
-	ctrl := gomock.NewController(t)
-	mockStore := NewMockExecutorStore(ctrl)
-
-	mockChan := make(chan int64, 1)
-
-	// We only expect one call to subscribe and get state, since the cache will then be
-	// populated
-	mockStore.EXPECT().Subscribe(gomock.Any(), "test-ns").Return(mockChan, assert.AnError)
-
-	cache := NewShardToExecutorCache(ShardToExecutorCacheParams{
-		Store:  mockStore,
-		Logger: logger,
-	})
-
-	cache.Start()
-
-	// This will read the namespace from the store as the cache is empty
-	_, err := cache.GetShardOwner(context.Background(), "test-ns", "shard-1")
-	assert.ErrorContains(t, err, "get namespace shard to executor")
-
-	cache.Stop()
-}
-*/

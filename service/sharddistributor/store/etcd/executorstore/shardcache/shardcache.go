@@ -1,4 +1,4 @@
-package executorstore
+package shardcache
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
-	"go.uber.org/fx"
 
 	"github.com/uber/cadence/common/log"
 )
@@ -22,17 +21,17 @@ type ShardToExecutorCache struct {
 	wg                sync.WaitGroup
 }
 
-type ShardToExecutorCacheParams struct {
-	fx.In
-
-	Logger log.Logger
-}
-
-func NewShardToExecutorCache(p ShardToExecutorCacheParams) *ShardToExecutorCache {
+func NewShardToExecutorCache(
+	prefix string,
+	client *clientv3.Client,
+	logger log.Logger,
+) *ShardToExecutorCache {
 	shardCache := &ShardToExecutorCache{
 		namespaceToShards: make(NamespaceToShards),
 		stopC:             make(chan struct{}),
-		logger:            p.Logger,
+		logger:            logger,
+		prefix:            prefix,
+		client:            client,
 		wg:                sync.WaitGroup{},
 	}
 
@@ -47,14 +46,22 @@ func (s *ShardToExecutorCache) Stop() {
 }
 
 func (s *ShardToExecutorCache) GetShardOwner(ctx context.Context, namespace, shardID string) (string, error) {
-	namespaceShardToExecutor, err := s.getNamespaceShardToExecutor(ctx, namespace)
+	namespaceShardToExecutor, err := s.getNamespaceShardToExecutor(namespace)
 	if err != nil {
 		return "", fmt.Errorf("get namespace shard to executor: %w", err)
 	}
 	return namespaceShardToExecutor.GetShardOwner(ctx, shardID)
 }
 
-func (s *ShardToExecutorCache) getNamespaceShardToExecutor(ctx context.Context, namespace string) (*namespaceShardToExecutor, error) {
+func (s *ShardToExecutorCache) GetExecutorModRevisionCmp(namespace string) ([]clientv3.Cmp, error) {
+	namespaceShardToExecutor, err := s.getNamespaceShardToExecutor(namespace)
+	if err != nil {
+		return nil, fmt.Errorf("get namespace shard to executor: %w", err)
+	}
+	return namespaceShardToExecutor.GetExecutorModRevisionCmp(), nil
+}
+
+func (s *ShardToExecutorCache) getNamespaceShardToExecutor(namespace string) (*namespaceShardToExecutor, error) {
 	s.RLock()
 	namespaceShardToExecutor, ok := s.namespaceToShards[namespace]
 	s.RUnlock()

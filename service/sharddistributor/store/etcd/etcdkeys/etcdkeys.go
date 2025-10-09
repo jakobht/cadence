@@ -5,6 +5,14 @@ import (
 	"strings"
 )
 
+const (
+	ExecutorHeartbeatKey      = "heartbeat"
+	ExecutorStatusKey         = "status"
+	ExecutorReportedShardsKey = "reported_shards"
+	ExecutorAssignedStateKey  = "assigned_state"
+	ShardAssignedKey          = "assigned"
+)
+
 func BuildNamespacePrefix(prefix string, namespace string) string {
 	return fmt.Sprintf("%s/%s", prefix, namespace)
 }
