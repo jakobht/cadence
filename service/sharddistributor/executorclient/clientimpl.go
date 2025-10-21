@@ -110,7 +110,7 @@ func (e *executorImpl[SP]) GetShardProcess(ctx context.Context, shardID string) 
 		}
 
 		// Do a heartbeat and check again
-		shardAssignment, err := e.heartbeatAndAssignShards(ctx)
+		shardAssignment, err := e.heartbeatAndHandleMigrationMode(ctx)
 		if err != nil {
 			var zero SP
 			return zero, fmt.Errorf("heartbeat and assign shards: %w", err)
@@ -159,7 +159,7 @@ func (e *executorImpl[SP]) heartbeatloop(ctx context.Context) {
 			return
 		case <-heartBeatTimer.Chan():
 			heartBeatTimer.Reset(getJitteredHeartbeatDuration(e.heartBeatInterval, heartbeatJitterMax))
-			shardAssignment, err := e.heartbeatAndAssignShards(ctx)
+			shardAssignment, err := e.heartbeatAndHandleMigrationMode(ctx)
 			if errors.Is(err, ErrLocalPassthroughMode) {
 				e.logger.Info("local passthrough mode: stopping heartbeat loop")
 				return
@@ -175,7 +175,7 @@ func (e *executorImpl[SP]) heartbeatloop(ctx context.Context) {
 	}
 }
 
-func (e *executorImpl[SP]) heartbeatAndAssignShards(ctx context.Context) (shardAssignment map[string]*types.ShardAssignment, err error) {
+func (e *executorImpl[SP]) heartbeatAndHandleMigrationMode(ctx context.Context) (shardAssignment map[string]*types.ShardAssignment, err error) {
 	shardAssignment, migrationMode, err := e.heartbeat(ctx)
 	if err != nil {
 		// TODO: should we stop the executor, and drop all the shards?

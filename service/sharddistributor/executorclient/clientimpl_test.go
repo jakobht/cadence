@@ -588,7 +588,7 @@ func TestGetShardProcess_NonOwnedShard_Fails(t *testing.T) {
 			migrationMode:          types.MigrationModeONBOARDED,
 			shardsInCache:          []string{},
 			heartbeatCallsExpected: 1,
-			expectedError:          fmt.Errorf("heartbeat and assign shards:"),
+			expectedError:          fmt.Errorf("heartbeat and assign shards"),
 			heartBeatError:         assert.AnError,
 		},
 	}
