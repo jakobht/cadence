@@ -197,10 +197,12 @@ func (e *executorImpl[SP]) heartbeatAndAssignShards(ctx context.Context) (shardA
 		// DISTRIBUTED_PASSTHROUGH: validate then apply the assignment
 		e.compareAssignments(shardAssignment)
 		return shardAssignment, nil
+		// Continue with applying the assignment from heartbeat
 
 	case types.MigrationModeONBOARDED:
 		// ONBOARDED: normal flow, apply the assignment from heartbeat
 		return shardAssignment, nil
+		// Continue with normal assignment logic below
 
 	default:
 		e.logger.Warn("unknown migration mode, skipping assignment",
@@ -213,6 +215,7 @@ func (e *executorImpl[SP]) updateShardAssignmentMetered(ctx context.Context, sha
 	if !e.assignmentMutex.TryLock() {
 		e.logger.Warn("already doing shard assignment, will skip this assignment")
 		e.metrics.Counter(metricsconstants.ShardDistributorExecutorAssignmentSkipped).Inc(1)
+		return
 	}
 	defer e.assignmentMutex.Unlock()
 
