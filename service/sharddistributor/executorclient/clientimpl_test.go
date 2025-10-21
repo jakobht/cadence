@@ -552,6 +552,7 @@ func TestGetShardProcess_NonOwnedShard_Fails(t *testing.T) {
 		shardsReturnedOnHeartbeat map[string]*types.ShardAssignment
 		heartbeatCallsExpected    int
 		heartBeatError            error
+		setupMocks                func(shardProcessorFactory *MockShardProcessorFactory[*MockShardProcessor], shardProcessor *MockShardProcessor)
 	}{
 		"empty cache local passthrough": {
 			migrationMode:          types.MigrationModeLOCALPASSTHROUGH,
@@ -571,6 +572,10 @@ func TestGetShardProcess_NonOwnedShard_Fails(t *testing.T) {
 				"test-shard-id1": {Status: types.AssignmentStatusREADY},
 			},
 			heartbeatCallsExpected: 1,
+			setupMocks: func(processorFactory *MockShardProcessorFactory[*MockShardProcessor], processor *MockShardProcessor) {
+				processorFactory.EXPECT().NewShardProcessor(gomock.Any()).Return(processor, nil)
+				processor.EXPECT().Start(gomock.Any())
+			},
 		},
 		"shard not found on heartbeat": {
 			migrationMode:             types.MigrationModeONBOARDED,
@@ -596,9 +601,13 @@ func TestGetShardProcess_NonOwnedShard_Fails(t *testing.T) {
 			shardDistributorClient.EXPECT().Heartbeat(gomock.Any(), gomock.Any(), gomock.Any()).
 				Return(&types.ExecutorHeartbeatResponse{
 					ShardAssignments: tc.shardsReturnedOnHeartbeat,
+					MigrationMode:    tc.migrationMode,
 				}, tc.heartBeatError).Times(tc.heartbeatCallsExpected)
 
 			shardProcessorFactory := NewMockShardProcessorFactory[*MockShardProcessor](ctrl)
+			if tc.setupMocks != nil {
+				tc.setupMocks(shardProcessorFactory, NewMockShardProcessor(ctrl))
+			}
 
 			executor := &executorImpl[*MockShardProcessor]{
 				logger:                 log.NewNoop(),
@@ -606,6 +615,7 @@ func TestGetShardProcess_NonOwnedShard_Fails(t *testing.T) {
 				metrics:                tally.NoopScope,
 				migrationMode:          tc.migrationMode,
 				shardDistributorClient: shardDistributorClient,
+				timeSource:             clock.NewMockedTimeSource(),
 			}
 
 			for _, shardID := range tc.shardsInCache {
