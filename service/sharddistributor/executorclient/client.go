@@ -40,7 +40,7 @@ type Executor[SP ShardProcessor] interface {
 	Start(ctx context.Context)
 	Stop()
 
-	GetShardProcess(shardID string) (SP, error)
+	GetShardProcess(ctx context.Context, shardID string) (SP, error)
 	// Used during the migration during local-passthrough and local-passthrough-shadow
 	AssignShardsFromLocalLogic(ctx context.Context, shardAssignment map[string]*types.ShardAssignment)
 }

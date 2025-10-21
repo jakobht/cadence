@@ -85,11 +85,27 @@ func (e *executorImpl[SP]) Stop() {
 	e.processLoopWG.Wait()
 }
 
-func (e *executorImpl[SP]) GetShardProcess(shardID string) (SP, error) {
+func (e *executorImpl[SP]) GetShardProcess(ctx context.Context, shardID string) (SP, error) {
 	shardProcess, ok := e.managedProcessors.Load(shardID)
 	if !ok {
-		var zero SP
-		return zero, fmt.Errorf("shard process not found for shard ID: %s", shardID)
+
+		if e.migrationMode == types.MigrationModeLOCALPASSTHROUGH {
+			// Fail immediately if we are in LOCAL_PASSTHROUGH mode
+			var zero SP
+			return zero, fmt.Errorf("shard process not found for shard ID: %s", shardID)
+		}
+
+		// Do a heartbeat and check again
+		_, err := e.heartbeatAndAssignShards(ctx, false)
+		if err != nil {
+			var zero SP
+			return zero, fmt.Errorf("heartbeat and assign shards: %w", err)
+		}
+		shardProcess, ok = e.managedProcessors.Load(shardID)
+		if !ok {
+			var zero SP
+			return zero, fmt.Errorf("shard process not found for shard ID: %s", shardID)
+		}
 	}
 	return shardProcess.processor, nil
 }
@@ -124,56 +140,74 @@ func (e *executorImpl[SP]) heartbeatloop(ctx context.Context) {
 			return
 		case <-heartBeatTimer.Chan():
 			heartBeatTimer.Reset(getJitteredHeartbeatDuration(e.heartBeatInterval, heartbeatJitterMax))
-			shardAssignment, migrationMode, err := e.heartbeat(ctx)
+			shouldContinue, err := e.heartbeatAndAssignShards(ctx, true)
 			if err != nil {
-				e.logger.Error("failed to heartbeat", tag.Error(err))
-				continue // TODO: should we stop the executor, and drop all the shards?
+				e.logger.Error("failed to heartbeat and assign shards", tag.Error(err))
+				continue
 			}
-
-			// Handle migration mode logic
-			switch migrationMode {
-			case types.MigrationModeLOCALPASSTHROUGH:
-				// LOCAL_PASSTHROUGH: statically assigned, stop heartbeating
-				e.logger.Info("local passthrough mode: stopping heartbeat loop")
+			if !shouldContinue {
 				return
-
-			case types.MigrationModeLOCALPASSTHROUGHSHADOW:
-				// LOCAL_PASSTHROUGH_SHADOW: check response but don't apply it
-				e.compareAssignments(shardAssignment)
-				continue
-
-			case types.MigrationModeDISTRIBUTEDPASSTHROUGH:
-				// DISTRIBUTED_PASSTHROUGH: validate then apply the assignment
-				e.compareAssignments(shardAssignment)
-				// Continue with applying the assignment from heartbeat
-
-			case types.MigrationModeONBOARDED:
-				// ONBOARDED: normal flow, apply the assignment from heartbeat
-				// Continue with normal assignment logic below
-
-			default:
-				e.logger.Warn("unknown migration mode, skipping assignment",
-					tag.Dynamic("migration-mode", migrationMode))
-				continue
 			}
-
-			if !e.assignmentMutex.TryLock() {
-				e.logger.Warn("already doing shard assignment, will skip this assignment")
-				e.metrics.Counter(metricsconstants.ShardDistributorExecutorAssignmentSkipped).Inc(1)
-				continue
-			}
-			go func() {
-				defer e.assignmentMutex.Unlock()
-
-				startTime := e.timeSource.Now()
-				defer e.metrics.
-					Histogram(metricsconstants.ShardDistributorExecutorAssignLoopLatency, metricsconstants.ShardDistributorExecutorAssignLoopLatencyBuckets).
-					RecordDuration(e.timeSource.Since(startTime))
-
-				e.updateShardAssignment(ctx, shardAssignment)
-			}()
 		}
 	}
+}
+
+func (e *executorImpl[SP]) heartbeatAndAssignShards(ctx context.Context, asyncAssign bool) (bool, error) {
+	shardAssignment, migrationMode, err := e.heartbeat(ctx)
+	if err != nil {
+		// TODO: should we stop the executor, and drop all the shards?
+		return true, fmt.Errorf("failed to heartbeat: %w", err)
+	}
+
+	// Handle migration mode logic
+	switch migrationMode {
+	case types.MigrationModeLOCALPASSTHROUGH:
+		// LOCAL_PASSTHROUGH: statically assigned, stop heartbeating
+		e.logger.Info("local passthrough mode: stopping heartbeat loop")
+		return false, nil
+
+	case types.MigrationModeLOCALPASSTHROUGHSHADOW:
+		// LOCAL_PASSTHROUGH_SHADOW: check response but don't apply it
+		e.compareAssignments(shardAssignment)
+		return true, nil
+
+	case types.MigrationModeDISTRIBUTEDPASSTHROUGH:
+		// DISTRIBUTED_PASSTHROUGH: validate then apply the assignment
+		e.compareAssignments(shardAssignment)
+		// Continue with applying the assignment from heartbeat
+
+	case types.MigrationModeONBOARDED:
+		// ONBOARDED: normal flow, apply the assignment from heartbeat
+		// Continue with normal assignment logic below
+
+	default:
+		e.logger.Warn("unknown migration mode, skipping assignment",
+			tag.Dynamic("migration-mode", migrationMode))
+		return true, nil
+	}
+
+	if asyncAssign {
+		go e.updateShardAssignmentMetered(ctx, shardAssignment)
+	} else {
+		e.updateShardAssignmentMetered(ctx, shardAssignment)
+	}
+
+	return true, nil
+}
+
+func (e *executorImpl[SP]) updateShardAssignmentMetered(ctx context.Context, shardAssignment map[string]*types.ShardAssignment) {
+	if !e.assignmentMutex.TryLock() {
+		e.logger.Warn("already doing shard assignment, will skip this assignment")
+		e.metrics.Counter(metricsconstants.ShardDistributorExecutorAssignmentSkipped).Inc(1)
+	}
+	defer e.assignmentMutex.Unlock()
+
+	startTime := e.timeSource.Now()
+	defer e.metrics.
+		Histogram(metricsconstants.ShardDistributorExecutorAssignLoopLatency, metricsconstants.ShardDistributorExecutorAssignLoopLatencyBuckets).
+		RecordDuration(e.timeSource.Since(startTime))
+
+	e.updateShardAssignment(ctx, shardAssignment)
 }
 
 func (e *executorImpl[SP]) heartbeat(ctx context.Context) (shardAssignments map[string]*types.ShardAssignment, migrationMode types.MigrationMode, err error) {

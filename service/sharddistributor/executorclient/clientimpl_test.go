@@ -2,6 +2,7 @@ package executorclient
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -83,17 +84,17 @@ func TestHeartBeartLoop(t *testing.T) {
 	mockTimeSource.BlockUntil(1)
 
 	// Assert that the two shards are assigned to the executor
-	processor1, err := executor.GetShardProcess("test-shard-id1")
+	processor1, err := executor.GetShardProcess(context.Background(), "test-shard-id1")
 	assert.NoError(t, err)
 	assert.Equal(t, mockShardProcessor1, processor1)
 
-	processor2, err := executor.GetShardProcess("test-shard-id2")
+	processor2, err := executor.GetShardProcess(context.Background(), "test-shard-id2")
 	assert.NoError(t, err)
 	assert.Equal(t, mockShardProcessor2, processor2)
 
-	nonOwned, err := executor.GetShardProcess("non-owned-shard-id")
-	assert.Error(t, err)
-	assert.Nil(t, nonOwned)
+	// Check that non-owned-shard-id is not in the local cache, we check directly since we don't want to trigger a heartbeat
+	_, ok := executor.managedProcessors.Load("non-owned-shard-id")
+	assert.False(t, ok)
 }
 
 func TestHeartbeat(t *testing.T) {
@@ -184,16 +185,18 @@ func TestHeartBeartLoop_ShardAssignmentChange(t *testing.T) {
 	time.Sleep(10 * time.Millisecond) // Force the updateShardAssignment goroutines to run
 
 	// Assert that we now have the 2 shards in the assignment
-	_, err := executor.GetShardProcess("test-shard-id1")
-	assert.Error(t, err)
-
-	processor2, err := executor.GetShardProcess("test-shard-id2")
+	processor2, err := executor.GetShardProcess(context.Background(), "test-shard-id2")
 	assert.NoError(t, err)
 	assert.Equal(t, shardProcessorMock2, processor2)
 
-	processor3, err := executor.GetShardProcess("test-shard-id3")
+	processor3, err := executor.GetShardProcess(context.Background(), "test-shard-id3")
 	assert.NoError(t, err)
 	assert.Equal(t, shardProcessorMock3, processor3)
+
+	// Check that we do not have shard "test-shard-id1" in the local cache
+	// we lookup directly since we don't want to trigger a heartbeat
+	_, ok := executor.managedProcessors.Load("test-shard-id1")
+	assert.False(t, ok)
 }
 
 func TestAssignShards(t *testing.T) {
@@ -232,17 +235,18 @@ func TestAssignShards(t *testing.T) {
 	time.Sleep(10 * time.Millisecond) // Force the updateShardAssignment goroutines to run
 
 	// Assert that we now have the 2 shards in the assignment
-	_, err := executor.GetShardProcess("test-shard-id1")
-	assert.Error(t, err)
-
-	processor2, err := executor.GetShardProcess("test-shard-id2")
+	processor2, err := executor.GetShardProcess(context.Background(), "test-shard-id2")
 	assert.NoError(t, err)
 	assert.Equal(t, shardProcessorMock2, processor2)
 
-	processor3, err := executor.GetShardProcess("test-shard-id3")
+	processor3, err := executor.GetShardProcess(context.Background(), "test-shard-id3")
 	assert.NoError(t, err)
 	assert.Equal(t, shardProcessorMock3, processor3)
 
+	// Check that we do not have shard "test-shard-id1" in the local cache
+	// we lookup directly since we don't want to trigger a heartbeat
+	_, ok := executor.managedProcessors.Load("test-shard-id1")
+	assert.False(t, ok)
 }
 
 func TestHeartbeat_WithMigrationMode(t *testing.T) {
@@ -379,9 +383,9 @@ func TestHeartbeatLoop_LocalPassthroughShadow_SkipsAssignment(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 	mockTimeSource.BlockUntil(1)
 
-	// Assert that no shards were assigned
-	_, err := executor.GetShardProcess("test-shard-id1")
-	assert.Error(t, err)
+	// Assert that no shards were assigned, we check directly since we don't want to trigger a heartbeat
+	_, ok := executor.managedProcessors.Load("test-shard-id1")
+	assert.False(t, ok)
 }
 
 func TestHeartbeatLoop_DistributedPassthrough_AppliesAssignment(t *testing.T) {
@@ -430,7 +434,7 @@ func TestHeartbeatLoop_DistributedPassthrough_AppliesAssignment(t *testing.T) {
 	mockTimeSource.BlockUntil(1)
 
 	// Assert that the shard was assigned
-	processor, err := executor.GetShardProcess("test-shard-id1")
+	processor, err := executor.GetShardProcess(context.Background(), "test-shard-id1")
 	assert.NoError(t, err)
 	assert.Equal(t, mockShardProcessor, processor)
 }
@@ -538,4 +542,82 @@ func TestCompareAssignments_Diverged_WrongStatus(t *testing.T) {
 	// Verify divergence metric was emitted
 	snapshot := testScope.Snapshot()
 	assert.Equal(t, int64(1), snapshot.Counters()["test.shard_distributor_executor_assignment_divergence+"].Value())
+}
+
+func TestGetShardProcess_NonOwnedShard_Fails(t *testing.T) {
+	cases := map[string]struct {
+		migrationMode             types.MigrationMode
+		expectedError             error
+		shardsInCache             []string
+		shardsReturnedOnHeartbeat map[string]*types.ShardAssignment
+		heartbeatCallsExpected    int
+		heartBeatError            error
+	}{
+		"empty cache local passthrough": {
+			migrationMode:          types.MigrationModeLOCALPASSTHROUGH,
+			expectedError:          fmt.Errorf("shard process not found for shard ID: test-shard-id1"),
+			shardsInCache:          []string{},
+			heartbeatCallsExpected: 0,
+		},
+		"shard found": {
+			migrationMode:          types.MigrationModeONBOARDED,
+			shardsInCache:          []string{"test-shard-id1"},
+			heartbeatCallsExpected: 0,
+		},
+		"shard found on heartbeat": {
+			migrationMode: types.MigrationModeONBOARDED,
+			shardsInCache: []string{},
+			shardsReturnedOnHeartbeat: map[string]*types.ShardAssignment{
+				"test-shard-id1": {Status: types.AssignmentStatusREADY},
+			},
+			heartbeatCallsExpected: 1,
+		},
+		"shard not found on heartbeat": {
+			migrationMode:             types.MigrationModeONBOARDED,
+			shardsInCache:             []string{},
+			shardsReturnedOnHeartbeat: map[string]*types.ShardAssignment{},
+			heartbeatCallsExpected:    1,
+			expectedError:             fmt.Errorf("shard process not found for shard ID: test-shard-id1"),
+		},
+		"heartbeat error": {
+			migrationMode:          types.MigrationModeONBOARDED,
+			shardsInCache:          []string{},
+			heartbeatCallsExpected: 1,
+			expectedError:          fmt.Errorf("heartbeat and assign shards:"),
+			heartBeatError:         assert.AnError,
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+
+			shardDistributorClient := sharddistributorexecutor.NewMockClient(ctrl)
+			shardDistributorClient.EXPECT().Heartbeat(gomock.Any(), gomock.Any(), gomock.Any()).
+				Return(&types.ExecutorHeartbeatResponse{
+					ShardAssignments: tc.shardsReturnedOnHeartbeat,
+				}, tc.heartBeatError).Times(tc.heartbeatCallsExpected)
+
+			shardProcessorFactory := NewMockShardProcessorFactory[*MockShardProcessor](ctrl)
+
+			executor := &executorImpl[*MockShardProcessor]{
+				logger:                 log.NewNoop(),
+				shardProcessorFactory:  shardProcessorFactory,
+				metrics:                tally.NoopScope,
+				migrationMode:          tc.migrationMode,
+				shardDistributorClient: shardDistributorClient,
+			}
+
+			for _, shardID := range tc.shardsInCache {
+				executor.managedProcessors.Store(shardID, newManagedProcessor(NewMockShardProcessor(ctrl), processorStateStarted))
+			}
+
+			_, err := executor.GetShardProcess(context.Background(), "test-shard-id1")
+			if tc.expectedError != nil {
+				assert.ErrorContains(t, err, tc.expectedError.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }
