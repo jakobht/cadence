@@ -2,6 +2,7 @@ package executorclient
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"sync"
@@ -17,6 +18,11 @@ import (
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/sharddistributor/executorclient/metricsconstants"
 	"github.com/uber/cadence/service/sharddistributor/executorclient/syncgeneric"
+)
+
+var (
+	// ErrLocalPassthroughMode indicates that the heartbeat loop should stop due to local passthrough mode
+	ErrLocalPassthroughMode = errors.New("local passthrough mode: stopping heartbeat loop")
 )
 
 type processorState int32
@@ -67,7 +73,15 @@ type executorImpl[SP ShardProcessor] struct {
 	processLoopWG          sync.WaitGroup
 	assignmentMutex        sync.Mutex
 	metrics                tally.Scope
-	migrationMode          types.MigrationMode
+	migrationMode          atomic.Int32
+}
+
+func (e *executorImpl[SP]) setMigrationMode(mode types.MigrationMode) {
+	e.migrationMode.Store(int32(mode))
+}
+
+func (e *executorImpl[SP]) getMigrationMode() types.MigrationMode {
+	return types.MigrationMode(e.migrationMode.Load())
 }
 
 func (e *executorImpl[SP]) Start(ctx context.Context) {
@@ -89,18 +103,23 @@ func (e *executorImpl[SP]) GetShardProcess(ctx context.Context, shardID string) 
 	shardProcess, ok := e.managedProcessors.Load(shardID)
 	if !ok {
 
-		if e.migrationMode == types.MigrationModeLOCALPASSTHROUGH {
+		if e.getMigrationMode() == types.MigrationModeLOCALPASSTHROUGH {
 			// Fail immediately if we are in LOCAL_PASSTHROUGH mode
 			var zero SP
 			return zero, fmt.Errorf("shard process not found for shard ID: %s", shardID)
 		}
 
 		// Do a heartbeat and check again
-		_, err := e.heartbeatAndAssignShards(ctx, false)
+		shardAssignment, err := e.heartbeatAndAssignShards(ctx)
 		if err != nil {
 			var zero SP
 			return zero, fmt.Errorf("heartbeat and assign shards: %w", err)
 		}
+		if shardAssignment != nil {
+			e.updateShardAssignmentMetered(ctx, shardAssignment)
+		}
+
+		// Check again if the shard process is found
 		shardProcess, ok = e.managedProcessors.Load(shardID)
 		if !ok {
 			var zero SP
@@ -120,7 +139,7 @@ func (e *executorImpl[SP]) AssignShardsFromLocalLogic(ctx context.Context, shard
 
 func (e *executorImpl[SP]) heartbeatloop(ctx context.Context) {
 	// Check if initial migration mode is LOCAL_PASSTHROUGH - if so, skip heartbeating entirely
-	if e.migrationMode == types.MigrationModeLOCALPASSTHROUGH {
+	if e.getMigrationMode() == types.MigrationModeLOCALPASSTHROUGH {
 		e.logger.Info("initial migration mode is local passthrough, skipping heartbeat loop")
 		return
 	}
@@ -140,59 +159,54 @@ func (e *executorImpl[SP]) heartbeatloop(ctx context.Context) {
 			return
 		case <-heartBeatTimer.Chan():
 			heartBeatTimer.Reset(getJitteredHeartbeatDuration(e.heartBeatInterval, heartbeatJitterMax))
-			shouldContinue, err := e.heartbeatAndAssignShards(ctx, true)
+			shardAssignment, err := e.heartbeatAndAssignShards(ctx)
+			if errors.Is(err, ErrLocalPassthroughMode) {
+				e.logger.Info("local passthrough mode: stopping heartbeat loop")
+				return
+			}
 			if err != nil {
 				e.logger.Error("failed to heartbeat and assign shards", tag.Error(err))
 				continue
 			}
-			if !shouldContinue {
-				return
+			if shardAssignment != nil {
+				go e.updateShardAssignmentMetered(ctx, shardAssignment)
 			}
 		}
 	}
 }
 
-func (e *executorImpl[SP]) heartbeatAndAssignShards(ctx context.Context, asyncAssign bool) (bool, error) {
+func (e *executorImpl[SP]) heartbeatAndAssignShards(ctx context.Context) (shardAssignment map[string]*types.ShardAssignment, err error) {
 	shardAssignment, migrationMode, err := e.heartbeat(ctx)
 	if err != nil {
 		// TODO: should we stop the executor, and drop all the shards?
-		return true, fmt.Errorf("failed to heartbeat: %w", err)
+		return nil, fmt.Errorf("failed to heartbeat: %w", err)
 	}
 
 	// Handle migration mode logic
 	switch migrationMode {
 	case types.MigrationModeLOCALPASSTHROUGH:
 		// LOCAL_PASSTHROUGH: statically assigned, stop heartbeating
-		e.logger.Info("local passthrough mode: stopping heartbeat loop")
-		return false, nil
+		return nil, ErrLocalPassthroughMode
 
 	case types.MigrationModeLOCALPASSTHROUGHSHADOW:
 		// LOCAL_PASSTHROUGH_SHADOW: check response but don't apply it
 		e.compareAssignments(shardAssignment)
-		return true, nil
+		return nil, nil
 
 	case types.MigrationModeDISTRIBUTEDPASSTHROUGH:
 		// DISTRIBUTED_PASSTHROUGH: validate then apply the assignment
 		e.compareAssignments(shardAssignment)
-		// Continue with applying the assignment from heartbeat
+		return shardAssignment, nil
 
 	case types.MigrationModeONBOARDED:
 		// ONBOARDED: normal flow, apply the assignment from heartbeat
-		// Continue with normal assignment logic below
+		return shardAssignment, nil
 
 	default:
 		e.logger.Warn("unknown migration mode, skipping assignment",
 			tag.Dynamic("migration-mode", migrationMode))
-		return true, nil
+		return nil, nil
 	}
-
-	if asyncAssign {
-		go e.updateShardAssignmentMetered(ctx, shardAssignment)
-	} else {
-		e.updateShardAssignmentMetered(ctx, shardAssignment)
-	}
-
-	return true, nil
 }
 
 func (e *executorImpl[SP]) updateShardAssignmentMetered(ctx context.Context, shardAssignment map[string]*types.ShardAssignment) {
@@ -241,13 +255,13 @@ func (e *executorImpl[SP]) heartbeat(ctx context.Context) (shardAssignments map[
 		return nil, types.MigrationModeINVALID, fmt.Errorf("send heartbeat: %w", err)
 	}
 
-	previousMode := e.migrationMode
+	previousMode := e.getMigrationMode()
 	currentMode := response.MigrationMode
 	if previousMode != currentMode {
 		e.logger.Info("migration mode transition",
 			tag.Dynamic("previous", previousMode),
 			tag.Dynamic("current", currentMode))
-		e.migrationMode = currentMode
+		e.setMigrationMode(currentMode)
 	}
 
 	return response.ShardAssignments, response.MigrationMode, nil

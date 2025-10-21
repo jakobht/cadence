@@ -273,15 +273,15 @@ func TestHeartbeat_WithMigrationMode(t *testing.T) {
 		namespace:              "test-namespace",
 		executorID:             "test-executor-id",
 		metrics:                tally.NoopScope,
-		migrationMode:          types.MigrationModeINVALID,
 	}
+	executor.setMigrationMode(types.MigrationModeINVALID)
 
 	shardAssignments, migrationMode, err := executor.heartbeat(context.Background())
 
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(shardAssignments))
 	assert.Equal(t, types.MigrationModeDISTRIBUTEDPASSTHROUGH, migrationMode)
-	assert.Equal(t, types.MigrationModeDISTRIBUTEDPASSTHROUGH, executor.migrationMode)
+	assert.Equal(t, types.MigrationModeDISTRIBUTEDPASSTHROUGH, executor.getMigrationMode())
 }
 
 func TestHeartbeat_MigrationModeTransition(t *testing.T) {
@@ -299,14 +299,14 @@ func TestHeartbeat_MigrationModeTransition(t *testing.T) {
 		namespace:              "test-namespace",
 		executorID:             "test-executor-id",
 		metrics:                tally.NoopScope,
-		migrationMode:          types.MigrationModeDISTRIBUTEDPASSTHROUGH,
 	}
+	executor.setMigrationMode(types.MigrationModeDISTRIBUTEDPASSTHROUGH)
 
 	_, migrationMode, err := executor.heartbeat(context.Background())
 
 	assert.NoError(t, err)
 	assert.Equal(t, types.MigrationModeONBOARDED, migrationMode)
-	assert.Equal(t, types.MigrationModeONBOARDED, executor.migrationMode)
+	assert.Equal(t, types.MigrationModeONBOARDED, executor.getMigrationMode())
 }
 
 func TestHeartbeatLoop_LocalPassthrough_SkipsHeartbeat(t *testing.T) {
@@ -330,8 +330,8 @@ func TestHeartbeatLoop_LocalPassthrough_SkipsHeartbeat(t *testing.T) {
 		managedProcessors:      syncgeneric.Map[string, *managedProcessor[*MockShardProcessor]]{},
 		executorID:             "test-executor-id",
 		timeSource:             mockTimeSource,
-		migrationMode:          types.MigrationModeLOCALPASSTHROUGH,
 	}
+	executor.setMigrationMode(types.MigrationModeLOCALPASSTHROUGH)
 
 	executor.Start(context.Background())
 	defer executor.Stop()
@@ -372,8 +372,8 @@ func TestHeartbeatLoop_LocalPassthroughShadow_SkipsAssignment(t *testing.T) {
 		managedProcessors:      syncgeneric.Map[string, *managedProcessor[*MockShardProcessor]]{},
 		executorID:             "test-executor-id",
 		timeSource:             mockTimeSource,
-		migrationMode:          types.MigrationModeONBOARDED,
 	}
+	executor.setMigrationMode(types.MigrationModeONBOARDED)
 
 	executor.Start(context.Background())
 	defer executor.Stop()
@@ -422,8 +422,8 @@ func TestHeartbeatLoop_DistributedPassthrough_AppliesAssignment(t *testing.T) {
 		managedProcessors:      syncgeneric.Map[string, *managedProcessor[*MockShardProcessor]]{},
 		executorID:             "test-executor-id",
 		timeSource:             mockTimeSource,
-		migrationMode:          types.MigrationModeONBOARDED,
 	}
+	executor.setMigrationMode(types.MigrationModeONBOARDED)
 
 	executor.Start(context.Background())
 	defer executor.Stop()
@@ -613,10 +613,10 @@ func TestGetShardProcess_NonOwnedShard_Fails(t *testing.T) {
 				logger:                 log.NewNoop(),
 				shardProcessorFactory:  shardProcessorFactory,
 				metrics:                tally.NoopScope,
-				migrationMode:          tc.migrationMode,
 				shardDistributorClient: shardDistributorClient,
 				timeSource:             clock.NewMockedTimeSource(),
 			}
+			executor.setMigrationMode(tc.migrationMode)
 
 			for _, shardID := range tc.shardsInCache {
 				executor.managedProcessors.Store(shardID, newManagedProcessor(NewMockShardProcessor(ctrl), processorStateStarted))

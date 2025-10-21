@@ -102,7 +102,7 @@ func newExecutorWithConfig[SP ShardProcessor](params Params[SP], namespaceConfig
 		"namespace":              namespaceConfig.Namespace,
 	})
 
-	return &executorImpl[SP]{
+	executor := &executorImpl[SP]{
 		logger:                 params.Logger,
 		shardDistributorClient: shardDistributorClient,
 		shardProcessorFactory:  params.ShardProcessorFactory,
@@ -112,8 +112,10 @@ func newExecutorWithConfig[SP ShardProcessor](params Params[SP], namespaceConfig
 		timeSource:             params.TimeSource,
 		stopC:                  make(chan struct{}),
 		metrics:                metricsScope,
-		migrationMode:          namespaceConfig.GetMigrationMode(),
-	}, nil
+	}
+	executor.setMigrationMode(namespaceConfig.GetMigrationMode())
+
+	return executor, nil
 }
 
 func createShardDistributorExecutorClient(yarpcClient sharddistributorv1.ShardDistributorExecutorAPIYARPCClient, metricsScope tally.Scope, logger log.Logger) (sharddistributorexecutor.Client, error) {
