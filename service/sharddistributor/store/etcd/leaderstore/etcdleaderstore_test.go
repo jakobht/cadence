@@ -12,11 +12,10 @@ import (
 	"github.com/stretchr/testify/require"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.uber.org/fx/fxtest"
-	"gopkg.in/yaml.v2"
 
-	"github.com/uber/cadence/common/config"
-	shardDistributorCfg "github.com/uber/cadence/service/sharddistributor/config"
+	"github.com/uber/cadence/service/sharddistributor/config"
 	"github.com/uber/cadence/service/sharddistributor/store"
+	"github.com/uber/cadence/service/sharddistributor/store/etcd/etcdclient"
 	"github.com/uber/cadence/testflags"
 )
 
@@ -66,7 +65,7 @@ func TestCampaign(t *testing.T) {
 	defer client.Close()
 
 	// Get the key and verify it exists
-	key := fmt.Sprintf("%s/%s/leader", tc.storeConfig.Prefix, namespace)
+	key := fmt.Sprintf("%s/%s/leader", tc.prefix, namespace)
 	resp, err := client.Get(ctx, key)
 	require.NoError(t, err)
 	require.NotEqual(t, 0, resp.Count, "Leader key should exist")
@@ -199,9 +198,9 @@ func TestSessionDone(t *testing.T) {
 
 // testCluster represents a test etcd cluster with its resources
 type testCluster struct {
-	store       store.Elector
-	storeConfig etcdCfg
-	endpoints   []string
+	store     store.Elector
+	prefix    string
+	endpoints []string
 }
 
 // setupETCDCluster initializes an etcd cluster for testing
@@ -219,39 +218,37 @@ func setupETCDCluster(t *testing.T) *testCluster {
 
 	t.Logf("ETCD endpoints: %v", endpoints)
 
-	testConfig := etcdCfg{
+	prefix := fmt.Sprintf("/election/%s", t.Name())
+
+	client, err := clientv3.New(clientv3.Config{
 		Endpoints:   endpoints,
 		DialTimeout: 5 * time.Second,
-		Prefix:      fmt.Sprintf("/election/%s", t.Name()),
-		ElectionTTL: 5 * time.Second,
-	}
+	})
+	require.NoError(t, err)
+	t.Cleanup(func() { client.Close() })
 
 	// Create store
+	etcdCfg := etcdclient.Config{
+		Prefix: prefix,
+	}
+	fullCfg := config.ShardDistribution{
+		Election: config.Election{
+			LeaderPeriod: 10 * time.Second,
+		},
+	}
 	storeParams := StoreParams{
-		Cfg:       shardDistributorCfg.ShardDistribution{LeaderStore: shardDistributorCfg.Store{StorageParams: createConfig(t, testConfig)}},
-		Lifecycle: fxtest.NewLifecycle(t),
+		Client:     client,
+		EtcdConfig: etcdCfg,
+		FullConfig: fullCfg,
+		Lifecycle:  fxtest.NewLifecycle(t),
 	}
 
 	store, err := NewLeaderStore(storeParams)
 	require.NoError(t, err)
 
 	return &testCluster{
-		store:       store,
-		storeConfig: testConfig,
-		endpoints:   endpoints,
+		store:     store,
+		prefix:    etcdCfg.Prefix,
+		endpoints: endpoints,
 	}
-}
-
-func createConfig(t *testing.T, cfg etcdCfg) *config.YamlNode {
-	t.Helper()
-
-	yamlCfg, err := yaml.Marshal(cfg)
-	require.NoError(t, err)
-
-	var res *config.YamlNode
-
-	err = yaml.Unmarshal(yamlCfg, &res)
-	require.NoError(t, err)
-
-	return res
 }

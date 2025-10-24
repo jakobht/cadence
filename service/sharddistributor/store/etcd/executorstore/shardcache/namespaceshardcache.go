@@ -11,6 +11,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/service/sharddistributor/store"
+	"github.com/uber/cadence/service/sharddistributor/store/etcd/etcdclient"
 	"github.com/uber/cadence/service/sharddistributor/store/etcd/etcdkeys"
 )
 
@@ -24,10 +25,10 @@ type namespaceShardToExecutor struct {
 	changeUpdateChannel clientv3.WatchChan
 	stopCh              chan struct{}
 	logger              log.Logger
-	client              *clientv3.Client
+	client              etcdclient.Client
 }
 
-func newNamespaceShardToExecutor(etcdPrefix, namespace string, client *clientv3.Client, stopCh chan struct{}, logger log.Logger) (*namespaceShardToExecutor, error) {
+func newNamespaceShardToExecutor(etcdPrefix, namespace string, client etcdclient.Client, stopCh chan struct{}, logger log.Logger) (*namespaceShardToExecutor, error) {
 	// Start listening
 	watchPrefix := etcdkeys.BuildExecutorPrefix(etcdPrefix, namespace)
 	watchChan := client.Watch(context.Background(), watchPrefix, clientv3.WithPrefix())

@@ -27,6 +27,7 @@ import (
 	"fmt"
 
 	"github.com/uber-go/tally"
+	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 
@@ -46,6 +47,7 @@ import (
 	shardDistributorCfg "github.com/uber/cadence/service/sharddistributor/config"
 	"github.com/uber/cadence/service/sharddistributor/sharddistributorfx"
 	"github.com/uber/cadence/service/sharddistributor/store/etcd"
+	"github.com/uber/cadence/service/sharddistributor/store/etcd/etcdclient"
 	"github.com/uber/cadence/tools/cassandra"
 	"github.com/uber/cadence/tools/sql"
 )
@@ -74,6 +76,48 @@ func Module(serviceName string) fx.Option {
 				return z.With(zap.String("service", service.ShardDistributor)), l.WithTags(tag.Service(service.ShardDistributor))
 			}),
 
+			// Provide shared etcd client (from store config)
+			fx.Provide(func(cfg shardDistributorCfg.ShardDistribution, lifecycle fx.Lifecycle) (etcdclient.Client, error) {
+				var etcdCfg etcdclient.Config
+
+				if err := cfg.Store.StorageParams.Decode(&etcdCfg); err != nil {
+					return nil, fmt.Errorf("bad config for etcd store: %w", err)
+				}
+
+				client, err := clientv3.New(clientv3.Config{
+					Endpoints:   etcdCfg.Endpoints,
+					DialTimeout: etcdCfg.DialTimeout,
+				})
+
+				lifecycle.Append(fx.StopHook(client.Close))
+				return client, err
+			}),
+			// Provide etcd config for leader store
+			fx.Provide(
+				fx.Annotate(
+					func(cfg shardDistributorCfg.ShardDistribution) (etcdclient.Config, error) {
+						var etcdCfg etcdclient.Config
+						if err := cfg.LeaderStore.StorageParams.Decode(&etcdCfg); err != nil {
+							return etcdclient.Config{}, fmt.Errorf("bad config for etcd leader store: %w", err)
+						}
+						return etcdCfg, nil
+					},
+					fx.ResultTags(`name:"leaderStoreConfig"`),
+				),
+			),
+			// Provide etcd config for executor/shard store
+			fx.Provide(
+				fx.Annotate(
+					func(cfg shardDistributorCfg.ShardDistribution) (etcdclient.Config, error) {
+						var etcdCfg etcdclient.Config
+						if err := cfg.Store.StorageParams.Decode(&etcdCfg); err != nil {
+							return etcdclient.Config{}, fmt.Errorf("bad config for etcd store: %w", err)
+						}
+						return etcdCfg, nil
+					},
+					fx.ResultTags(`name:"executorStoreConfig"`),
+				),
+			),
 			etcd.Module,
 
 			rpcfx.Module,

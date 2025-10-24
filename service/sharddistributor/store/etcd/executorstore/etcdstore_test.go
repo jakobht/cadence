@@ -14,6 +14,7 @@ import (
 	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/sharddistributor/store"
+	"github.com/uber/cadence/service/sharddistributor/store/etcd/etcdclient"
 	"github.com/uber/cadence/service/sharddistributor/store/etcd/etcdkeys"
 	"github.com/uber/cadence/service/sharddistributor/store/etcd/leaderstore"
 	"github.com/uber/cadence/service/sharddistributor/store/etcd/testhelper"
@@ -301,8 +302,16 @@ func TestGuardedOperations(t *testing.T) {
 	executorID := "exec-to-delete"
 
 	// 1. Create two potential leaders
-	// FIX: Use the correct constructor for the leader elector.
-	elector, err := leaderstore.NewLeaderStore(leaderstore.StoreParams{Client: tc.Client, Cfg: tc.LeaderCfg, Lifecycle: fxtest.NewLifecycle(t)})
+	etcdCfg := etcdclient.Config{
+		Prefix: tc.EtcdPrefix,
+	}
+	fullCfg := tc.LeaderCfg
+	elector, err := leaderstore.NewLeaderStore(leaderstore.StoreParams{
+		Client:     tc.Client,
+		EtcdConfig: etcdCfg,
+		FullConfig: fullCfg,
+		Lifecycle:  fxtest.NewLifecycle(t),
+	})
 	require.NoError(t, err)
 	election1, err := elector.CreateElection(ctx, namespace)
 	require.NoError(t, err)
@@ -541,9 +550,12 @@ func recordHeartbeats(ctx context.Context, t *testing.T, executorStore store.Sto
 
 func createStore(t *testing.T, tc *testhelper.StoreTestCluster) store.Store {
 	t.Helper()
+	etcdCfg := etcdclient.Config{
+		Prefix: tc.EtcdPrefix,
+	}
 	store, err := NewStore(ExecutorStoreParams{
 		Client:    tc.Client,
-		Cfg:       tc.LeaderCfg,
+		Config:    etcdCfg,
 		Lifecycle: fxtest.NewLifecycle(t),
 		Logger:    testlogger.New(t),
 	})

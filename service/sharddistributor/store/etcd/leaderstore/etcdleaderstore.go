@@ -3,7 +3,6 @@ package leaderstore
 import (
 	"context"
 	"fmt"
-	"time"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/client/v3/concurrency"
@@ -12,68 +11,53 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/service/sharddistributor/config"
 	"github.com/uber/cadence/service/sharddistributor/store"
+	"github.com/uber/cadence/service/sharddistributor/store/etcd/etcdclient"
 )
 
 type LeaderStore struct {
-	client         *clientv3.Client
-	electionConfig etcdCfg
-}
-
-type etcdCfg struct {
-	Endpoints   []string      `yaml:"endpoints"`
-	DialTimeout time.Duration `yaml:"dialTimeout"`
-	Prefix      string        `yaml:"prefix"`
-	ElectionTTL time.Duration `yaml:"electionTTL"`
+	client         etcdclient.Client
+	etcdConfig     etcdclient.Config
+	electionConfig config.Election
 }
 
 // StoreParams defines the dependencies for the etcd store, for use with fx.
 type StoreParams struct {
 	fx.In
 
-	Client    *clientv3.Client `optional:"true"`
-	Cfg       config.ShardDistribution
-	Lifecycle fx.Lifecycle
-	Logger    log.Logger
+	Client         etcdclient.Client
+	EtcdConfig     etcdclient.Config `name:"leaderStoreConfig"`
+	FullConfig     config.ShardDistribution
+	Lifecycle      fx.Lifecycle
+	Logger         log.Logger
 }
 
 // NewLeaderStore creates a new leaderstore backed by ETCD.
 func NewLeaderStore(p StoreParams) (store.Elector, error) {
-	var err error
-
-	var out etcdCfg
-	if err := p.Cfg.LeaderStore.StorageParams.Decode(&out); err != nil {
-		return nil, fmt.Errorf("bad config: %w", err)
-	}
-
-	etcdClient := p.Client
-	if etcdClient == nil {
-		etcdClient, err = clientv3.New(clientv3.Config{
-			Endpoints:   out.Endpoints,
-			DialTimeout: out.DialTimeout,
-		})
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	p.Lifecycle.Append(fx.StopHook(etcdClient.Close))
-
 	return &LeaderStore{
-		client:         etcdClient,
-		electionConfig: out,
+		client:         p.Client,
+		etcdConfig:     p.EtcdConfig,
+		electionConfig: p.FullConfig.Election,
 	}, nil
 }
 
 func (ls *LeaderStore) CreateElection(ctx context.Context, namespace string) (el store.Election, err error) {
+	// Type assert to concrete client for concurrency operations.
+	// The concurrency package unfortunatly requires a *clientv3.Client struct, not an interface.
+	concreteClient, ok := ls.client.(*clientv3.Client)
+	if !ok {
+		return nil, fmt.Errorf("client does not support concurrency operations: expected *clientv3.Client, got %T", ls.client)
+	}
+
 	// Create a new session for election
-	session, err := concurrency.NewSession(ls.client,
-		concurrency.WithTTL(int(ls.electionConfig.ElectionTTL.Seconds())),
+	// Use leaderPeriod as the session TTL - the session must outlive the leadership period
+	session, err := concurrency.NewSession(concreteClient,
+		concurrency.WithTTL(int(ls.electionConfig.LeaderPeriod.Seconds())),
 		concurrency.WithContext(ctx))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create session: %w", err)
 	}
 
-	namespacePrefix := fmt.Sprintf("%s/%s", ls.electionConfig.Prefix, namespace)
+	namespacePrefix := fmt.Sprintf("%s/%s", ls.etcdConfig.Prefix, namespace)
 	electionKey := fmt.Sprintf("%s/leader", namespacePrefix)
 	etcdElection := concurrency.NewElection(session, electionKey)
 
