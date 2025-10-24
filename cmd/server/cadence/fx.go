@@ -93,31 +93,13 @@ func Module(serviceName string) fx.Option {
 				return client, err
 			}),
 			// Provide etcd config for leader store
-			fx.Provide(
-				fx.Annotate(
-					func(cfg shardDistributorCfg.ShardDistribution) (etcdclient.Config, error) {
-						var etcdCfg etcdclient.Config
-						if err := cfg.LeaderStore.StorageParams.Decode(&etcdCfg); err != nil {
-							return etcdclient.Config{}, fmt.Errorf("bad config for etcd leader store: %w", err)
-						}
-						return etcdCfg, nil
-					},
-					fx.ResultTags(`name:"leaderStoreConfig"`),
-				),
-			),
+			provideEtcdConfigOption(func(cfg shardDistributorCfg.ShardDistribution) shardDistributorCfg.Store {
+				return cfg.LeaderStore
+			}, "leaderStoreConfig"),
 			// Provide etcd config for executor/shard store
-			fx.Provide(
-				fx.Annotate(
-					func(cfg shardDistributorCfg.ShardDistribution) (etcdclient.Config, error) {
-						var etcdCfg etcdclient.Config
-						if err := cfg.Store.StorageParams.Decode(&etcdCfg); err != nil {
-							return etcdclient.Config{}, fmt.Errorf("bad config for etcd store: %w", err)
-						}
-						return etcdCfg, nil
-					},
-					fx.ResultTags(`name:"executorStoreConfig"`),
-				),
-			),
+			provideEtcdConfigOption(func(cfg shardDistributorCfg.ShardDistribution) shardDistributorCfg.Store {
+				return cfg.Store
+			}, "executorStoreConfig"),
 			etcd.Module,
 
 			rpcfx.Module,
@@ -205,4 +187,24 @@ type serviceContext struct {
 
 	Name     string `name:"service"`
 	FullName string `name:"service-full-name"`
+}
+
+// provideEtcdConfigOption creates an fx.Option that provides an etcd config from a store selector
+func provideEtcdConfigOption(
+	storeSelector func(shardDistributorCfg.ShardDistribution) shardDistributorCfg.Store,
+	resultTagName string,
+) fx.Option {
+	return fx.Provide(
+		fx.Annotate(
+			func(cfg shardDistributorCfg.ShardDistribution) (etcdclient.Config, error) {
+				store := storeSelector(cfg)
+				var etcdCfg etcdclient.Config
+				if err := store.StorageParams.Decode(&etcdCfg); err != nil {
+					return etcdclient.Config{}, fmt.Errorf("bad config for %s: %w", resultTagName, err)
+				}
+				return etcdCfg, nil
+			},
+			fx.ResultTags(fmt.Sprintf(`name:"%s"`, resultTagName)),
+		),
+	)
 }
