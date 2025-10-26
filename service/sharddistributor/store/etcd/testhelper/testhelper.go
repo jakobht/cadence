@@ -15,6 +15,7 @@ import (
 
 	"github.com/uber/cadence/common/config"
 	shardDistributorCfg "github.com/uber/cadence/service/sharddistributor/config"
+	"github.com/uber/cadence/service/sharddistributor/store/etcd/etcdclient"
 	"github.com/uber/cadence/service/sharddistributor/store/etcd/etcdkeys"
 	"github.com/uber/cadence/testflags"
 )
@@ -23,7 +24,7 @@ type StoreTestCluster struct {
 	EtcdPrefix string
 	Namespace  string
 	LeaderCfg  shardDistributorCfg.ShardDistribution
-	Client     *clientv3.Client
+	Client     etcdclient.Client
 }
 
 func SetupStoreTestCluster(t *testing.T) *StoreTestCluster {
@@ -57,8 +58,10 @@ func SetupStoreTestCluster(t *testing.T) *StoreTestCluster {
 		LeaderStore: shardDistributorCfg.Store{StorageParams: yamlNode},
 	}
 
-	client, err := clientv3.New(clientv3.Config{Endpoints: endpoints, DialTimeout: 5 * time.Second})
+	rawClient, err := clientv3.New(clientv3.Config{Endpoints: endpoints, DialTimeout: 5 * time.Second})
 	require.NoError(t, err)
+
+	client := etcdclient.NewClientWrapper(rawClient)
 	t.Cleanup(func() { client.Close() })
 
 	_, err = client.Delete(context.Background(), etcdkeys.BuildNamespacePrefix(etcdPrefix, namespace), clientv3.WithPrefix())

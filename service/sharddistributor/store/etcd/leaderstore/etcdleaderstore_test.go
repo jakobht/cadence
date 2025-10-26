@@ -220,11 +220,13 @@ func setupETCDCluster(t *testing.T) *testCluster {
 
 	prefix := fmt.Sprintf("/election/%s", t.Name())
 
-	client, err := clientv3.New(clientv3.Config{
+	rawClient, err := clientv3.New(clientv3.Config{
 		Endpoints:   endpoints,
 		DialTimeout: 5 * time.Second,
 	})
 	require.NoError(t, err)
+
+	client := etcdclient.NewClientWrapper(rawClient)
 	t.Cleanup(func() { client.Close() })
 
 	// Create store

@@ -12,6 +12,7 @@ import (
 	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/sharddistributor/store"
+	"github.com/uber/cadence/service/sharddistributor/store/etcd/etcdclient"
 	"github.com/uber/cadence/service/sharddistributor/store/etcd/etcdkeys"
 	"github.com/uber/cadence/service/sharddistributor/store/etcd/testhelper"
 )
@@ -19,7 +20,7 @@ import (
 func TestNewShardToExecutorCache(t *testing.T) {
 	logger := testlogger.New(t)
 
-	client := &clientv3.Client{}
+	client := etcdclient.NewClientWrapper(&clientv3.Client{})
 	cache := NewShardToExecutorCache("some-prefix", client, logger)
 
 	assert.NotNil(t, cache)

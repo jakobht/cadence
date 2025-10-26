@@ -41,16 +41,9 @@ func NewLeaderStore(p StoreParams) (store.Elector, error) {
 }
 
 func (ls *LeaderStore) CreateElection(ctx context.Context, namespace string) (el store.Election, err error) {
-	// Type assert to concrete client for concurrency operations.
-	// The concurrency package unfortunatly requires a *clientv3.Client struct, not an interface.
-	concreteClient, ok := ls.client.(*clientv3.Client)
-	if !ok {
-		return nil, fmt.Errorf("client does not support concurrency operations: expected *clientv3.Client, got %T", ls.client)
-	}
-
 	// Create a new session for election
 	// Use leaderPeriod as the session TTL - the session must outlive the leadership period
-	session, err := concurrency.NewSession(concreteClient,
+	session, err := ls.client.GetSession(ctx,
 		concurrency.WithTTL(int(ls.electionConfig.LeaderPeriod.Seconds())),
 		concurrency.WithContext(ctx))
 	if err != nil {

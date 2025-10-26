@@ -27,7 +27,6 @@ import (
 	"fmt"
 
 	"github.com/uber-go/tally"
-	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 
@@ -84,13 +83,13 @@ func Module(serviceName string) fx.Option {
 					return nil, fmt.Errorf("bad config for etcd store: %w", err)
 				}
 
-				client, err := clientv3.New(clientv3.Config{
-					Endpoints:   etcdCfg.Endpoints,
-					DialTimeout: etcdCfg.DialTimeout,
-				})
+				client, err := etcdclient.NewClient(etcdCfg)
+				if err != nil {
+					return nil, err
+				}
 
 				lifecycle.Append(fx.StopHook(client.Close))
-				return client, err
+				return client, nil
 			}),
 			// Provide etcd config for leader store
 			provideEtcdConfigOption(func(cfg shardDistributorCfg.ShardDistribution) shardDistributorCfg.Store {
