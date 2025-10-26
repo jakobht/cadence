@@ -92,11 +92,11 @@ func Module(serviceName string) fx.Option {
 				return client, nil
 			}),
 			// Provide etcd config for leader store
-			provideEtcdConfigOption(func(cfg shardDistributorCfg.ShardDistribution) shardDistributorCfg.Store {
+			provideEtcdConfig(func(cfg shardDistributorCfg.ShardDistribution) shardDistributorCfg.Store {
 				return cfg.LeaderStore
 			}, "leaderStoreConfig"),
 			// Provide etcd config for executor/shard store
-			provideEtcdConfigOption(func(cfg shardDistributorCfg.ShardDistribution) shardDistributorCfg.Store {
+			provideEtcdConfig(func(cfg shardDistributorCfg.ShardDistribution) shardDistributorCfg.Store {
 				return cfg.Store
 			}, "executorStoreConfig"),
 			etcd.Module,
@@ -188,8 +188,8 @@ type serviceContext struct {
 	FullName string `name:"service-full-name"`
 }
 
-// provideEtcdConfigOption creates an fx.Option that provides an etcd config from a store selector
-func provideEtcdConfigOption(
+// provideEtcdConfig creates an fx.Option that provides an etcd config from a store selector
+func provideEtcdConfig(
 	storeSelector func(shardDistributorCfg.ShardDistribution) shardDistributorCfg.Store,
 	resultTagName string,
 ) fx.Option {
