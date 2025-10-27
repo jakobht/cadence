@@ -2,17 +2,12 @@ package shardcache
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	clientv3 "go.etcd.io/etcd/client/v3"
 
 	"github.com/uber/cadence/common/log/testlogger"
-	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/service/sharddistributor/store"
-	"github.com/uber/cadence/service/sharddistributor/store/etcd/etcdkeys"
 	"github.com/uber/cadence/service/sharddistributor/store/etcd/testhelper"
 )
 
@@ -34,30 +29,15 @@ func TestNewShardToExecutorCache(t *testing.T) {
 
 func TestShardExecutorCache(t *testing.T) {
 	testCluster := testhelper.SetupStoreTestCluster(t)
-
 	logger := testlogger.New(t)
 
-	// Setup: Create an assigned state for the executor
-	assignedState := &store.AssignedState{
-		AssignedShards: map[string]*types.ShardAssignment{
-			"shard-1": {Status: types.AssignmentStatusREADY},
-		},
-	}
-	assignedStateJSON, err := json.Marshal(assignedState)
-	require.NoError(t, err)
-
-	executorAssignedStateKey, err := etcdkeys.BuildExecutorKey(testCluster.EtcdPrefix, "test-ns", "executor-1", etcdkeys.ExecutorAssignedStateKey)
-	require.NoError(t, err)
-	testCluster.Client.Put(context.Background(), executorAssignedStateKey, string(assignedStateJSON))
-
-	// Add metadata for executor-1
-	executorMetadataKey1 := etcdkeys.BuildMetadataKey(testCluster.EtcdPrefix, "test-ns", "executor-1", "datacenter")
-	testCluster.Client.Put(context.Background(), executorMetadataKey1, "dc1")
-	executorMetadataKey2 := etcdkeys.BuildMetadataKey(testCluster.EtcdPrefix, "test-ns", "executor-1", "rack")
-	testCluster.Client.Put(context.Background(), executorMetadataKey2, "rack-42")
+	// Setup: Create executor-1 with shard-1 and metadata
+	setupExecutorWithShards(t, testCluster, "test-ns", "executor-1", []string{"shard-1"}, map[string]string{
+		"datacenter": "dc1",
+		"rack":       "rack-42",
+	})
 
 	cache := NewShardToExecutorCache(testCluster.EtcdPrefix, testCluster.Client, logger)
-
 	cache.Start()
 	defer cache.Stop()
 
