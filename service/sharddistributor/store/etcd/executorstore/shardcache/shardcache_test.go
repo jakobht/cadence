@@ -50,6 +50,12 @@ func TestShardExecutorCache(t *testing.T) {
 	require.NoError(t, err)
 	testCluster.Client.Put(context.Background(), executorAssignedStateKey, string(assignedStateJSON))
 
+	// Add metadata for executor-1
+	executorMetadataKey1 := etcdkeys.BuildMetadataKey(testCluster.EtcdPrefix, "test-ns", "executor-1", "datacenter")
+	testCluster.Client.Put(context.Background(), executorMetadataKey1, "dc1")
+	executorMetadataKey2 := etcdkeys.BuildMetadataKey(testCluster.EtcdPrefix, "test-ns", "executor-1", "rack")
+	testCluster.Client.Put(context.Background(), executorMetadataKey2, "rack-42")
+
 	cache := NewShardToExecutorCache(testCluster.EtcdPrefix, testCluster.Client, logger)
 
 	cache.Start()
@@ -58,9 +64,11 @@ func TestShardExecutorCache(t *testing.T) {
 	// This will read the namespace from the store as the cache is empty
 	owner, err := cache.GetShardOwner(context.Background(), "test-ns", "shard-1")
 	assert.NoError(t, err)
-	assert.Equal(t, "executor-1", owner)
+	assert.Equal(t, "executor-1", owner.ExecutorID)
+	assert.Equal(t, "dc1", owner.Metadata["datacenter"])
+	assert.Equal(t, "rack-42", owner.Metadata["rack"])
 
 	// Check the cache is populated
 	assert.Greater(t, cache.namespaceToShards["test-ns"].executorRevision["executor-1"], int64(0))
-	assert.Equal(t, "executor-1", cache.namespaceToShards["test-ns"].shardToExecutor["shard-1"])
+	assert.Equal(t, "executor-1", cache.namespaceToShards["test-ns"].shardToExecutor["shard-1"].ExecutorID)
 }
