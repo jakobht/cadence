@@ -145,7 +145,8 @@ func (n *namespaceShardToExecutor) refresh(ctx context.Context) error {
 		if keyErr != nil {
 			continue
 		}
-		if keyType == etcdkeys.ExecutorAssignedStateKey {
+		switch keyType {
+		case etcdkeys.ExecutorAssignedStateKey:
 			shardOwner := getOrCreateShardOwner(shardOwners, executorID)
 
 			var assignedState store.AssignedState
@@ -157,11 +158,14 @@ func (n *namespaceShardToExecutor) refresh(ctx context.Context) error {
 				n.shardToExecutor[shardID] = shardOwner
 				n.executorRevision[executorID] = kv.ModRevision
 			}
-		}
-		if keyType == etcdkeys.ExecutorMetadataKey {
+
+		case etcdkeys.ExecutorMetadataKey:
 			shardOwner := getOrCreateShardOwner(shardOwners, executorID)
 			metadataKey := strings.TrimPrefix(string(kv.Key), etcdkeys.BuildMetadataKey(n.etcdPrefix, n.namespace, executorID, ""))
 			shardOwner.Metadata[metadataKey] = string(kv.Value)
+
+		default:
+			continue
 		}
 	}
 
