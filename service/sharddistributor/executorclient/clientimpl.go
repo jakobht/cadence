@@ -422,10 +422,10 @@ func getJitteredHeartbeatDuration(interval time.Duration, jitterMax time.Duratio
 	return interval - jitter
 }
 
-func (e *executorImpl[SP]) SetMetadata(ctx context.Context, metadata map[string]string) {
+func (e *executorImpl[SP]) SetMetadata(metadata map[string]string) {
 	e.metadata.Set(metadata)
 }
 
-func (e *executorImpl[SP]) GetMetadata(ctx context.Context) (map[string]string, error) {
-	return e.metadata.Get(), nil
+func (e *executorImpl[SP]) GetMetadata() map[string]string {
+	return e.metadata.Get()
 }

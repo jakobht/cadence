@@ -45,9 +45,9 @@ type Executor[SP ShardProcessor] interface {
 	GetShardProcess(ctx context.Context, shardID string) (SP, error)
 
 	// Set metadata for the executor
-	SetMetadata(ctx context.Context, metadata map[string]string)
+	SetMetadata(metadata map[string]string)
 	// Get the current metadata of the executor
-	GetMetadata(ctx context.Context) (map[string]string, error)
+	GetMetadata() map[string]string
 
 	// Used during the migration during local-passthrough and local-passthrough-shadow
 	AssignShardsFromLocalLogic(ctx context.Context, shardAssignment map[string]*types.ShardAssignment)
