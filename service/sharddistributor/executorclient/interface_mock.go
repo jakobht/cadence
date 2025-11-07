@@ -156,18 +156,17 @@ func (mr *MockExecutorMockRecorder[SP]) AssignShardsFromLocalLogic(ctx, shardAss
 }
 
 // GetMetadata mocks base method.
-func (m *MockExecutor[SP]) GetMetadata(ctx context.Context) (map[string]string, error) {
+func (m *MockExecutor[SP]) GetMetadata() map[string]string {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetMetadata", ctx)
+	ret := m.ctrl.Call(m, "GetMetadata")
 	ret0, _ := ret[0].(map[string]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	return ret0
 }
 
 // GetMetadata indicates an expected call of GetMetadata.
-func (mr *MockExecutorMockRecorder[SP]) GetMetadata(ctx any) *gomock.Call {
+func (mr *MockExecutorMockRecorder[SP]) GetMetadata() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMetadata", reflect.TypeOf((*MockExecutor[SP])(nil).GetMetadata), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMetadata", reflect.TypeOf((*MockExecutor[SP])(nil).GetMetadata))
 }
 
 // GetShardProcess mocks base method.
@@ -186,15 +185,15 @@ func (mr *MockExecutorMockRecorder[SP]) GetShardProcess(ctx, shardID any) *gomoc
 }
 
 // SetMetadata mocks base method.
-func (m *MockExecutor[SP]) SetMetadata(ctx context.Context, metadata map[string]string) {
+func (m *MockExecutor[SP]) SetMetadata(metadata map[string]string) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetMetadata", ctx, metadata)
+	m.ctrl.Call(m, "SetMetadata", metadata)
 }
 
 // SetMetadata indicates an expected call of SetMetadata.
-func (mr *MockExecutorMockRecorder[SP]) SetMetadata(ctx, metadata any) *gomock.Call {
+func (mr *MockExecutorMockRecorder[SP]) SetMetadata(metadata any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetMetadata", reflect.TypeOf((*MockExecutor[SP])(nil).SetMetadata), ctx, metadata)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetMetadata", reflect.TypeOf((*MockExecutor[SP])(nil).SetMetadata), metadata)
 }
 
 // Start mocks base method.
