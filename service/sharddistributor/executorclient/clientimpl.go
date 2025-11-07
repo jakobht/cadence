@@ -42,20 +42,20 @@ type managedProcessor[SP ShardProcessor] struct {
 	state     atomic.Int32
 }
 
-type executorMetadata struct {
+type syncExecutorMetadata struct {
 	sync.RWMutex
 
 	data map[string]string
 }
 
-func (m *executorMetadata) Set(metadata map[string]string) {
+func (m *syncExecutorMetadata) Set(metadata map[string]string) {
 	m.Lock()
 	defer m.Unlock()
 
 	m.data = metadata
 }
 
-func (m *executorMetadata) Get() map[string]string {
+func (m *syncExecutorMetadata) Get() map[string]string {
 	m.RLock()
 	defer m.RUnlock()
 
@@ -100,7 +100,7 @@ type executorImpl[SP ShardProcessor] struct {
 	assignmentMutex        sync.Mutex
 	metrics                tally.Scope
 	migrationMode          atomic.Int32
-	metadata               executorMetadata
+	metadata               syncExecutorMetadata
 }
 
 func (e *executorImpl[SP]) setMigrationMode(mode types.MigrationMode) {

@@ -634,7 +634,7 @@ func TestGetShardProcess_NonOwnedShard_Fails(t *testing.T) {
 }
 
 func TestExecutorMetadata_SetAndGet(t *testing.T) {
-	metadata := &executorMetadata{
+	metadata := &syncExecutorMetadata{
 		data: make(map[string]string),
 	}
 
@@ -652,7 +652,7 @@ func TestExecutorMetadata_SetAndGet(t *testing.T) {
 }
 
 func TestExecutorMetadata_DefensiveCopy(t *testing.T) {
-	metadata := &executorMetadata{
+	metadata := &syncExecutorMetadata{
 		data: map[string]string{
 			"key1": "value1",
 		},
@@ -672,7 +672,7 @@ func TestExecutorMetadata_DefensiveCopy(t *testing.T) {
 }
 
 func TestExecutorMetadata_ConcurrentAccess(t *testing.T) {
-	metadata := &executorMetadata{
+	metadata := &syncExecutorMetadata{
 		data: make(map[string]string),
 	}
 
@@ -712,7 +712,7 @@ func TestExecutorMetadata_ConcurrentAccess(t *testing.T) {
 }
 
 func TestExecutorMetadata_NilHandling(t *testing.T) {
-	metadata := &executorMetadata{
+	metadata := &syncExecutorMetadata{
 		data: nil,
 	}
 
@@ -729,7 +729,7 @@ func TestExecutorMetadata_NilHandling(t *testing.T) {
 }
 
 func TestExecutorMetadata_EmptyMap(t *testing.T) {
-	metadata := &executorMetadata{
+	metadata := &syncExecutorMetadata{
 		data: make(map[string]string),
 	}
 

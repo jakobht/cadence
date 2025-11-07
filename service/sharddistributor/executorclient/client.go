@@ -121,7 +121,7 @@ func newExecutorWithConfig[SP ShardProcessor](params Params[SP], namespaceConfig
 		timeSource:             params.TimeSource,
 		stopC:                  make(chan struct{}),
 		metrics:                metricsScope,
-		metadata: executorMetadata{
+		metadata: syncExecutorMetadata{
 			data: params.Metadata,
 		},
 	}
