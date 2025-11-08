@@ -29,6 +29,7 @@ import (
 	"go.uber.org/yarpc"
 
 	sharddistributorv1 "github.com/uber/cadence/.gen/proto/sharddistributor/v1"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/proto"
 )
 
@@ -46,4 +47,22 @@ func (g GRPCHandler) Health(ctx context.Context, _ *apiv1.HealthRequest) (*apiv1
 
 func (g ExecutorGRPCExecutor) Register(dispatcher *yarpc.Dispatcher) {
 	dispatcher.Register(sharddistributorv1.BuildShardDistributorExecutorAPIYARPCProcedures(g))
+}
+
+// The GRPC wrapper does not support streaming responses, so we manually implement it here.
+func (g GRPCHandler) WatchNamespaceState(request *sharddistributorv1.WatchNamespaceStateRequest, server sharddistributorv1.ShardDistributorAPIServiceWatchNamespaceStateYARPCServer) error {
+	err := g.h.WatchNamespaceState(proto.ToShardDistributorWatchNamespaceStateRequest(request), &watchNamespaceStateServer{server: server})
+	return err
+}
+
+type watchNamespaceStateServer struct {
+	server sharddistributorv1.ShardDistributorAPIServiceWatchNamespaceStateYARPCServer
+}
+
+func (s *watchNamespaceStateServer) Context() context.Context {
+	return s.server.Context()
+}
+
+func (s *watchNamespaceStateServer) Send(response *types.WatchNamespaceStateResponse) error {
+	return s.server.Send(proto.FromShardDistributorWatchNamespaceStateResponse(response))
 }
