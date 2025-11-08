@@ -308,14 +308,13 @@ func FromShardDistributorWatchNamespaceStateResponse(t *types.WatchNamespaceStat
 
 	var executors []*sharddistributorv1.ExecutorInfo
 
-		for _, executor := range t.GetExecutors() {
-			executors = append(executors, &sharddistributorv1.ExecutorInfo{
-				ExecutorId: executor.GetExecutorID(),
-				Metadata:   executor.GetMetadata(),
-				ShardKeys:  executor.GetAssignedShards(),
-			})
-		}
-
+	for _, executor := range t.GetExecutors() {
+		executors = append(executors, &sharddistributorv1.ExecutorInfo{
+			ExecutorId: executor.GetExecutorID(),
+			Metadata:   executor.GetMetadata(),
+			ShardKeys:  executor.GetAssignedShards(),
+		})
+	}
 
 	return &sharddistributorv1.WatchNamespaceStateResponse{
 		Executors: executors,

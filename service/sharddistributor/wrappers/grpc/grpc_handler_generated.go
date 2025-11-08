@@ -24,3 +24,8 @@ func (g GRPCHandler) GetShardOwner(ctx context.Context, request *sharddistributo
 	response, err := g.h.GetShardOwner(ctx, proto.ToShardDistributorGetShardOwnerRequest(request))
 	return proto.FromShardDistributorGetShardOwnerResponse(response), proto.FromError(err)
 }
+
+func (g GRPCHandler) WatchNamespaceState(ctx context.Context, request *sharddistributorv1.WatchNamespaceStateRequest) (*sharddistributorv1.WatchNamespaceStateResponse, error) {
+	err := g.h.WatchNamespaceState(ctx, proto.ToShardDistributorWatchNamespaceStateRequest(request))
+	return &sharddistributorv1.WatchNamespaceStateResponse{}, proto.FromError(err)
+}

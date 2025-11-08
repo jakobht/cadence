@@ -30,7 +30,6 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/service/sharddistributor/handler"
 )
 
 func handleErr(err error, scope metrics.Scope, logger log.Logger) error {
@@ -56,13 +55,4 @@ func handleErr(err error, scope metrics.Scope, logger log.Logger) error {
 	logger.Error("internal uncategorized error", tag.Error(err))
 	scope.IncCounter(metrics.ShardDistributorFailures)
 	return err
-}
-
-// The metrics wrapper does not support streaming responses, so we manually implement it here.
-func (h *metricsHandler) WatchNamespaceState(request *types.WatchNamespaceStateRequest, server handler.WatchNamespaceStateServer) error {
-	err := h.handler.WatchNamespaceState(request, server)
-	if err != nil {
-		return handleErr(err, h.metricsClient.Scope(metrics.ShardDistributorWatchNamespaceStateScope), h.logger)
-	}
-	return nil
 }
