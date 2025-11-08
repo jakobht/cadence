@@ -42,6 +42,8 @@ type Handler interface {
 	Health(context.Context) (*types.HealthStatus, error)
 
 	GetShardOwner(context.Context, *types.GetShardOwnerRequest) (*types.GetShardOwnerResponse, error)
+
+	WatchNamespaceState(context.Context, *types.WatchNamespaceStateRequest) (<-chan *types.WatchNamespaceStateResponse, <-chan error)
 }
 
 type Executor interface {
