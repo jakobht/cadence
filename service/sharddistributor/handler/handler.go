@@ -146,7 +146,8 @@ func (h *handlerImpl) WatchNamespaceState(request *types.WatchNamespaceStateRequ
 
 	// Subscribe to state changes from storage
 	// TODO: We need a better interface, this subscribes to too many things
-	versionChan, err := h.storage.Subscribe(server.Context(), request.Namespace)
+	assignmentChangesChan, unSubscribe, err := h.storage.SubscribeToAssignmentChanges(server.Context(), request.Namespace)
+	defer unSubscribe()
 	if err != nil {
 		return fmt.Errorf("subscribe to namespace state: %w", err)
 	}
@@ -166,18 +167,20 @@ func (h *handlerImpl) WatchNamespaceState(request *types.WatchNamespaceStateRequ
 		select {
 		case <-server.Context().Done():
 			return server.Context().Err()
-		case _, ok := <-versionChan:
+		case assignmentChanges, ok := <-assignmentChangesChan:
 			if !ok {
 				return fmt.Errorf("unexpected close of updates channel")
 			}
-			// Get the current state after receiving a version update
-			state, err := h.storage.GetState(server.Context(), request.Namespace)
-			if err != nil {
-				return fmt.Errorf("get state: %w", err)
+			response := &types.WatchNamespaceStateResponse{
+				Executors: make([]*types.ExecutorShardAssignment, 0, len(state.ShardAssignments)),
 			}
-
-			// Convert storage state to response format
-			response := toWatchNamespaceStateResponse(state)
+			for executor, shardIDs := range assignmentChanges {
+				response.Executors = append(response.Executors, &types.ExecutorShardAssignment{
+					ExecutorID:     executor.ExecutorID,
+					AssignedShards: shardIDs,
+					Metadata:       executor.Metadata,
+				})
+			}
 
 			err = server.Send(response)
 			if err != nil {

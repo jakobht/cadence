@@ -288,8 +288,8 @@ func (s *executorStoreImpl) GetState(ctx context.Context, namespace string) (*st
 	}, nil
 }
 
-func (s *executorStoreImpl) SubscribeToAssignmentChanges(ctx context.Context, namespace string) (<-chan int64, error) {
-
+func (s *executorStoreImpl) SubscribeToAssignmentChanges(ctx context.Context, namespace string) (<-chan map[*store.ShardOwner][]string, func(), error) {
+	return s.shardCache.Subscribe(ctx, namespace)
 }
 
 func (s *executorStoreImpl) Subscribe(ctx context.Context, namespace string) (<-chan int64, error) {

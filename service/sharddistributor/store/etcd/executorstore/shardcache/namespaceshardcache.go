@@ -97,6 +97,10 @@ func (n *namespaceShardToExecutor) GetExecutorModRevisionCmp() ([]clientv3.Cmp, 
 	return comparisons, nil
 }
 
+func (n *namespaceShardToExecutor) Subscribe(ctx context.Context) (<-chan map[*store.ShardOwner][]string, func()) {
+	return n.pubSub.subscribe(ctx)
+}
+
 func (n *namespaceShardToExecutor) nameSpaceRefreashLoop() {
 	for {
 		select {
@@ -127,7 +131,24 @@ func (n *namespaceShardToExecutor) nameSpaceRefreashLoop() {
 }
 
 func (n *namespaceShardToExecutor) refresh(ctx context.Context) error {
+	err := n.refreshExecutorState(ctx)
+	if err != nil {
+		return fmt.Errorf("refresh executor state: %w", err)
+	}
 
+	n.RLock()
+	executorState := make(map[*store.ShardOwner][]string)
+	for executor, shardIDs := range n.executorState {
+		executorState[executor] = make([]string, len(shardIDs))
+		copy(executorState[executor], shardIDs)
+	}
+	n.RUnlock()
+
+	n.pubSub.publish(n.executorState)
+	return nil
+}
+
+func (n *namespaceShardToExecutor) refreshExecutorState(ctx context.Context) error {
 	executorPrefix := etcdkeys.BuildExecutorPrefix(n.etcdPrefix, n.namespace)
 
 	resp, err := n.client.Get(ctx, executorPrefix, clientv3.WithPrefix())
