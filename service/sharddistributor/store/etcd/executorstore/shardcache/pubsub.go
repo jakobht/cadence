@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
+
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/service/sharddistributor/store"
