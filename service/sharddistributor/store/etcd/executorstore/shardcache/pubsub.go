@@ -21,8 +21,9 @@ type executorStatePubSub struct {
 
 func newExecutorStatePubSub(logger log.Logger, namespace string) *executorStatePubSub {
 	return &executorStatePubSub{
-		logger:    logger,
-		namespace: namespace,
+		subscribers: make(map[string]chan<- map[*store.ShardOwner][]string),
+		logger:      logger,
+		namespace:   namespace,
 	}
 }
 

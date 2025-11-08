@@ -45,6 +45,7 @@ func newNamespaceShardToExecutor(etcdPrefix, namespace string, client *clientv3.
 		stopCh:              stopCh,
 		logger:              logger,
 		client:              client,
+		pubSub:              newExecutorStatePubSub(logger, namespace),
 	}, nil
 }
 
