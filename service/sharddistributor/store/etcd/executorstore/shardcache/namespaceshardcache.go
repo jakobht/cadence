@@ -19,6 +19,7 @@ type namespaceShardToExecutor struct {
 	sync.RWMutex
 
 	shardToExecutor     map[string]*store.ShardOwner
+	executorState       map[*store.ShardOwner][]string // executor -> shardIDs
 	executorRevision    map[string]int64
 	namespace           string
 	etcdPrefix          string
@@ -26,6 +27,7 @@ type namespaceShardToExecutor struct {
 	stopCh              chan struct{}
 	logger              log.Logger
 	client              *clientv3.Client
+	pubSub              *executorStatePubSub
 }
 
 func newNamespaceShardToExecutor(etcdPrefix, namespace string, client *clientv3.Client, stopCh chan struct{}, logger log.Logger) (*namespaceShardToExecutor, error) {
@@ -35,6 +37,7 @@ func newNamespaceShardToExecutor(etcdPrefix, namespace string, client *clientv3.
 
 	return &namespaceShardToExecutor{
 		shardToExecutor:     make(map[string]*store.ShardOwner),
+		executorState:       make(map[*store.ShardOwner][]string),
 		executorRevision:    make(map[string]int64),
 		namespace:           namespace,
 		etcdPrefix:          etcdPrefix,
@@ -136,6 +139,7 @@ func (n *namespaceShardToExecutor) refresh(ctx context.Context) error {
 	defer n.Unlock()
 	// Clear the cache, so we don't have any stale data
 	n.shardToExecutor = make(map[string]*store.ShardOwner)
+	n.executorState = make(map[*store.ShardOwner][]string)
 	n.executorRevision = make(map[string]int64)
 
 	shardOwners := make(map[string]*store.ShardOwner)
@@ -154,10 +158,15 @@ func (n *namespaceShardToExecutor) refresh(ctx context.Context) error {
 			if err != nil {
 				return fmt.Errorf("parse assigned state: %w", err)
 			}
+
+			// Build both shard->executor and executor->shards mappings
+			shardIDs := make([]string, 0, len(assignedState.AssignedShards))
 			for shardID := range assignedState.AssignedShards {
 				n.shardToExecutor[shardID] = shardOwner
+				shardIDs = append(shardIDs, shardID)
 				n.executorRevision[executorID] = kv.ModRevision
 			}
+			n.executorState[shardOwner] = shardIDs
 
 		case etcdkeys.ExecutorMetadataKey:
 			shardOwner := getOrCreateShardOwner(shardOwners, executorID)

@@ -151,23 +151,40 @@ func (h *handlerImpl) WatchNamespaceState(request *types.WatchNamespaceStateRequ
 		return fmt.Errorf("subscribe to namespace state: %w", err)
 	}
 
-	for range versionChan {
-		// Get the current state after receiving a version update
-		state, err := h.storage.GetState(server.Context(), request.Namespace)
-		if err != nil {
-			return fmt.Errorf("get state: %w", err)
-		}
-
-		// Convert storage state to response format
-		response := toWatchNamespaceStateResponse(state)
-
-		err = server.Send(response)
-		if err != nil {
-			return fmt.Errorf("send response: %w", err)
-		}
+	// Send initial state immediately so client doesn't have to wait for first update
+	state, err := h.storage.GetState(server.Context(), request.Namespace)
+	if err != nil {
+		return fmt.Errorf("get initial state: %w", err)
+	}
+	response := toWatchNamespaceStateResponse(state)
+	if err := server.Send(response); err != nil {
+		return fmt.Errorf("send initial state: %w", err)
 	}
 
-	return nil
+	// Stream subsequent updates
+	for {
+		select {
+		case <-server.Context().Done():
+			return server.Context().Err()
+		case _, ok := <-versionChan:
+			if !ok {
+				return fmt.Errorf("unexpected close of updates channel")
+			}
+			// Get the current state after receiving a version update
+			state, err := h.storage.GetState(server.Context(), request.Namespace)
+			if err != nil {
+				return fmt.Errorf("get state: %w", err)
+			}
+
+			// Convert storage state to response format
+			response := toWatchNamespaceStateResponse(state)
+
+			err = server.Send(response)
+			if err != nil {
+				return fmt.Errorf("send response: %w", err)
+			}
+		}
+	}
 }
 
 func toWatchNamespaceStateResponse(state *store.NamespaceState) *types.WatchNamespaceStateResponse {
