@@ -145,7 +145,6 @@ func (h *handlerImpl) WatchNamespaceState(request *types.WatchNamespaceStateRequ
 	h.startWG.Wait()
 
 	// Subscribe to state changes from storage
-	// TODO: We need a better interface, this subscribes to too many things
 	assignmentChangesChan, unSubscribe, err := h.storage.SubscribeToAssignmentChanges(server.Context(), request.Namespace)
 	defer unSubscribe()
 	if err != nil {
