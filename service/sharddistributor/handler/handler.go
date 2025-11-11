@@ -176,7 +176,7 @@ func (h *handlerImpl) WatchNamespaceState(request *types.WatchNamespaceStateRequ
 			for executor, shardIDs := range assignmentChanges {
 				response.Executors = append(response.Executors, &types.ExecutorShardAssignment{
 					ExecutorID:     executor.ExecutorID,
-					AssignedShards: shardIDs,
+					AssignedShards: WrapShards(shardIDs),
 					Metadata:       executor.Metadata,
 				})
 			}
@@ -203,9 +203,17 @@ func toWatchNamespaceStateResponse(state *store.NamespaceState) *types.WatchName
 
 		response.Executors = append(response.Executors, &types.ExecutorShardAssignment{
 			ExecutorID:     executorID,
-			AssignedShards: shardIDs,
+			AssignedShards: WrapShards(shardIDs),
 			Metadata:       state.Executors[executorID].Metadata,
 		})
 	}
 	return response
+}
+
+func WrapShards(shardIDs []string) []*types.Shard {
+	shards := make([]*types.Shard, 0, len(shardIDs))
+	for _, shardID := range shardIDs {
+		shards = append(shards, &types.Shard{ShardKey: shardID})
+	}
+	return shards
 }
