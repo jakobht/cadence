@@ -70,12 +70,12 @@ var (
 		Executors: []*types.ExecutorShardAssignment{
 			{
 				ExecutorID:     "executor-1",
-				AssignedShards: []string{"shard-1", "shard-2"},
+				AssignedShards: []*types.Shard{&types.Shard{ShardKey: "shard-1"}, &types.Shard{ShardKey: "shard-2"}},
 				Metadata:       map[string]string{"key-1": "value-1"},
 			},
 			{
 				ExecutorID:     "executor-2",
-				AssignedShards: []string{"shard-3"},
+				AssignedShards: []*types.Shard{&types.Shard{ShardKey: "shard-3"}},
 				Metadata:       map[string]string{"key-2": "value-2"},
 			},
 		},

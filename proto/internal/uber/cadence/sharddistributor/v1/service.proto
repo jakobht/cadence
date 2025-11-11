@@ -66,5 +66,9 @@ message WatchNamespaceStateResponse {
 message ExecutorInfo {
   string executor_id = 1;
   map<string, string> metadata = 2;
-  repeated string shard_keys = 3;
+  repeated Shard shards = 3;
+}
+
+message Shard {
+  string shard_key = 1;
 }

@@ -251,7 +251,7 @@ func (v *WatchNamespaceStateResponse) GetExecutors() (o []*ExecutorShardAssignme
 
 type ExecutorShardAssignment struct {
 	ExecutorID     string
-	AssignedShards []string
+	AssignedShards []*Shard
 	Metadata       map[string]string
 }
 
@@ -262,7 +262,7 @@ func (v *ExecutorShardAssignment) GetExecutorID() (o string) {
 	return
 }
 
-func (v *ExecutorShardAssignment) GetAssignedShards() (o []string) {
+func (v *ExecutorShardAssignment) GetAssignedShards() (o []*Shard) {
 	if v != nil {
 		return v.AssignedShards
 	}
@@ -272,6 +272,17 @@ func (v *ExecutorShardAssignment) GetAssignedShards() (o []string) {
 func (v *ExecutorShardAssignment) GetMetadata() (o map[string]string) {
 	if v != nil {
 		return v.Metadata
+	}
+	return
+}
+
+type Shard struct {
+	ShardKey string
+}
+
+func (v *Shard) GetShardKey() (o string) {
+	if v != nil {
+		return v.ShardKey
 	}
 	return
 }

@@ -309,10 +309,17 @@ func FromShardDistributorWatchNamespaceStateResponse(t *types.WatchNamespaceStat
 	var executors []*sharddistributorv1.ExecutorInfo
 
 	for _, executor := range t.GetExecutors() {
+		// Convert the Shards
+		shards := make([]*sharddistributorv1.Shard, 0, len(executor.GetAssignedShards()))
+		for _, shard := range executor.GetAssignedShards() {
+			shards = append(shards, &sharddistributorv1.Shard{
+				ShardKey: shard.GetShardKey(),
+			})
+		}
 		executors = append(executors, &sharddistributorv1.ExecutorInfo{
 			ExecutorId: executor.GetExecutorID(),
 			Metadata:   executor.GetMetadata(),
-			ShardKeys:  executor.GetAssignedShards(),
+			Shards:     shards,
 		})
 	}
 
@@ -331,10 +338,18 @@ func ToShardDistributorWatchNamespaceStateResponse(t *sharddistributorv1.WatchNa
 	if t.GetExecutors() != nil {
 		executors = make([]*types.ExecutorShardAssignment, 0, len(t.GetExecutors()))
 		for _, executor := range t.GetExecutors() {
+			// Convert the Shards
+			shards := make([]*types.Shard, 0, len(executor.GetShards()))
+			for _, shard := range executor.GetShards() {
+				shards = append(shards, &types.Shard{
+					ShardKey: shard.GetShardKey(),
+				})
+			}
+
 			executors = append(executors, &types.ExecutorShardAssignment{
 				ExecutorID:     executor.GetExecutorId(),
 				Metadata:       executor.GetMetadata(),
-				AssignedShards: executor.GetShardKeys(),
+				AssignedShards: shards,
 			})
 		}
 	}
