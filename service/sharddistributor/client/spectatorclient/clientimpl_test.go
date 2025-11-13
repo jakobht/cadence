@@ -3,7 +3,6 @@ package spectatorclient
 import (
 	"context"
 	"errors"
-	"sync"
 	"testing"
 	"time"
 
@@ -26,6 +25,15 @@ func TestWatchLoopBasicFlow(t *testing.T) {
 	mockClient := sharddistributor.NewMockClient(ctrl)
 	mockStream := sharddistributor.NewMockWatchNamespaceStateClient(ctrl)
 
+	spectator := &spectatorImpl{
+		namespace:  "test-ns",
+		client:     mockClient,
+		logger:     log.NewNoop(),
+		scope:      tally.NoopScope,
+		timeSource: clock.NewRealTimeSource(),
+	}
+	spectator.firstStateWG.Add(1)
+
 	// Expect stream creation
 	mockClient.EXPECT().
 		WatchNamespaceState(gomock.Any(), &types.WatchNamespaceStateRequest{Namespace: "test-ns"}).
@@ -45,27 +53,18 @@ func TestWatchLoopBasicFlow(t *testing.T) {
 	}, nil)
 
 	// Second Recv blocks until shutdown
-	var recvCalled sync.WaitGroup
-	recvCalled.Add(1)
 	mockStream.EXPECT().Recv().DoAndReturn(func(...interface{}) (*types.WatchNamespaceStateResponse, error) {
-		recvCalled.Wait()
-		return nil, errors.New("context canceled")
+		// Wait for context to be done
+		<-spectator.ctx.Done()
+		return nil, spectator.ctx.Err()
 	})
 
 	mockStream.EXPECT().CloseSend().Return(nil)
 
-	spectator := &spectatorImpl{
-		namespace:  "test-ns",
-		client:     mockClient,
-		logger:     log.NewNoop(),
-		scope:      tally.NoopScope,
-		timeSource: clock.NewRealTimeSource(),
-	}
-	spectator.firstStateWG.Add(1)
-
 	ctx := context.Background()
 	err := spectator.Start(ctx)
 	require.NoError(t, err)
+	defer spectator.Stop()
 
 	// Wait for first state
 	spectator.firstStateWG.Wait()
@@ -78,9 +77,6 @@ func TestWatchLoopBasicFlow(t *testing.T) {
 	owner, err = spectator.GetShardOwner(context.Background(), "shard-2")
 	assert.NoError(t, err)
 	assert.Equal(t, "executor-1", owner)
-
-	recvCalled.Done()
-	spectator.Stop()
 }
 
 func TestGetShardOwner_CacheMiss_FallbackToRPC(t *testing.T) {
@@ -89,6 +85,15 @@ func TestGetShardOwner_CacheMiss_FallbackToRPC(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockClient := sharddistributor.NewMockClient(ctrl)
 	mockStream := sharddistributor.NewMockWatchNamespaceStateClient(ctrl)
+
+	spectator := &spectatorImpl{
+		namespace:  "test-ns",
+		client:     mockClient,
+		logger:     log.NewNoop(),
+		scope:      tally.NoopScope,
+		timeSource: clock.NewRealTimeSource(),
+	}
+	spectator.firstStateWG.Add(1)
 
 	// Setup stream
 	mockClient.EXPECT().
@@ -103,11 +108,10 @@ func TestGetShardOwner_CacheMiss_FallbackToRPC(t *testing.T) {
 	}, nil)
 
 	// Second Recv blocks until shutdown
-	var recvCalled sync.WaitGroup
-	recvCalled.Add(1)
 	mockStream.EXPECT().Recv().AnyTimes().DoAndReturn(func(...interface{}) (*types.WatchNamespaceStateResponse, error) {
-		recvCalled.Wait()
-		return nil, errors.New("shutdown")
+		// Wait for context to be done
+		<-spectator.ctx.Done()
+		return nil, spectator.ctx.Err()
 	})
 
 	mockStream.EXPECT().CloseSend().Return(nil)
@@ -119,15 +123,6 @@ func TestGetShardOwner_CacheMiss_FallbackToRPC(t *testing.T) {
 			ShardKey:  "unknown-shard",
 		}).
 		Return(&types.GetShardOwnerResponse{Owner: "executor-2"}, nil)
-
-	spectator := &spectatorImpl{
-		namespace:  "test-ns",
-		client:     mockClient,
-		logger:     log.NewNoop(),
-		scope:      tally.NoopScope,
-		timeSource: clock.NewRealTimeSource(),
-	}
-	spectator.firstStateWG.Add(1)
 
 	spectator.Start(context.Background())
 	defer spectator.Stop()
@@ -143,8 +138,6 @@ func TestGetShardOwner_CacheMiss_FallbackToRPC(t *testing.T) {
 	owner, err = spectator.GetShardOwner(context.Background(), "unknown-shard")
 	assert.NoError(t, err)
 	assert.Equal(t, "executor-2", owner)
-
-	recvCalled.Done()
 }
 
 func TestStreamReconnection(t *testing.T) {
@@ -155,6 +148,15 @@ func TestStreamReconnection(t *testing.T) {
 	mockStream1 := sharddistributor.NewMockWatchNamespaceStateClient(ctrl)
 	mockStream2 := sharddistributor.NewMockWatchNamespaceStateClient(ctrl)
 	mockTimeSource := clock.NewMockedTimeSource()
+
+	spectator := &spectatorImpl{
+		namespace:  "test-ns",
+		client:     mockClient,
+		logger:     log.NewNoop(),
+		scope:      tally.NoopScope,
+		timeSource: mockTimeSource,
+	}
+	spectator.firstStateWG.Add(1)
 
 	// First stream fails immediately
 	mockClient.EXPECT().
@@ -175,23 +177,13 @@ func TestStreamReconnection(t *testing.T) {
 	}, nil)
 
 	// Second Recv blocks until shutdown
-	var recvCalled sync.WaitGroup
-	recvCalled.Add(1)
 	mockStream2.EXPECT().Recv().AnyTimes().DoAndReturn(func(...interface{}) (*types.WatchNamespaceStateResponse, error) {
-		recvCalled.Wait()
+		// Wait for context to be done
+		<-spectator.ctx.Done()
 		return nil, errors.New("shutdown")
 	})
 
 	mockStream2.EXPECT().CloseSend().Return(nil)
-
-	spectator := &spectatorImpl{
-		namespace:  "test-ns",
-		client:     mockClient,
-		logger:     log.NewNoop(),
-		scope:      tally.NoopScope,
-		timeSource: mockTimeSource,
-	}
-	spectator.firstStateWG.Add(1)
 
 	spectator.Start(context.Background())
 	defer spectator.Stop()
@@ -199,6 +191,4 @@ func TestStreamReconnection(t *testing.T) {
 	// Advance time for retry
 	mockTimeSource.Advance(2 * time.Second)
 	spectator.firstStateWG.Wait()
-
-	recvCalled.Done()
 }
