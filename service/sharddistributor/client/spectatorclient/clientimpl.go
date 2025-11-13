@@ -18,8 +18,8 @@ import (
 )
 
 const (
-	streamRetryInterval      = 1 * time.Second
-	streamRetryJitterCoeff   = 0.1 // 10% jitter (900ms - 1100ms)
+	streamRetryInterval    = 1 * time.Second
+	streamRetryJitterCoeff = 0.1 // 10% jitter (900ms - 1100ms)
 )
 
 // ShardOwner contains information about the executor that owns a shard
