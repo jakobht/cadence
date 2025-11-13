@@ -9,11 +9,17 @@ import (
 	"github.com/uber-go/tally"
 
 	"github.com/uber/cadence/client/sharddistributor"
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/sharddistributor/client/clientcommon"
+)
+
+const (
+	streamRetryInterval      = 1 * time.Second
+	streamRetryJitterCoeff   = 0.1 // 10% jitter (900ms - 1100ms)
 )
 
 // ShardOwner contains information about the executor that owns a shard
@@ -84,7 +90,7 @@ func (s *spectatorImpl) watchLoop() {
 			}
 
 			s.logger.Error("Failed to create stream, retrying", tag.Error(err), tag.ShardNamespace(s.namespace))
-			s.timeSource.Sleep(1 * time.Second)
+			s.timeSource.Sleep(backoff.JitDuration(streamRetryInterval, streamRetryJitterCoeff))
 			continue
 		}
 
@@ -162,18 +168,7 @@ func (s *spectatorImpl) handleResponse(response *types.WatchNamespaceStateRespon
 // If not found in cache, it falls back to querying the shard distributor directly.
 func (s *spectatorImpl) GetShardOwner(ctx context.Context, shardKey string) (string, error) {
 	// Wait for first state to be received to avoid flooding shard distributor on startup
-	done := make(chan struct{})
-	go func() {
-		s.firstStateWG.Wait()
-		close(done)
-	}()
-
-	select {
-	case <-done:
-		// First state received, continue
-	case <-ctx.Done():
-		return "", ctx.Err()
-	}
+	s.firstStateWG.Wait()
 
 	// Check cache first
 	s.stateMu.RLock()
