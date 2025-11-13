@@ -18,7 +18,7 @@ import (
 	"github.com/uber/cadence/service/sharddistributor/client/clientcommon"
 )
 
-//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination interface_mock.go . SpectatorProcessor,Spectator
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination interface_mock.go . Spectator
 
 type Spectator interface {
 	Start(ctx context.Context) error
