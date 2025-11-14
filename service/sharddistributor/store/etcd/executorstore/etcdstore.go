@@ -343,16 +343,16 @@ func (s *executorStoreImpl) AssignShards(ctx context.Context, namespace string, 
 	}
 
 	// 1. Prepare operations to delete stale executors and add comparisons to ensure they haven't been modified
-	for executorID, _ := range request.ExecutorsToDelete {
+	for executorID, expectedModRevision := range request.ExecutorsToDelete {
 		// Build the assigned state key to check for concurrent modifications
-		_, err := etcdkeys.BuildExecutorKey(s.prefix, namespace, executorID, etcdkeys.ExecutorAssignedStateKey)
+		executorStateKey, err := etcdkeys.BuildExecutorKey(s.prefix, namespace, executorID, etcdkeys.ExecutorAssignedStateKey)
 		if err != nil {
 			return fmt.Errorf("build executor assigned state key for comparison: %w", err)
 		}
 
 		// Add a comparison to ensure the executor's assigned state hasn't changed
 		// This prevents deleting an executor that just received a shard assignment
-		// comparisons = append(comparisons, clientv3.Compare(clientv3.ModRevision(executorStateKey), "=", expectedModRevision))
+		comparisons = append(comparisons, clientv3.Compare(clientv3.ModRevision(executorStateKey), "=", expectedModRevision))
 
 		// Delete all keys for this executor
 		executorPrefix, err := etcdkeys.BuildExecutorKey(s.prefix, namespace, executorID, "")
