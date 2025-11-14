@@ -3,6 +3,7 @@ package process
 import (
 	"context"
 	"fmt"
+	"maps"
 	"math/rand"
 	"slices"
 	"sort"
@@ -248,14 +249,14 @@ func (p *namespaceProcessor) runShardStatsCleanupLoop(ctx context.Context) {
 }
 
 // identifyStaleExecutors returns a list of executors who have not reported a heartbeat recently.
-func (p *namespaceProcessor) identifyStaleExecutors(namespaceState *store.NamespaceState) []string {
-	var expiredExecutors []string
+func (p *namespaceProcessor) identifyStaleExecutors(namespaceState *store.NamespaceState) map[string]int64 {
+	expiredExecutors := make(map[string]int64)
 	now := p.timeSource.Now().Unix()
 	heartbeatTTL := int64(p.cfg.HeartbeatTTL.Seconds())
 
 	for executorID, state := range namespaceState.Executors {
 		if (now - state.LastHeartbeat) > heartbeatTTL {
-			expiredExecutors = append(expiredExecutors, executorID)
+			expiredExecutors[executorID] = namespaceState.ShardAssignments[executorID].ModRevision
 		}
 	}
 
@@ -353,7 +354,7 @@ func (p *namespaceProcessor) rebalanceShardsImpl(ctx context.Context, metricsLoo
 	// Identify stale executors that need to be removed
 	staleExecutors := p.identifyStaleExecutors(namespaceState)
 	if len(staleExecutors) > 0 {
-		p.logger.Info("Identified stale executors for removal", tag.ShardExecutors(staleExecutors))
+		p.logger.Info("Identified stale executors for removal", tag.ShardExecutors(slices.Collect(maps.Keys(staleExecutors))))
 	}
 
 	activeExecutors := p.getActiveExecutors(namespaceState, staleExecutors)
@@ -361,6 +362,7 @@ func (p *namespaceProcessor) rebalanceShardsImpl(ctx context.Context, metricsLoo
 		p.logger.Warn("No active executors found. Cannot assign shards.")
 		return nil
 	}
+	p.logger.Info("Active executors", tag.ShardExecutors(activeExecutors))
 
 	deletedShards := p.findDeletedShards(namespaceState)
 	shardsToReassign, currentAssignments := p.findShardsToReassign(activeExecutors, namespaceState, deletedShards, staleExecutors)
@@ -368,10 +370,10 @@ func (p *namespaceProcessor) rebalanceShardsImpl(ctx context.Context, metricsLoo
 	metricsLoopScope.UpdateGauge(metrics.ShardDistributorAssignLoopNumRebalancedShards, float64(len(shardsToReassign)))
 
 	// If there are deleted shards or stale executors, the distribution has changed.
-	distributionChanged := len(deletedShards) > 0 || len(staleExecutors) > 0
-	distributionChanged = distributionChanged || assignShardsToEmptyExecutors(currentAssignments)
-	distributionChanged = distributionChanged || p.updateAssignments(shardsToReassign, activeExecutors, currentAssignments)
+	assignedToEmptyExecutors := assignShardsToEmptyExecutors(currentAssignments)
+	updatedAssignments := p.updateAssignments(shardsToReassign, activeExecutors, currentAssignments)
 
+	distributionChanged := len(deletedShards) > 0 || len(staleExecutors) > 0 || assignedToEmptyExecutors || updatedAssignments
 	if !distributionChanged {
 		p.logger.Debug("No changes to distribution detected. Skipping rebalance.")
 		return nil
@@ -383,7 +385,7 @@ func (p *namespaceProcessor) rebalanceShardsImpl(ctx context.Context, metricsLoo
 	// Use the leader guard for the assign and delete operation.
 	err = p.shardStore.AssignShards(ctx, p.namespaceCfg.Name, store.AssignShardsRequest{
 		NewState:          namespaceState,
-		ExecutorsToDelete: p.buildExecutorsToDelete(staleExecutors, namespaceState),
+		ExecutorsToDelete: staleExecutors,
 	}, p.election.Guard())
 	if err != nil {
 		return fmt.Errorf("assign shards: %w", err)
@@ -401,20 +403,6 @@ func (p *namespaceProcessor) rebalanceShardsImpl(ctx context.Context, metricsLoo
 	return nil
 }
 
-func (p *namespaceProcessor) buildExecutorsToDelete(staleExecutors []string, namespaceState *store.NamespaceState) map[string]int64 {
-	executorsToDelete := make(map[string]int64)
-	for _, executorID := range staleExecutors {
-		// Get the ModRevision from the namespace state for transactional safety
-		if assignedState, exists := namespaceState.ShardAssignments[executorID]; exists {
-			executorsToDelete[executorID] = assignedState.ModRevision
-		} else {
-			// If there's no assigned state, use 0 to indicate the key should not exist
-			executorsToDelete[executorID] = 0
-		}
-	}
-	return executorsToDelete
-}
-
 func (p *namespaceProcessor) findDeletedShards(namespaceState *store.NamespaceState) map[string]store.ShardState {
 	deletedShards := make(map[string]store.ShardState)
 
@@ -430,16 +418,15 @@ func (p *namespaceProcessor) findDeletedShards(namespaceState *store.NamespaceSt
 	return deletedShards
 }
 
-func (p *namespaceProcessor) findShardsToReassign(activeExecutors []string, namespaceState *store.NamespaceState, deletedShards map[string]store.ShardState, staleExecutors []string) ([]string, map[string][]string) {
+func (p *namespaceProcessor) findShardsToReassign(
+	activeExecutors []string,
+	namespaceState *store.NamespaceState,
+	deletedShards map[string]store.ShardState,
+	staleExecutors map[string]int64,
+) ([]string, map[string][]string) {
 	allShards := make(map[string]struct{})
 	for _, shardID := range getShards(p.namespaceCfg, namespaceState, deletedShards) {
 		allShards[shardID] = struct{}{}
-	}
-
-	// Build a set of stale executors for quick lookup
-	staleExecutorSet := make(map[string]struct{})
-	for _, executorID := range staleExecutors {
-		staleExecutorSet[executorID] = struct{}{}
 	}
 
 	shardsToReassign := make([]string, 0)
@@ -451,10 +438,7 @@ func (p *namespaceProcessor) findShardsToReassign(activeExecutors []string, name
 
 	for executorID, state := range namespaceState.ShardAssignments {
 		isActive := namespaceState.Executors[executorID].Status == types.ExecutorStatusACTIVE
-		isStale := false
-		if _, ok := staleExecutorSet[executorID]; ok {
-			isStale = true
-		}
+		_, isStale := staleExecutors[executorID]
 
 		for shardID := range state.AssignedShards {
 			if _, ok := allShards[shardID]; ok {
@@ -512,18 +496,12 @@ func (p *namespaceProcessor) addAssignmentsToNamespaceState(namespaceState *stor
 	namespaceState.ShardAssignments = newState
 }
 
-func (*namespaceProcessor) getActiveExecutors(namespaceState *store.NamespaceState, staleExecutors []string) []string {
-	// Build a set of stale executors for quick lookup
-	staleExecutorSet := make(map[string]struct{})
-	for _, executorID := range staleExecutors {
-		staleExecutorSet[executorID] = struct{}{}
-	}
-
+func (*namespaceProcessor) getActiveExecutors(namespaceState *store.NamespaceState, staleExecutors map[string]int64) []string {
 	var activeExecutors []string
 	for id, state := range namespaceState.Executors {
 		// Executor must be ACTIVE and not stale
 		if state.Status == types.ExecutorStatusACTIVE {
-			if _, isStale := staleExecutorSet[id]; !isStale {
+			if _, ok := staleExecutors[id]; !ok {
 				activeExecutors = append(activeExecutors, id)
 			}
 		}
