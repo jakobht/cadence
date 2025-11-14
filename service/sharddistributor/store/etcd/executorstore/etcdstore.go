@@ -382,16 +382,7 @@ func (s *executorStoreImpl) AssignShards(ctx context.Context, namespace string, 
 		return nil
 	}
 
-	// DEBUG CHECK - check that all 32 shards are assigned to an executor in the new state
-	assignedShards := 0
-	for _, state := range request.NewState.ShardAssignments {
-		for range state.AssignedShards {
-			assignedShards++
-		}
-	}
-	s.logger.Info("Assigned shards", tag.ShardNamespace(namespace), tag.Value(assignedShards), tag.Value(request.NewState), tag.Value(request.ExecutorsToDelete))
-
-	// 2. Apply the guard function to get the base transaction, which may already have an 'If' condition for leadership.
+	// 3. Apply the guard function to get the base transaction, which may already have an 'If' condition for leadership.
 	nativeTxn := s.client.Txn(ctx)
 	guardedTxn, err := guard(nativeTxn)
 	if err != nil {
@@ -402,7 +393,7 @@ func (s *executorStoreImpl) AssignShards(ctx context.Context, namespace string, 
 		return fmt.Errorf("guard function returned invalid transaction type")
 	}
 
-	// 3. Create a nested transaction operation. This allows us to add our own 'If' (comparisons)
+	// 4. Create a nested transaction operation. This allows us to add our own 'If' (comparisons)
 	// and 'Then' (ops) logic that will only execute if the outer guard's 'If' condition passes.
 	nestedTxnOp := clientv3.OpTxn(
 		comparisons, // Our IF conditions
@@ -410,14 +401,14 @@ func (s *executorStoreImpl) AssignShards(ctx context.Context, namespace string, 
 		nil,         // Our ELSE operations
 	)
 
-	// 4. Add the nested transaction to the guarded transaction's THEN clause and commit.
+	// 5. Add the nested transaction to the guarded transaction's THEN clause and commit.
 	etcdGuardedTxn = etcdGuardedTxn.Then(nestedTxnOp)
 	txnResp, err := etcdGuardedTxn.Commit()
 	if err != nil {
 		return fmt.Errorf("commit shard assignments transaction: %w", err)
 	}
 
-	// 5. Check the results of both the outer and nested transactions.
+	// 6. Check the results of both the outer and nested transactions.
 	if !txnResp.Succeeded {
 		// This means the guard's condition (e.g., leadership) failed.
 		return fmt.Errorf("%w: transaction failed, leadership may have changed", store.ErrVersionConflict)
