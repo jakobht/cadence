@@ -226,7 +226,7 @@ func TestCleanupStaleExecutors(t *testing.T) {
 	namespaceState := &store.NamespaceState{Executors: heartbeats}
 
 	staleExecutors := processor.identifyStaleExecutors(namespaceState)
-	assert.Equal(t, []string{"exec-stale"}, staleExecutors)
+	assert.Equal(t, map[string]int64{"exec-stale": 0}, staleExecutors)
 }
 
 func TestCleanupStaleShardStats(t *testing.T) {
