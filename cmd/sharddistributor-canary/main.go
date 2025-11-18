@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"net"
 	"os"
 	"time"
 
@@ -8,6 +10,7 @@ import (
 	"github.com/urfave/cli/v2"
 	"go.uber.org/fx"
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/zap"
 
@@ -25,6 +28,7 @@ const (
 	defaultShardDistributorEndpoint = "127.0.0.1:7943"
 	defaultFixedNamespace           = "shard-distributor-canary"
 	defaultEphemeralNamespace       = "shard-distributor-canary-ephemeral"
+	defaultCanaryGRPCPort           = 7953 // Port for canary to receive ping requests
 
 	shardDistributorServiceName = "cadence-shard-distributor"
 )
@@ -33,11 +37,12 @@ func runApp(c *cli.Context) {
 	endpoint := c.String("endpoint")
 	fixedNamespace := c.String("fixed-namespace")
 	ephemeralNamespace := c.String("ephemeral-namespace")
+	canaryGRPCPort := c.Int("canary-grpc-port")
 
-	fx.New(opts(fixedNamespace, ephemeralNamespace, endpoint)).Run()
+	fx.New(opts(fixedNamespace, ephemeralNamespace, endpoint, canaryGRPCPort)).Run()
 }
 
-func opts(fixedNamespace, ephemeralNamespace, endpoint string) fx.Option {
+func opts(fixedNamespace, ephemeralNamespace, endpoint string, canaryGRPCPort int) fx.Option {
 	configuration := clientcommon.Config{
 		Namespaces: []clientcommon.NamespaceConfig{
 			{Namespace: fixedNamespace, HeartBeatInterval: 1 * time.Second, MigrationMode: config.MigrationModeONBOARDED},
@@ -49,13 +54,28 @@ func opts(fixedNamespace, ephemeralNamespace, endpoint string) fx.Option {
 		},
 	}
 
+	canaryGRPCAddress := fmt.Sprintf("127.0.0.1:%d", canaryGRPCPort)
+
+	// Create listener for GRPC inbound
+	listener, err := net.Listen("tcp", canaryGRPCAddress)
+	if err != nil {
+		panic(err)
+	}
+
 	transport := grpc.NewTransport()
+
 	yarpcConfig := yarpc.Config{
 		Name: "shard-distributor-canary",
+		Inbounds: yarpc.Inbounds{
+			transport.NewInbound(listener), // Listen for incoming ping requests
+		},
 		Outbounds: yarpc.Outbounds{
 			shardDistributorServiceName: {
-				Unary: transport.NewSingleOutbound(endpoint),
+				Unary:  transport.NewSingleOutbound(endpoint),
+				Stream: transport.NewSingleOutbound(endpoint),
 			},
+			// Note: canary-to-canary outbound will be added dynamically in the canary module
+			// after spectators are created, using SpectatorPeerChooser
 		},
 	}
 
@@ -65,6 +85,10 @@ func opts(fixedNamespace, ephemeralNamespace, endpoint string) fx.Option {
 			fx.Annotate(clock.NewRealTimeSource(), fx.As(new(clock.TimeSource))),
 			yarpcConfig,
 			configuration,
+			transport,
+		),
+		fx.Provide(
+			func(t *grpc.Transport) peer.Transport { return t },
 		),
 		fx.Provide(
 			yarpc.NewDispatcher,
@@ -78,7 +102,7 @@ func opts(fixedNamespace, ephemeralNamespace, endpoint string) fx.Option {
 			lc.Append(fx.StartStopHook(dispatcher.Start, dispatcher.Stop))
 		}),
 
-		// Include the canary module
+		// Include the canary module - it will set up spectator peer choosers and canary client
 		canary.Module(canary.NamespacesNames{FixedNamespace: fixedNamespace, EphemeralNamespace: ephemeralNamespace, ExternalAssignmentNamespace: executors.ExternalAssignmentNamespace, SharddistributorServiceName: shardDistributorServiceName}),
 	)
 }
@@ -109,6 +133,11 @@ func buildCLI() *cli.App {
 					Name:  "ephemeral-namespace",
 					Value: defaultEphemeralNamespace,
 					Usage: "namespace for ephemeral shard creation testing",
+				},
+				&cli.IntFlag{
+					Name:  "canary-grpc-port",
+					Value: defaultCanaryGRPCPort,
+					Usage: "port for canary to receive ping requests",
 				},
 			},
 			Action: func(c *cli.Context) error {

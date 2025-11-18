@@ -45,6 +45,9 @@ type Executor[SP ShardProcessor] interface {
 
 	GetShardProcess(ctx context.Context, shardID string) (SP, error)
 
+	// Get the namespace this executor is responsible for
+	GetNamespace() string
+
 	// Set metadata for the executor
 	SetMetadata(metadata map[string]string)
 	// Get the current metadata of the executor

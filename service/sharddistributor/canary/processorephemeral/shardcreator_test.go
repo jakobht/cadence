@@ -9,9 +9,8 @@ import (
 	"go.uber.org/mock/gomock"
 	"go.uber.org/zap/zaptest"
 
-	"github.com/uber/cadence/client/sharddistributor"
 	"github.com/uber/cadence/common/clock"
-	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/sharddistributor/client/spectatorclient"
 )
 
 func TestShardCreator_Lifecycle(t *testing.T) {
@@ -21,25 +20,28 @@ func TestShardCreator_Lifecycle(t *testing.T) {
 	timeSource := clock.NewMockedTimeSource()
 	ctrl := gomock.NewController(t)
 
-	mockShardDistributor := sharddistributor.NewMockClient(ctrl)
 	namespace := "test-namespace"
 
-	// Set up expectation for GetShardOwner calls that return errors
-	mockShardDistributor.EXPECT().
+	// Create mock spectator that returns errors
+	mockSpectator := spectatorclient.NewMockSpectator(ctrl)
+	mockSpectator.EXPECT().
 		GetShardOwner(gomock.Any(), gomock.Any()).
-		DoAndReturn(func(ctx interface{}, req *types.GetShardOwnerRequest, opts ...interface{}) (*types.GetShardOwnerResponse, error) {
-			// Verify the request contains the correct namespace even on error
-			assert.Equal(t, namespace, req.Namespace)
-			assert.NotEmpty(t, req.ShardKey)
-
+		DoAndReturn(func(ctx interface{}, shardKey string) (*spectatorclient.ShardOwner, error) {
+			// Verify the shard key is not empty
+			assert.NotEmpty(t, shardKey)
 			return nil, assert.AnError // Using testify's AnError for consistency
 		}).
 		Times(2)
 
+	spectators := map[string]spectatorclient.Spectator{
+		namespace: mockSpectator,
+	}
+
 	params := ShardCreatorParams{
-		Logger:           logger,
-		TimeSource:       timeSource,
-		ShardDistributor: mockShardDistributor,
+		Logger:     logger,
+		TimeSource: timeSource,
+		Spectators: spectators,
+		// Note: CanaryClient is not needed for this test as we're testing error handling before ping
 	}
 
 	creator := NewShardCreator(params, []string{namespace})
