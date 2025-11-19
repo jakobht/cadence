@@ -75,10 +75,11 @@ func opts(names NamespacesNames) fx.Option {
 			})
 		}),
 
-		fx.Provide(func(params pinger.Params, lc fx.Lifecycle) *pinger.Pinger {
-			pinger := pinger.NewPinger(params, names.FixedNamespace, 32)
-			lc.Append(fx.StartStopHook(pinger.Start, pinger.Stop))
-			return pinger
+		fx.Provide(func(params pinger.Params) *pinger.Pinger {
+			return pinger.NewPinger(params, names.FixedNamespace, 32)
+		}),
+		fx.Invoke(func(p *pinger.Pinger, lc fx.Lifecycle) {
+			lc.Append(fx.StartStopHook(p.Start, p.Stop))
 		}),
 
 		// Register canary ping handler to receive ping requests from other executors
