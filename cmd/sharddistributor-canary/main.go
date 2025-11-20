@@ -19,7 +19,9 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/service/sharddistributor/canary"
 	"github.com/uber/cadence/service/sharddistributor/canary/executors"
+	"github.com/uber/cadence/service/sharddistributor/canary/metadata"
 	"github.com/uber/cadence/service/sharddistributor/client/clientcommon"
+	"github.com/uber/cadence/service/sharddistributor/client/executorclient"
 	"github.com/uber/cadence/service/sharddistributor/client/spectatorclient"
 	"github.com/uber/cadence/service/sharddistributor/config"
 	"github.com/uber/cadence/tools/common/commoncli"
@@ -66,12 +68,17 @@ func opts(fixedNamespace, ephemeralNamespace, endpoint string, canaryGRPCPort in
 
 	transport := grpc.NewTransport()
 
+	executorMetadata := executorclient.ExecutorMetadata{
+		metadata.MetadataKeyGRPCAddress: canaryGRPCAddress,
+	}
+
 	return fx.Options(
 		fx.Supply(
 			fx.Annotate(tally.NoopScope, fx.As(new(tally.Scope))),
 			fx.Annotate(clock.NewRealTimeSource(), fx.As(new(clock.TimeSource))),
 			configuration,
 			transport,
+			executorMetadata,
 		),
 
 		fx.Provide(func(peerChooser spectatorclient.SpectatorPeerChooserInterface) yarpc.Config {

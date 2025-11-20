@@ -10,7 +10,6 @@ import (
 	"github.com/uber/cadence/service/sharddistributor/canary/executors"
 	"github.com/uber/cadence/service/sharddistributor/canary/factory"
 	"github.com/uber/cadence/service/sharddistributor/canary/handler"
-	"github.com/uber/cadence/service/sharddistributor/canary/metadata"
 	"github.com/uber/cadence/service/sharddistributor/canary/pinger"
 	"github.com/uber/cadence/service/sharddistributor/canary/processor"
 	"github.com/uber/cadence/service/sharddistributor/canary/processorephemeral"
@@ -37,9 +36,6 @@ func opts(names NamespacesNames) fx.Option {
 		fx.Provide(sharddistributorv1.NewFxShardDistributorAPIYARPCClient(names.SharddistributorServiceName)),
 
 		fx.Provide(sharddistributorclient.NewShardDistributorClient),
-
-		// Provide executor metadata with GRPC address
-		fx.Provide(metadata.NewExecutorMetadata),
 
 		// Modules for the shard distributor canary
 		fx.Provide(
