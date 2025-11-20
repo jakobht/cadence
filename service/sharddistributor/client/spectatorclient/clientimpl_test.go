@@ -44,6 +44,9 @@ func TestWatchLoopBasicFlow(t *testing.T) {
 		Executors: []*types.ExecutorShardAssignment{
 			{
 				ExecutorID: "executor-1",
+				Metadata: map[string]string{
+					"grpc_address": "127.0.0.1:7953",
+				},
 				AssignedShards: []*types.Shard{
 					{ShardKey: "shard-1"},
 					{ShardKey: "shard-2"},
@@ -72,11 +75,12 @@ func TestWatchLoopBasicFlow(t *testing.T) {
 	// Query shard owner
 	owner, err := spectator.GetShardOwner(context.Background(), "shard-1")
 	assert.NoError(t, err)
-	assert.Equal(t, "executor-1", owner)
+	assert.Equal(t, "executor-1", owner.ExecutorID)
+	assert.Equal(t, "127.0.0.1:7953", owner.Metadata["grpc_address"])
 
 	owner, err = spectator.GetShardOwner(context.Background(), "shard-2")
 	assert.NoError(t, err)
-	assert.Equal(t, "executor-1", owner)
+	assert.Equal(t, "executor-1", owner.ExecutorID)
 }
 
 func TestGetShardOwner_CacheMiss_FallbackToRPC(t *testing.T) {
@@ -103,7 +107,13 @@ func TestGetShardOwner_CacheMiss_FallbackToRPC(t *testing.T) {
 	// First Recv returns state
 	mockStream.EXPECT().Recv().Return(&types.WatchNamespaceStateResponse{
 		Executors: []*types.ExecutorShardAssignment{
-			{ExecutorID: "executor-1", AssignedShards: []*types.Shard{{ShardKey: "shard-1"}}},
+			{
+				ExecutorID: "executor-1",
+				Metadata: map[string]string{
+					"grpc_address": "127.0.0.1:7953",
+				},
+				AssignedShards: []*types.Shard{{ShardKey: "shard-1"}},
+			},
 		},
 	}, nil)
 
@@ -122,7 +132,12 @@ func TestGetShardOwner_CacheMiss_FallbackToRPC(t *testing.T) {
 			Namespace: "test-ns",
 			ShardKey:  "unknown-shard",
 		}).
-		Return(&types.GetShardOwnerResponse{Owner: "executor-2"}, nil)
+		Return(&types.GetShardOwnerResponse{
+			Owner: "executor-2",
+			Metadata: map[string]string{
+				"grpc_address": "127.0.0.1:7954",
+			},
+		}, nil)
 
 	spectator.Start(context.Background())
 	defer spectator.Stop()
@@ -132,12 +147,13 @@ func TestGetShardOwner_CacheMiss_FallbackToRPC(t *testing.T) {
 	// Cache hit
 	owner, err := spectator.GetShardOwner(context.Background(), "shard-1")
 	assert.NoError(t, err)
-	assert.Equal(t, "executor-1", owner)
+	assert.Equal(t, "executor-1", owner.ExecutorID)
 
 	// Cache miss - should trigger RPC
 	owner, err = spectator.GetShardOwner(context.Background(), "unknown-shard")
 	assert.NoError(t, err)
-	assert.Equal(t, "executor-2", owner)
+	assert.Equal(t, "executor-2", owner.ExecutorID)
+	assert.Equal(t, "127.0.0.1:7954", owner.Metadata["grpc_address"])
 }
 
 func TestStreamReconnection(t *testing.T) {

@@ -41,10 +41,10 @@ func (m *MockSpectator) EXPECT() *MockSpectatorMockRecorder {
 }
 
 // GetShardOwner mocks base method.
-func (m *MockSpectator) GetShardOwner(ctx context.Context, shardKey string) (string, error) {
+func (m *MockSpectator) GetShardOwner(ctx context.Context, shardKey string) (*ShardOwner, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetShardOwner", ctx, shardKey)
-	ret0, _ := ret[0].(string)
+	ret0, _ := ret[0].(*ShardOwner)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

@@ -20,13 +20,50 @@ import (
 
 //go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination interface_mock.go . Spectator
 
+type Spectators map[string]Spectator
+
+func (s Spectators) ForNamespace(namespace string) (Spectator, error) {
+	spectator, ok := s[namespace]
+	if !ok {
+		return nil, fmt.Errorf("spectator not found for namespace %s", namespace)
+	}
+	return spectator, nil
+}
+
+func (s Spectators) Start(ctx context.Context) error {
+	for namespace, spectator := range s {
+		if err := spectator.Start(ctx); err != nil {
+			return fmt.Errorf("start spectator for namespace %s: %w", namespace, err)
+		}
+	}
+	return nil
+}
+
+func (s Spectators) Stop() {
+	for _, spectator := range s {
+		spectator.Stop()
+	}
+}
+
+func NewSpectators(params Params) (Spectators, error) {
+	spectators := make(Spectators)
+	for _, namespace := range params.Config.Namespaces {
+		spectator, err := NewSpectatorWithNamespace(params, namespace.Namespace)
+		if err != nil {
+			return nil, fmt.Errorf("create spectator for namespace %s: %w", namespace.Namespace, err)
+		}
+
+		spectators[namespace.Namespace] = spectator
+	}
+	return spectators, nil
+}
+
 type Spectator interface {
 	Start(ctx context.Context) error
 	Stop()
 
-	// GetShardOwner returns the owner of a shard. It first checks the local cache,
-	// and if not found, falls back to querying the shard distributor directly.
-	GetShardOwner(ctx context.Context, shardKey string) (string, error)
+	// GetShardOwner returns the owner of a shard
+	GetShardOwner(ctx context.Context, shardKey string) (*ShardOwner, error)
 }
 
 type Params struct {
@@ -109,21 +146,9 @@ func createShardDistributorClient(yarpcClient sharddistributorv1.ShardDistributo
 // Module creates a spectator module using auto-selection (single namespace only)
 func Module() fx.Option {
 	return fx.Module("shard-distributor-spectator-client",
-		fx.Provide(NewSpectator),
-		fx.Invoke(func(spectator Spectator, lc fx.Lifecycle) {
-			lc.Append(fx.StartStopHook(spectator.Start, spectator.Stop))
-		}),
-	)
-}
-
-// ModuleWithNamespace creates a spectator module for a specific namespace
-func ModuleWithNamespace(namespace string) fx.Option {
-	return fx.Module(fmt.Sprintf("shard-distributor-spectator-client-%s", namespace),
-		fx.Provide(func(params Params) (Spectator, error) {
-			return NewSpectatorWithNamespace(params, namespace)
-		}),
-		fx.Invoke(func(spectator Spectator, lc fx.Lifecycle) {
-			lc.Append(fx.StartStopHook(spectator.Start, spectator.Stop))
+		fx.Provide(NewSpectators),
+		fx.Invoke(func(spectators Spectators, lc fx.Lifecycle) {
+			lc.Append(fx.StartStopHook(spectators.Start, spectators.Stop))
 		}),
 	)
 }

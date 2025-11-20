@@ -103,6 +103,7 @@ func (s *spectatorImpl) watchLoop() {
 
 		// Server shutdown or network issue - recreate stream (load balancer will route to new server)
 		s.logger.Info("Stream ended, reconnecting", tag.ShardNamespace(s.namespace))
+		s.timeSource.Sleep(backoff.JitDuration(streamRetryInterval, streamRetryJitterCoeff))
 	}
 }
 
@@ -163,10 +164,10 @@ func (s *spectatorImpl) handleResponse(response *types.WatchNamespaceStateRespon
 		tag.Counter(len(response.Executors)))
 }
 
-// GetShardOwner returns the executor ID for a given shard.
+// GetShardOwner returns the full owner information including metadata for a given shard.
 // It first waits for the initial state to be received, then checks the cache.
 // If not found in cache, it falls back to querying the shard distributor directly.
-func (s *spectatorImpl) GetShardOwner(ctx context.Context, shardKey string) (string, error) {
+func (s *spectatorImpl) GetShardOwner(ctx context.Context, shardKey string) (*ShardOwner, error) {
 	// Wait for first state to be received to avoid flooding shard distributor on startup
 	s.firstStateWG.Wait()
 
@@ -176,7 +177,7 @@ func (s *spectatorImpl) GetShardOwner(ctx context.Context, shardKey string) (str
 	s.stateMu.RUnlock()
 
 	if owner != nil {
-		return owner.ExecutorID, nil
+		return owner, nil
 	}
 
 	// Cache miss - fall back to RPC call
@@ -189,8 +190,11 @@ func (s *spectatorImpl) GetShardOwner(ctx context.Context, shardKey string) (str
 		ShardKey:  shardKey,
 	})
 	if err != nil {
-		return "", fmt.Errorf("get shard owner from shard distributor: %w", err)
+		return nil, fmt.Errorf("get shard owner from shard distributor: %w", err)
 	}
 
-	return response.Owner, nil
+	return &ShardOwner{
+		ExecutorID: response.Owner,
+		Metadata:   response.Metadata,
+	}, nil
 }
