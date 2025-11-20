@@ -171,6 +171,20 @@ func (mr *MockExecutorMockRecorder[SP]) GetMetadata() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMetadata", reflect.TypeOf((*MockExecutor[SP])(nil).GetMetadata))
 }
 
+// GetNamespace mocks base method.
+func (m *MockExecutor[SP]) GetNamespace() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetNamespace")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetNamespace indicates an expected call of GetNamespace.
+func (mr *MockExecutorMockRecorder[SP]) GetNamespace() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNamespace", reflect.TypeOf((*MockExecutor[SP])(nil).GetNamespace))
+}
+
 // GetShardProcess mocks base method.
 func (m *MockExecutor[SP]) GetShardProcess(ctx context.Context, shardID string) (SP, error) {
 	m.ctrl.T.Helper()
