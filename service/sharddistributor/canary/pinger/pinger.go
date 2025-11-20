@@ -20,6 +20,7 @@ import (
 const (
 	pingInterval    = 1 * time.Second
 	pingJitterCoeff = 0.1 // 10% jitter
+	pingTimeout     = 5 * time.Second
 )
 
 // Pinger periodically pings shard owners in the fixed namespace
@@ -112,7 +113,11 @@ func (p *Pinger) pingShard(shardKey string) error {
 		Namespace: p.namespace,
 	}
 
-	response, err := p.canaryClient.Ping(p.ctx, request, yarpc.WithShardKey(shardKey), yarpc.WithHeader(spectatorclient.NamespaceHeader, p.namespace))
+	// Create context with deadline for the RPC call
+	ctx, cancel := context.WithTimeout(p.ctx, pingTimeout)
+	defer cancel()
+
+	response, err := p.canaryClient.Ping(ctx, request, yarpc.WithShardKey(shardKey), yarpc.WithHeader(spectatorclient.NamespaceHeader, p.namespace))
 	if err != nil {
 		return fmt.Errorf("ping rpc failed: %w", err)
 	}

@@ -14,11 +14,13 @@ import (
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/zap"
 
+	sharddistributorv1 "github.com/uber/cadence/.gen/proto/sharddistributor/v1"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/service/sharddistributor/canary"
 	"github.com/uber/cadence/service/sharddistributor/canary/executors"
 	"github.com/uber/cadence/service/sharddistributor/client/clientcommon"
+	"github.com/uber/cadence/service/sharddistributor/client/spectatorclient"
 	"github.com/uber/cadence/service/sharddistributor/config"
 	"github.com/uber/cadence/tools/common/commoncli"
 )
@@ -64,29 +66,35 @@ func opts(fixedNamespace, ephemeralNamespace, endpoint string, canaryGRPCPort in
 
 	transport := grpc.NewTransport()
 
-	yarpcConfig := yarpc.Config{
-		Name: "shard-distributor-canary",
-		Inbounds: yarpc.Inbounds{
-			transport.NewInbound(listener), // Listen for incoming ping requests
-		},
-		Outbounds: yarpc.Outbounds{
-			shardDistributorServiceName: {
-				Unary:  transport.NewSingleOutbound(endpoint),
-				Stream: transport.NewSingleOutbound(endpoint),
-			},
-			// Note: canary-to-canary outbound will be added dynamically in the canary module
-			// after spectators are created, using SpectatorPeerChooser
-		},
-	}
-
 	return fx.Options(
 		fx.Supply(
 			fx.Annotate(tally.NoopScope, fx.As(new(tally.Scope))),
 			fx.Annotate(clock.NewRealTimeSource(), fx.As(new(clock.TimeSource))),
-			yarpcConfig,
 			configuration,
 			transport,
 		),
+
+		fx.Provide(func(peerChooser spectatorclient.SpectatorPeerChooserInterface) yarpc.Config {
+			return yarpc.Config{
+				Name: "shard-distributor-canary",
+				Inbounds: yarpc.Inbounds{
+					transport.NewInbound(listener), // Listen for incoming ping requests
+				},
+				Outbounds: yarpc.Outbounds{
+					shardDistributorServiceName: {
+						Unary:  transport.NewSingleOutbound(endpoint),
+						Stream: transport.NewSingleOutbound(endpoint),
+					},
+					// canary-to-canary outbound will be added dynamically in the canary module
+					// after spectators are created, using SpectatorPeerChooser
+					"shard-distributor-canary-to-canary": {
+						Unary:  transport.NewOutbound(peerChooser),
+						Stream: transport.NewOutbound(peerChooser),
+					},
+				},
+			}
+		}),
+
 		fx.Provide(
 			func(t *grpc.Transport) peer.Transport { return t },
 		),
@@ -96,6 +104,11 @@ func opts(fixedNamespace, ephemeralNamespace, endpoint string, canaryGRPCPort in
 		),
 		fx.Provide(zap.NewDevelopment),
 		fx.Provide(log.NewLogger),
+
+		// Register canary procedures with dispatcher
+		fx.Invoke(func(dispatcher *yarpc.Dispatcher, server sharddistributorv1.ShardDistributorExecutorCanaryAPIYARPCServer) {
+			dispatcher.Register(sharddistributorv1.BuildShardDistributorExecutorCanaryAPIYARPCProcedures(server))
+		}),
 
 		// Start the YARPC dispatcher
 		fx.Invoke(func(lc fx.Lifecycle, dispatcher *yarpc.Dispatcher) {

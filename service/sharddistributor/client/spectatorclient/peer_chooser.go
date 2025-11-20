@@ -18,7 +18,13 @@ import (
 
 const NamespaceHeader = "x-shard-distributor-namespace"
 
-// spectatorPeerChooser is a peer.Chooser that uses the Spectator to route requests
+// SpectatorPeerChooserInterface extends peer.Chooser with SetSpectators method
+type SpectatorPeerChooserInterface interface {
+	peer.Chooser
+	SetSpectators(spectators Spectators)
+}
+
+// SpectatorPeerChooser is a peer.Chooser that uses the Spectator to route requests
 // to the correct executor based on shard ownership.
 // This is the shard distributor equivalent of Cadence's RingpopPeerChooser.
 //
@@ -29,7 +35,7 @@ const NamespaceHeader = "x-shard-distributor-namespace"
 //  4. Extract grpc_address from owner metadata
 //  5. Create/reuse peer for that address
 //  6. Return peer to YARPC for connection
-type spectatorPeerChooser struct {
+type SpectatorPeerChooser struct {
 	spectators Spectators
 	transport  peer.Transport
 	logger     log.Logger
@@ -41,31 +47,29 @@ type spectatorPeerChooser struct {
 
 type SpectatorPeerChooserParams struct {
 	fx.In
-	Spectators Spectators
-	Transport  peer.Transport
-	Logger     log.Logger
+	Transport peer.Transport
+	Logger    log.Logger
 }
 
 // NewSpectatorPeerChooser creates a new peer chooser that routes based on shard distributor ownership
 func NewSpectatorPeerChooser(
 	params SpectatorPeerChooserParams,
-) peer.Chooser {
-	return &spectatorPeerChooser{
-		spectators: params.Spectators,
-		transport:  params.Transport,
-		logger:     params.Logger,
-		peers:      make(map[string]peer.Peer),
+) SpectatorPeerChooserInterface {
+	return &SpectatorPeerChooser{
+		transport: params.Transport,
+		logger:    params.Logger,
+		peers:     make(map[string]peer.Peer),
 	}
 }
 
 // Start satisfies the peer.Chooser interface
-func (c *spectatorPeerChooser) Start() error {
+func (c *SpectatorPeerChooser) Start() error {
 	c.logger.Info("Starting shard distributor peer chooser", tag.ShardNamespace(c.namespace))
 	return nil
 }
 
 // Stop satisfies the peer.Chooser interface
-func (c *spectatorPeerChooser) Stop() error {
+func (c *SpectatorPeerChooser) Stop() error {
 	c.logger.Info("Stopping shard distributor peer chooser", tag.ShardNamespace(c.namespace))
 
 	// Release all peers
@@ -83,7 +87,7 @@ func (c *spectatorPeerChooser) Stop() error {
 }
 
 // IsRunning satisfies the peer.Chooser interface
-func (c *spectatorPeerChooser) IsRunning() bool {
+func (c *SpectatorPeerChooser) IsRunning() bool {
 	return true
 }
 
@@ -95,7 +99,7 @@ func (c *spectatorPeerChooser) IsRunning() bool {
 //
 // The ShardKey in the request is the actual shard key (e.g., workflow ID, shard ID),
 // NOT the ip:port address. This is the key distinction from directPeerChooser.
-func (c *spectatorPeerChooser) Choose(ctx context.Context, req *transport.Request) (peer.Peer, func(error), error) {
+func (c *SpectatorPeerChooser) Choose(ctx context.Context, req *transport.Request) (peer.Peer, func(error), error) {
 	if req.ShardKey == "" {
 		return nil, nil, yarpcerrors.InvalidArgumentErrorf("chooser requires ShardKey to be non-empty")
 	}
@@ -141,7 +145,11 @@ func (c *spectatorPeerChooser) Choose(ctx context.Context, req *transport.Reques
 	return p, func(error) {}, nil
 }
 
-func (c *spectatorPeerChooser) addPeer(grpcAddress string) (peer.Peer, error) {
+func (c *SpectatorPeerChooser) SetSpectators(spectators Spectators) {
+	c.spectators = spectators
+}
+
+func (c *SpectatorPeerChooser) addPeer(grpcAddress string) (peer.Peer, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 

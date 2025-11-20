@@ -1,10 +1,10 @@
 package canary
 
 import (
+	"context"
+
 	"go.uber.org/fx"
-	"go.uber.org/yarpc/api/peer"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/transport/grpc"
+	"go.uber.org/yarpc"
 
 	sharddistributorv1 "github.com/uber/cadence/.gen/proto/sharddistributor/v1"
 	"github.com/uber/cadence/service/sharddistributor/canary/executors"
@@ -60,19 +60,14 @@ func opts(names NamespacesNames) fx.Option {
 
 		spectatorclient.Module(),
 		fx.Provide(spectatorclient.NewSpectatorPeerChooser),
-		fx.Invoke(func(chooser peer.Chooser, lc fx.Lifecycle) {
+		fx.Invoke(func(chooser spectatorclient.SpectatorPeerChooserInterface, lc fx.Lifecycle) {
 			lc.Append(fx.StartStopHook(chooser.Start, chooser.Stop))
 		}),
 
-		// Create canary client with SpectatorPeerChooser for canary-to-canary communication
-		fx.Provide(func(chooser peer.Chooser, tsp *grpc.Transport) sharddistributorv1.ShardDistributorExecutorCanaryAPIYARPCClient {
-			outbound := tsp.NewOutbound(chooser)
-
-			// Create a simple client config with the outbound
-			return sharddistributorv1.NewShardDistributorExecutorCanaryAPIYARPCClient(&transport.OutboundConfig{
-				CallerName: "cadence-shard-distributor-canary",
-				Outbounds:  transport.Outbounds{Unary: outbound},
-			})
+		// Create canary client using the dispatcher's client config
+		fx.Provide(func(dispatcher *yarpc.Dispatcher) sharddistributorv1.ShardDistributorExecutorCanaryAPIYARPCClient {
+			config := dispatcher.ClientConfig("shard-distributor-canary-to-canary")
+			return sharddistributorv1.NewShardDistributorExecutorCanaryAPIYARPCClient(config)
 		}),
 
 		fx.Provide(func(params pinger.Params) *pinger.Pinger {
@@ -90,5 +85,14 @@ func opts(names NamespacesNames) fx.Option {
 			},
 		)),
 		fx.Provide(sharddistributorv1.NewFxShardDistributorExecutorCanaryAPIYARPCProcedures()),
+
+		fx.Invoke(func(lc fx.Lifecycle, chooser spectatorclient.SpectatorPeerChooserInterface, spectators spectatorclient.Spectators) {
+			lc.Append(fx.Hook{
+				OnStart: func(ctx context.Context) error {
+					chooser.SetSpectators(spectators)
+					return nil
+				},
+			})
+		}),
 	)
 }
