@@ -62,7 +62,7 @@ func opts(names NamespacesNames) fx.Option {
 
 		// Create canary client using the dispatcher's client config
 		fx.Provide(func(dispatcher *yarpc.Dispatcher) sharddistributorv1.ShardDistributorExecutorCanaryAPIYARPCClient {
-			config := dispatcher.ClientConfig("shard-distributor-canary-to-canary")
+			config := dispatcher.ClientConfig("shard-distributor-canary")
 			return sharddistributorv1.NewShardDistributorExecutorCanaryAPIYARPCClient(config)
 		}),
 

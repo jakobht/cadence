@@ -92,9 +92,8 @@ func opts(fixedNamespace, ephemeralNamespace, endpoint string, canaryGRPCPort in
 						Unary:  transport.NewSingleOutbound(endpoint),
 						Stream: transport.NewSingleOutbound(endpoint),
 					},
-					// canary-to-canary outbound will be added dynamically in the canary module
-					// after spectators are created, using SpectatorPeerChooser
-					"shard-distributor-canary-to-canary": {
+					// canary-to-canary outbound uses peer chooser to route to other canary instances
+					"shard-distributor-canary": {
 						Unary:  transport.NewOutbound(peerChooser),
 						Stream: transport.NewOutbound(peerChooser),
 					},
