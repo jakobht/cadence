@@ -204,7 +204,9 @@ func TestStreamReconnection(t *testing.T) {
 	spectator.Start(context.Background())
 	defer spectator.Stop()
 
-	// Advance time for retry
+	// Wait for the goroutine to be blocked in Sleep, then advance time
+	mockTimeSource.BlockUntil(1) // Wait for 1 goroutine to be blocked in Sleep
 	mockTimeSource.Advance(2 * time.Second)
+
 	spectator.firstStateWG.Wait()
 }
