@@ -23,7 +23,7 @@ const (
 // SpectatorPeerChooserInterface extends peer.Chooser with SetSpectators method
 type SpectatorPeerChooserInterface interface {
 	peer.Chooser
-	SetSpectators(spectators Spectators)
+	SetSpectators(spectators *Spectators)
 }
 
 // SpectatorPeerChooser is a peer.Chooser that uses the Spectator to route requests
@@ -38,7 +38,7 @@ type SpectatorPeerChooserInterface interface {
 //  5. Create/reuse peer for that address
 //  6. Return peer to YARPC for connection
 type SpectatorPeerChooser struct {
-	spectators Spectators
+	spectators *Spectators
 	transport  peer.Transport
 	logger     log.Logger
 	namespace  string
@@ -147,7 +147,7 @@ func (c *SpectatorPeerChooser) Choose(ctx context.Context, req *transport.Reques
 	return p, func(error) {}, nil
 }
 
-func (c *SpectatorPeerChooser) SetSpectators(spectators Spectators) {
+func (c *SpectatorPeerChooser) SetSpectators(spectators *Spectators) {
 	c.spectators = spectators
 }
 
