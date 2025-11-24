@@ -13,10 +13,12 @@ import (
 
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/service/sharddistributor/canary/metadata"
 )
 
-const NamespaceHeader = "x-shard-distributor-namespace"
+const (
+	NamespaceHeader        = "x-shard-distributor-namespace"
+	grpcAddressMetadataKey = "grpc_address"
+)
 
 // SpectatorPeerChooserInterface extends peer.Chooser with SetSpectators method
 type SpectatorPeerChooserInterface interface {
@@ -122,7 +124,7 @@ func (c *SpectatorPeerChooser) Choose(ctx context.Context, req *transport.Reques
 	}
 
 	// Extract GRPC address from owner metadata
-	grpcAddress, ok := owner.Metadata[metadata.MetadataKeyGRPCAddress]
+	grpcAddress, ok := owner.Metadata[grpcAddressMetadataKey]
 	if !ok || grpcAddress == "" {
 		return nil, nil, yarpcerrors.InternalErrorf("no grpc_address in metadata for executor %s owning shard %s", owner.ExecutorID, req.ShardKey)
 	}
