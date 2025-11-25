@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"fmt"
 
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -112,11 +111,8 @@ func (h *PingHandler) Ping(ctx context.Context, request *sharddistributorv1.Ping
 }
 
 func getExecutorID(metadata map[string]string) string {
-	if id, ok := metadata["executor_id"]; ok && id != "" {
-		return id
-	}
 	if addr, ok := metadata["grpc_address"]; ok && addr != "" {
-		return fmt.Sprintf("executor@%s", addr)
+		return addr
 	}
-	return "unknown"
+	return ""
 }
