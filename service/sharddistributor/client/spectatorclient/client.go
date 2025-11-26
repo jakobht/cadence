@@ -20,18 +20,20 @@ import (
 
 //go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination interface_mock.go . Spectator
 
-type Spectators map[string]Spectator
+type Spectators struct {
+	spectators map[string]Spectator
+}
 
-func (s Spectators) ForNamespace(namespace string) (Spectator, error) {
-	spectator, ok := s[namespace]
+func (s *Spectators) ForNamespace(namespace string) (Spectator, error) {
+	spectator, ok := s.spectators[namespace]
 	if !ok {
 		return nil, fmt.Errorf("spectator not found for namespace %s", namespace)
 	}
 	return spectator, nil
 }
 
-func (s Spectators) Start(ctx context.Context) error {
-	for namespace, spectator := range s {
+func (s *Spectators) Start(ctx context.Context) error {
+	for namespace, spectator := range s.spectators {
 		if err := spectator.Start(ctx); err != nil {
 			return fmt.Errorf("start spectator for namespace %s: %w", namespace, err)
 		}
@@ -39,14 +41,14 @@ func (s Spectators) Start(ctx context.Context) error {
 	return nil
 }
 
-func (s Spectators) Stop() {
-	for _, spectator := range s {
+func (s *Spectators) Stop() {
+	for _, spectator := range s.spectators {
 		spectator.Stop()
 	}
 }
 
-func NewSpectators(params Params) (Spectators, error) {
-	spectators := make(Spectators)
+func NewSpectators(params Params) (*Spectators, error) {
+	spectators := make(map[string]Spectator)
 	for _, namespace := range params.Config.Namespaces {
 		spectator, err := NewSpectatorWithNamespace(params, namespace.Namespace)
 		if err != nil {
@@ -55,7 +57,7 @@ func NewSpectators(params Params) (Spectators, error) {
 
 		spectators[namespace.Namespace] = spectator
 	}
-	return spectators, nil
+	return &Spectators{spectators: spectators}, nil
 }
 
 type Spectator interface {
@@ -147,7 +149,7 @@ func createShardDistributorClient(yarpcClient sharddistributorv1.ShardDistributo
 func Module() fx.Option {
 	return fx.Module("shard-distributor-spectator-client",
 		fx.Provide(NewSpectators),
-		fx.Invoke(func(spectators Spectators, lc fx.Lifecycle) {
+		fx.Invoke(func(spectators *Spectators, lc fx.Lifecycle) {
 			lc.Append(fx.StartStopHook(spectators.Start, spectators.Stop))
 		}),
 	)
