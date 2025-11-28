@@ -13,9 +13,10 @@ import (
 	context "context"
 	reflect "reflect"
 
-	sharddistributorv1 "github.com/uber/cadence/.gen/proto/sharddistributor/v1"
 	gomock "go.uber.org/mock/gomock"
 	yarpc "go.uber.org/yarpc"
+
+	sharddistributorv1 "github.com/uber/cadence/.gen/proto/sharddistributor/v1"
 )
 
 // MockShardDistributorExecutorCanaryAPIYARPCClient is a mock of ShardDistributorExecutorCanaryAPIYARPCClient interface.
