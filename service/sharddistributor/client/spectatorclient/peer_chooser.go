@@ -99,9 +99,12 @@ func (c *SpectatorPeerChooser) IsRunning() bool {
 // 2. Extracting the grpc_address from the owner's metadata
 // 3. Creating/reusing a peer for that address
 //
-// The ShardKey in the request is the actual shard key (e.g., workflow ID, shard ID),
-// NOT the ip:port address. This is the key distinction from directPeerChooser.
-func (c *SpectatorPeerChooser) Choose(ctx context.Context, req *transport.Request) (peer.Peer, func(error), error) {
+// The ShardKey in the request is the shard key (e.g., shard ID)
+// The function returns
+// peer: the peer to use for the request
+// onFinish: a function to call when the request is finished (currently no-op)
+// err: the error if the request failed
+func (c *SpectatorPeerChooser) Choose(ctx context.Context, req *transport.Request) (peer peer.Peer, onFinish func(error), err error) {
 	if req.ShardKey == "" {
 		return nil, nil, yarpcerrors.InvalidArgumentErrorf("chooser requires ShardKey to be non-empty")
 	}
