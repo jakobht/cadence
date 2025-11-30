@@ -57,57 +57,47 @@ func (h *PingHandler) Ping(ctx context.Context, request *sharddistributorv1.Ping
 
 	namespace := request.GetNamespace()
 
-	// Check fixed executors first
+	// Check fixed executors
 	if executor, found := h.executorsFixed[namespace]; found {
-		processor, err := executor.GetShardProcess(ctx, request.GetShardKey())
-		ownshard := err == nil && processor != nil
-		metadata := executor.GetMetadata()
-		executorID := getExecutorID(metadata)
-
-		response := &sharddistributorv1.PingResponse{
-			ExecutorId: executorID,
-			OwnsShard:  ownshard,
-			ShardKey:   request.GetShardKey(),
-		}
-
-		h.logger.Info("Responding to ping from fixed executor",
-			zap.String("shard_key", request.GetShardKey()),
-			zap.Bool("owns_shard", ownshard),
-			zap.String("executor_id", executorID))
-
-		return response, nil
+		return checkOwnerShipAndLog(ctx, executor, request, h), nil
 	}
 
 	// Check ephemeral executors
 	if executor, found := h.executorsEphemeral[namespace]; found {
-		processor, err := executor.GetShardProcess(ctx, request.GetShardKey())
-		ownshard := err == nil && processor != nil
-		metadata := executor.GetMetadata()
-		executorID := getExecutorID(metadata)
-
-		response := &sharddistributorv1.PingResponse{
-			ExecutorId: executorID,
-			OwnsShard:  ownshard,
-			ShardKey:   request.GetShardKey(),
-		}
-
-		h.logger.Info("Responding to ping from ephemeral executor",
-			zap.String("shard_key", request.GetShardKey()),
-			zap.Bool("owns_shard", ownshard),
-			zap.String("executor_id", executorID))
-
-		return response, nil
+		return checkOwnerShipAndLog(ctx, executor, request, h), nil
 	}
 
-	// Namespace not found in any executor
-	h.logger.Warn("Namespace not found in executors",
+	// Namespace not found
+	h.logger.Warn("Namespace executor not found",
 		zap.String("namespace", namespace))
 
 	return &sharddistributorv1.PingResponse{
-		ExecutorId: "unknown",
+		ExecutorId: "",
 		OwnsShard:  false,
 		ShardKey:   request.GetShardKey(),
 	}, nil
+}
+
+func checkOwnerShipAndLog[T executorclient.ShardProcessor](ctx context.Context, executor executorclient.Executor[T], request *sharddistributorv1.PingRequest, h *PingHandler) *sharddistributorv1.PingResponse {
+	// We just check that we have a processor for the shard
+	_, err := executor.GetShardProcess(ctx, request.GetShardKey())
+	ownshard := err == nil
+
+	metadata := executor.GetMetadata()
+	executorID := getExecutorID(metadata)
+
+	response := &sharddistributorv1.PingResponse{
+		ExecutorId: executorID,
+		OwnsShard:  ownshard,
+		ShardKey:   request.GetShardKey(),
+	}
+
+	h.logger.Info("Responding to ping",
+		zap.String("shard_key", request.GetShardKey()),
+		zap.Bool("owns_shard", ownshard),
+		zap.String("executor_id", executorID))
+
+	return response
 }
 
 func getExecutorID(metadata map[string]string) string {
