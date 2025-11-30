@@ -43,8 +43,8 @@ type SpectatorPeerChooser struct {
 	logger     log.Logger
 	namespace  string
 
-	mu    sync.RWMutex
-	peers map[string]peer.Peer // grpc_address -> peer
+	peersMutex sync.RWMutex
+	peers      map[string]peer.Peer // grpc_address -> peer
 }
 
 type SpectatorPeerChooserParams struct {
@@ -75,8 +75,8 @@ func (c *SpectatorPeerChooser) Stop() error {
 	c.logger.Info("Stopping shard distributor peer chooser", tag.ShardNamespace(c.namespace))
 
 	// Release all peers
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.peersMutex.Lock()
+	defer c.peersMutex.Unlock()
 
 	for addr, p := range c.peers {
 		if err := c.transport.ReleasePeer(p, &noOpSubscriber{}); err != nil {
@@ -130,13 +130,13 @@ func (c *SpectatorPeerChooser) Choose(ctx context.Context, req *transport.Reques
 	}
 
 	// Check if we already have a peer for this address
-	c.mu.RLock()
+	c.peersMutex.RLock()
 	p, ok := c.peers[grpcAddress]
 	if ok {
-		c.mu.RUnlock()
+		c.peersMutex.RUnlock()
 		return p, func(error) {}, nil
 	}
-	c.mu.RUnlock()
+	c.peersMutex.RUnlock()
 
 	// Create new peer for this address
 	p, err = c.addPeer(grpcAddress)
@@ -152,8 +152,8 @@ func (c *SpectatorPeerChooser) SetSpectators(spectators *Spectators) {
 }
 
 func (c *SpectatorPeerChooser) addPeer(grpcAddress string) (peer.Peer, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.peersMutex.Lock()
+	defer c.peersMutex.Unlock()
 
 	// Check again in case another goroutine added it
 	if p, ok := c.peers[grpcAddress]; ok {
