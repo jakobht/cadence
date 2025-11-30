@@ -117,13 +117,13 @@ func (c *SpectatorPeerChooser) Choose(ctx context.Context, req *transport.Reques
 
 	spectator, err := c.spectators.ForNamespace(namespace)
 	if err != nil {
-		return nil, nil, yarpcerrors.InvalidArgumentErrorf("failed to get spectator for namespace %s: %w", namespace, err)
+		return nil, nil, yarpcerrors.InvalidArgumentErrorf("get spectator for namespace %s: %w", namespace, err)
 	}
 
 	// Query spectator for shard owner
 	owner, err := spectator.GetShardOwner(ctx, req.ShardKey)
 	if err != nil {
-		return nil, nil, yarpcerrors.UnavailableErrorf("failed to get shard owner for key %s: %v", req.ShardKey, err)
+		return nil, nil, yarpcerrors.UnavailableErrorf("get shard owner for key %s: %v", req.ShardKey, err)
 	}
 
 	// Extract GRPC address from owner metadata
@@ -132,45 +132,44 @@ func (c *SpectatorPeerChooser) Choose(ctx context.Context, req *transport.Reques
 		return nil, nil, yarpcerrors.InternalErrorf("no grpc_address in metadata for executor %s owning shard %s", owner.ExecutorID, req.ShardKey)
 	}
 
-	// Check if we already have a peer for this address
-	c.peersMutex.RLock()
-	p, ok := c.peers[grpcAddress]
-	if ok {
-		c.peersMutex.RUnlock()
-		return p, func(error) {}, nil
-	}
-	c.peersMutex.RUnlock()
-
-	// Create new peer for this address
-	p, err = c.addPeer(grpcAddress)
+	// Get peer for this address
+	peer, err = c.getOrCreatePeer(grpcAddress)
 	if err != nil {
-		return nil, nil, yarpcerrors.InternalErrorf("failed to add peer for address %s: %v", grpcAddress, err)
+		return nil, nil, yarpcerrors.InternalErrorf("get or create peer for address %s: %v", grpcAddress, err)
 	}
 
-	return p, func(error) {}, nil
+	return peer, func(error) {}, nil
 }
 
 func (c *SpectatorPeerChooser) SetSpectators(spectators *Spectators) {
 	c.spectators = spectators
 }
 
-func (c *SpectatorPeerChooser) addPeer(grpcAddress string) (peer.Peer, error) {
+func (c *SpectatorPeerChooser) getOrCreatePeer(grpcAddress string) (peer.Peer, error) {
+	c.peersMutex.RLock()
+	peer, ok := c.peers[grpcAddress]
+	c.peersMutex.RUnlock()
+
+	if ok {
+		return peer, nil
+	}
+
+	// Create new peer for this address
 	c.peersMutex.Lock()
 	defer c.peersMutex.Unlock()
 
 	// Check again in case another goroutine added it
-	if p, ok := c.peers[grpcAddress]; ok {
-		return p, nil
+	if peer, ok := c.peers[grpcAddress]; ok {
+		return peer, nil
 	}
 
-	p, err := c.transport.RetainPeer(hostport.Identify(grpcAddress), &noOpSubscriber{})
+	peer, err := c.transport.RetainPeer(hostport.Identify(grpcAddress), &noOpSubscriber{})
 	if err != nil {
-		return nil, fmt.Errorf("retain peer failed: %w", err)
+		return nil, fmt.Errorf("retain peer: %w", err)
 	}
 
-	c.peers[grpcAddress] = p
-	c.logger.Info("Added peer to shard distributor peer chooser", tag.Address(grpcAddress))
-	return p, nil
+	c.peers[grpcAddress] = peer
+	return peer, nil
 }
 
 // noOpSubscriber is a no-op implementation of peer.Subscriber
