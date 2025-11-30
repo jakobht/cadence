@@ -79,10 +79,6 @@ func (p *Pinger) pingLoop() {
 	ticker := p.timeSource.NewTicker(backoff.JitDuration(pingInterval, pingJitterCoeff))
 	defer ticker.Stop()
 
-	p.logger.Info("Starting canary pinger",
-		zap.String("namespace", p.namespace),
-		zap.Int("num_shards", p.numShards))
-
 	for {
 		select {
 		case <-p.ctx.Done():
@@ -95,48 +91,28 @@ func (p *Pinger) pingLoop() {
 	}
 }
 
+// Pings a random shard in the namespace and logs the results
 func (p *Pinger) pingRandomShard() {
-	// Pick a random shard number
 	shardNum := rand.Intn(p.numShards)
 	shardKey := fmt.Sprintf("%d", shardNum)
 
-	if err := p.pingShard(shardKey); err != nil {
-		p.logger.Error("Failed to ping shard",
-			zap.String("namespace", p.namespace),
-			zap.String("shard_key", shardKey),
-			zap.Error(err))
-	}
-}
-
-func (p *Pinger) pingShard(shardKey string) error {
-	// Create ping request
 	request := &sharddistributorv1.PingRequest{
 		ShardKey:  shardKey,
 		Namespace: p.namespace,
 	}
 
-	// Create context with deadline for the RPC call
 	ctx, cancel := context.WithTimeout(p.ctx, pingTimeout)
 	defer cancel()
 
 	response, err := p.canaryClient.Ping(ctx, request, yarpc.WithShardKey(shardKey), yarpc.WithHeader(spectatorclient.NamespaceHeader, p.namespace))
 	if err != nil {
-		return fmt.Errorf("ping rpc failed: %w", err)
+		p.logger.Error("Failed to ping shard", zap.String("namespace", p.namespace), zap.String("shard_key", shardKey), zap.Error(err))
 	}
 
 	// Verify response
 	if !response.GetOwnsShard() {
-		p.logger.Warn("Executor does not own shard",
-			zap.String("namespace", p.namespace),
-			zap.String("shard_key", shardKey),
-			zap.String("executor_id", response.GetExecutorId()))
-		return fmt.Errorf("executor %s does not own shard %s", response.GetExecutorId(), shardKey)
+		p.logger.Warn("Executor does not own shard", zap.String("namespace", p.namespace), zap.String("shard_key", shardKey), zap.String("executor_id", response.GetExecutorId()))
 	}
 
-	p.logger.Info("Successfully pinged shard owner",
-		zap.String("namespace", p.namespace),
-		zap.String("shard_key", shardKey),
-		zap.String("executor_id", response.GetExecutorId()))
-
-	return nil
+	p.logger.Info("Successfully pinged shard owner", zap.String("namespace", p.namespace), zap.String("shard_key", shardKey), zap.String("executor_id", response.GetExecutorId()))
 }
