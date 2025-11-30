@@ -84,7 +84,7 @@ func opts(names NamespacesNames) fx.Option {
 		)),
 		fx.Provide(sharddistributorv1.NewFxShardDistributorExecutorCanaryAPIYARPCProcedures()),
 
-		fx.Invoke(func(lc fx.Lifecycle, chooser spectatorclient.SpectatorPeerChooserInterface, spectators spectatorclient.Spectators) {
+		fx.Invoke(func(lc fx.Lifecycle, chooser spectatorclient.SpectatorPeerChooserInterface, spectators *spectatorclient.Spectators) {
 			lc.Append(fx.Hook{
 				OnStart: func(ctx context.Context) error {
 					chooser.SetSpectators(spectators)

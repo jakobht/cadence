@@ -256,6 +256,7 @@ func (p *namespaceProcessor) identifyStaleExecutors(namespaceState *store.Namesp
 
 	for executorID, state := range namespaceState.Executors {
 		if now.Sub(state.LastHeartbeat) > p.cfg.HeartbeatTTL {
+			p.logger.Info("Executor has not reported a heartbeat recently", tag.ShardExecutor(executorID), tag.ShardNamespace(p.namespaceCfg.Name), tag.Value(state.LastHeartbeat))
 			expiredExecutors[executorID] = namespaceState.ShardAssignments[executorID].ModRevision
 		}
 	}
