@@ -102,9 +102,7 @@ func (n *namespaceShardToExecutor) Subscribe(ctx context.Context) (<-chan map[*s
 
 	// The go routine sends the initial state to the subscriber.
 	go func() {
-		n.RLock()
 		initialState := n.getExecutorState()
-		n.RUnlock()
 
 		select {
 		case <-ctx.Done():
