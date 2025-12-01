@@ -75,9 +75,11 @@ func TestNamespaceShardToExecutor_Lifecycle(t *testing.T) {
 	})
 
 	// Check the cache is populated
+	namespaceShardToExecutor.RLock()
 	_, ok := namespaceShardToExecutor.executorRevision["executor-1"]
 	assert.True(t, ok)
 	assert.Equal(t, "executor-1", namespaceShardToExecutor.shardToExecutor["shard-1"].ExecutorID)
+	namespaceShardToExecutor.RUnlock()
 
 	// Add executor-2 with shard-2 to trigger watch update
 	setupExecutorWithShards(t, testCluster, "test-ns", "executor-2", []string{"shard-2"}, map[string]string{
@@ -87,9 +89,11 @@ func TestNamespaceShardToExecutor_Lifecycle(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Check that executor-2 and shard-2 is in the cache
+	namespaceShardToExecutor.RLock()
 	_, ok = namespaceShardToExecutor.executorRevision["executor-2"]
 	assert.True(t, ok)
 	assert.Equal(t, "executor-2", namespaceShardToExecutor.shardToExecutor["shard-2"].ExecutorID)
+	namespaceShardToExecutor.RUnlock()
 
 	// Verify executor-2 owns shard-2 with correct metadata
 	verifyShardOwner(t, namespaceShardToExecutor, "shard-2", "executor-2", map[string]string{
