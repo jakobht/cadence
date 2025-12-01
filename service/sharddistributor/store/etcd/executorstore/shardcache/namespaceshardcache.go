@@ -97,7 +97,23 @@ func (n *namespaceShardToExecutor) GetExecutorModRevisionCmp() ([]clientv3.Cmp, 
 }
 
 func (n *namespaceShardToExecutor) Subscribe(ctx context.Context) (<-chan map[*store.ShardOwner][]string, func()) {
-	return n.pubSub.subscribe(ctx)
+	subCh, unSub := n.pubSub.subscribe(ctx)
+
+	// The go routine sends the initial state to the subscriber.
+	go func() {
+		n.RLock()
+		initialState := n.getExecutorState()
+		n.RUnlock()
+
+		select {
+		case <-ctx.Done():
+			n.logger.Warn("context finnished before initial state was sent", tag.ShardNamespace(n.namespace))
+		case subCh <- initialState:
+		}
+
+	}()
+
+	return subCh, unSub
 }
 
 func (n *namespaceShardToExecutor) nameSpaceRefreashLoop() {
@@ -135,16 +151,20 @@ func (n *namespaceShardToExecutor) refresh(ctx context.Context) error {
 		return fmt.Errorf("refresh executor state: %w", err)
 	}
 
+	n.pubSub.publish(n.getExecutorState())
+	return nil
+}
+
+func (n *namespaceShardToExecutor) getExecutorState() map[*store.ShardOwner][]string {
 	n.RLock()
+	defer n.RUnlock()
 	executorState := make(map[*store.ShardOwner][]string)
 	for executor, shardIDs := range n.executorState {
 		executorState[executor] = make([]string, len(shardIDs))
 		copy(executorState[executor], shardIDs)
 	}
-	n.RUnlock()
 
-	n.pubSub.publish(n.executorState)
-	return nil
+	return executorState
 }
 
 func (n *namespaceShardToExecutor) refreshExecutorState(ctx context.Context) error {
