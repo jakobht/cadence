@@ -15,8 +15,7 @@ import (
 
 	"github.com/uber/cadence/common/config"
 	shardDistributorCfg "github.com/uber/cadence/service/sharddistributor/config"
-	"github.com/uber/cadence/service/sharddistributor/store/etcd/etcdkeys"
-	"github.com/uber/cadence/testflags"
+	// "github.com/uber/cadence/testflags"
 )
 
 type StoreTestCluster struct {
@@ -30,7 +29,7 @@ type StoreTestCluster struct {
 func SetupStoreTestCluster(t *testing.T) *StoreTestCluster {
 	t.Helper()
 	flag.Parse()
-	testflags.RequireEtcd(t)
+	//testflags.RequireEtcd(t)
 
 	namespace := fmt.Sprintf("ns-%s", strings.ToLower(t.Name()))
 
@@ -64,7 +63,7 @@ func SetupStoreTestCluster(t *testing.T) *StoreTestCluster {
 	require.NoError(t, err)
 	t.Cleanup(func() { client.Close() })
 
-	_, err = client.Delete(context.Background(), etcdkeys.BuildNamespacePrefix(etcdPrefix, namespace), clientv3.WithPrefix())
+	_, err = client.Delete(context.Background(), etcdPrefix, clientv3.WithPrefix())
 	require.NoError(t, err)
 
 	return &StoreTestCluster{

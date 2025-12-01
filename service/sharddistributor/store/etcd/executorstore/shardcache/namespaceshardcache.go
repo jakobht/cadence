@@ -98,6 +98,7 @@ func (n *namespaceShardToExecutor) GetExecutorModRevisionCmp() ([]clientv3.Cmp, 
 
 func (n *namespaceShardToExecutor) Subscribe(ctx context.Context) (<-chan map[*store.ShardOwner][]string, func()) {
 	subCh, unSub := n.pubSub.subscribe(ctx)
+	n.logger.Info("initial state", tag.ShardNamespace(n.namespace), tag.Value(n.getExecutorState()))
 
 	// The go routine sends the initial state to the subscriber.
 	go func() {
@@ -109,6 +110,7 @@ func (n *namespaceShardToExecutor) Subscribe(ctx context.Context) (<-chan map[*s
 		case <-ctx.Done():
 			n.logger.Warn("context finnished before initial state was sent", tag.ShardNamespace(n.namespace))
 		case subCh <- initialState:
+			n.logger.Info("initial state sent to subscriber", tag.ShardNamespace(n.namespace), tag.Value(initialState))
 		}
 
 	}()
