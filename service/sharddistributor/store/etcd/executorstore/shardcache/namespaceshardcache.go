@@ -143,7 +143,7 @@ func (n *namespaceShardToExecutor) refresh(ctx context.Context) error {
 	}
 	n.RUnlock()
 
-	n.pubSub.publish(n.executorState)
+	n.pubSub.publish(executorState)
 	return nil
 }
 
