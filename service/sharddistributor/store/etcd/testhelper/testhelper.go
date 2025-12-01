@@ -15,7 +15,7 @@ import (
 
 	"github.com/uber/cadence/common/config"
 	shardDistributorCfg "github.com/uber/cadence/service/sharddistributor/config"
-	// "github.com/uber/cadence/testflags"
+	"github.com/uber/cadence/testflags"
 )
 
 type StoreTestCluster struct {
@@ -29,7 +29,7 @@ type StoreTestCluster struct {
 func SetupStoreTestCluster(t *testing.T) *StoreTestCluster {
 	t.Helper()
 	flag.Parse()
-	//testflags.RequireEtcd(t)
+	testflags.RequireEtcd(t)
 
 	namespace := fmt.Sprintf("ns-%s", strings.ToLower(t.Name()))
 
