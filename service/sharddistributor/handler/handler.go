@@ -31,7 +31,6 @@ import (
 	"sync"
 
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/sharddistributor/config"
 	"github.com/uber/cadence/service/sharddistributor/store"

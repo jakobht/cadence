@@ -61,25 +61,11 @@ func (n *namespaceShardToExecutor) Start(wg *sync.WaitGroup) {
 }
 
 func (n *namespaceShardToExecutor) GetShardOwner(ctx context.Context, shardID string) (*store.ShardOwner, error) {
-	n.RLock()
-	shardOwner, ok := n.shardToExecutor[shardID]
-	n.RUnlock()
-
-	if ok {
-		return shardOwner, nil
-	}
-
-	// Force refresh the cache
-	err := n.refresh(ctx)
+	shardOwner, err := n.getShardOwnerInMap(ctx, n.shardOwners, shardID)
 	if err != nil {
-		return nil, fmt.Errorf("refresh for namespace %s: %w", n.namespace, err)
+		return nil, fmt.Errorf("get shard owner in map: %w", err)
 	}
-
-	// Check the cache again after refresh
-	n.RLock()
-	shardOwner, ok = n.shardToExecutor[shardID]
-	n.RUnlock()
-	if ok {
+	if shardOwner != nil {
 		return shardOwner, nil
 	}
 
@@ -87,24 +73,11 @@ func (n *namespaceShardToExecutor) GetShardOwner(ctx context.Context, shardID st
 }
 
 func (n *namespaceShardToExecutor) GetExecutor(ctx context.Context, executorID string) (*store.ShardOwner, error) {
-	n.RLock()
-	shardOwner, ok := n.shardOwners[executorID]
-	n.RUnlock()
-	if ok {
-		return shardOwner, nil
-	}
-
-	// Force refresh the cache
-	err := n.refresh(ctx)
+	shardOwner, err := n.getShardOwnerInMap(ctx, n.shardOwners, executorID)
 	if err != nil {
-		return nil, fmt.Errorf("refresh for namespace %s: %w", n.namespace, err)
+		return nil, fmt.Errorf("get shard owner in map: %w", err)
 	}
-
-	// Check the cache again after refresh
-	n.RLock()
-	shardOwner, ok = n.shardOwners[executorID]
-	n.RUnlock()
-	if ok {
+	if shardOwner != nil {
 		return shardOwner, nil
 	}
 
@@ -238,4 +211,28 @@ func getOrCreateShardOwner(shardOwners map[string]*store.ShardOwner, executorID 
 		shardOwners[executorID] = shardOwner
 	}
 	return shardOwner
+}
+
+func (n *namespaceShardToExecutor) getShardOwnerInMap(ctx context.Context, m map[string]*store.ShardOwner, key string) (*store.ShardOwner, error) {
+	n.RLock()
+	shardOwner, ok := m[key]
+	n.RUnlock()
+	if ok {
+		return shardOwner, nil
+	}
+
+	// Force refresh the cache
+	err := n.refresh(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("refresh for namespace %s: %w", n.namespace, err)
+	}
+
+	// Check the cache again after refresh
+	n.RLock()
+	shardOwner, ok = m[key]
+	n.RUnlock()
+	if ok {
+		return shardOwner, nil
+	}
+	return nil, nil
 }

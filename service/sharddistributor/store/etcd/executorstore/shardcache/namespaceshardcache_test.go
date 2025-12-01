@@ -48,6 +48,14 @@ func verifyShardOwner(t *testing.T, cache *namespaceShardToExecutor, shardID, ex
 	for key, expectedValue := range expectedMetadata {
 		assert.Equal(t, expectedValue, owner.Metadata[key])
 	}
+
+	executor, err := cache.GetExecutor(context.Background(), expectedExecutorID)
+	require.NoError(t, err)
+	require.NotNil(t, executor)
+	assert.Equal(t, expectedExecutorID, executor.ExecutorID)
+	for key, expectedValue := range expectedMetadata {
+		assert.Equal(t, expectedValue, executor.Metadata[key])
+	}
 }
 
 func TestNamespaceShardToExecutor_Lifecycle(t *testing.T) {
