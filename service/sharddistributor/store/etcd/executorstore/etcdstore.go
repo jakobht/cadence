@@ -687,6 +687,10 @@ func (s *executorStoreImpl) GetShardOwner(ctx context.Context, namespace, shardI
 	return s.shardCache.GetShardOwner(ctx, namespace, shardID)
 }
 
+func (s *executorStoreImpl) GetExecutor(ctx context.Context, namespace string, executorID string) (*store.ShardOwner, error) {
+	return s.shardCache.GetExecutor(ctx, namespace, executorID)
+}
+
 func (s *executorStoreImpl) prepareShardStatisticsUpdates(ctx context.Context, namespace string, newAssignments map[string]store.AssignedState) ([]shardStatisticsUpdate, error) {
 	var updates []shardStatisticsUpdate
 

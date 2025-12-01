@@ -78,6 +78,9 @@ type Store interface {
 	GetShardOwner(ctx context.Context, namespace, shardID string) (*ShardOwner, error)
 	SubscribeToAssignmentChanges(ctx context.Context, namespace string) (<-chan map[*ShardOwner][]string, func(), error)
 
+	// GetExecutor retrieves an executor within a namespace.
+	GetExecutor(ctx context.Context, namespace string, executorID string) (*ShardOwner, error)
+
 	GetHeartbeat(ctx context.Context, namespace string, executorID string) (*HeartbeatState, *AssignedState, error)
 	RecordHeartbeat(ctx context.Context, namespace, executorID string, state HeartbeatState) error
 
