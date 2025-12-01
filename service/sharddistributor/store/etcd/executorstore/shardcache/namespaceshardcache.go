@@ -19,10 +19,10 @@ import (
 type namespaceShardToExecutor struct {
 	sync.RWMutex
 
-	shardToExecutor     map[string]*store.ShardOwner
+	shardToExecutor     map[string]*store.ShardOwner   // shardID -> shardOwner
+	shardOwners         map[string]*store.ShardOwner   // executorID -> shardOwner
 	executorState       map[*store.ShardOwner][]string // executor -> shardIDs
 	executorRevision    map[string]int64
-	shardOwners         map[string]*store.ShardOwner
 	namespace           string
 	etcdPrefix          string
 	changeUpdateChannel clientv3.WatchChan
@@ -61,7 +61,7 @@ func (n *namespaceShardToExecutor) Start(wg *sync.WaitGroup) {
 }
 
 func (n *namespaceShardToExecutor) GetShardOwner(ctx context.Context, shardID string) (*store.ShardOwner, error) {
-	shardOwner, err := n.getShardOwnerInMap(ctx, n.shardOwners, shardID)
+	shardOwner, err := n.getShardOwnerInMap(ctx, &n.shardToExecutor, shardID)
 	if err != nil {
 		return nil, fmt.Errorf("get shard owner in map: %w", err)
 	}
@@ -73,7 +73,7 @@ func (n *namespaceShardToExecutor) GetShardOwner(ctx context.Context, shardID st
 }
 
 func (n *namespaceShardToExecutor) GetExecutor(ctx context.Context, executorID string) (*store.ShardOwner, error) {
-	shardOwner, err := n.getShardOwnerInMap(ctx, n.shardOwners, executorID)
+	shardOwner, err := n.getShardOwnerInMap(ctx, &n.shardOwners, executorID)
 	if err != nil {
 		return nil, fmt.Errorf("get shard owner in map: %w", err)
 	}
@@ -213,9 +213,11 @@ func getOrCreateShardOwner(shardOwners map[string]*store.ShardOwner, executorID 
 	return shardOwner
 }
 
-func (n *namespaceShardToExecutor) getShardOwnerInMap(ctx context.Context, m map[string]*store.ShardOwner, key string) (*store.ShardOwner, error) {
+// getShardOwnerInMap retrieves a shard owner from the map if it exists, otherwise it refreshes the cache and tries again
+// it takes a pointer to the map. When the cache is refreshed, the map is updated, so we need to pass a pointer to the map
+func (n *namespaceShardToExecutor) getShardOwnerInMap(ctx context.Context, m *map[string]*store.ShardOwner, key string) (*store.ShardOwner, error) {
 	n.RLock()
-	shardOwner, ok := m[key]
+	shardOwner, ok := (*m)[key]
 	n.RUnlock()
 	if ok {
 		return shardOwner, nil
@@ -229,7 +231,7 @@ func (n *namespaceShardToExecutor) getShardOwnerInMap(ctx context.Context, m map
 
 	// Check the cache again after refresh
 	n.RLock()
-	shardOwner, ok = m[key]
+	shardOwner, ok = (*m)[key]
 	n.RUnlock()
 	if ok {
 		return shardOwner, nil
