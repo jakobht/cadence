@@ -9,6 +9,7 @@ import (
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxtest"
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport/transporttest"
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/yarpctest"
@@ -44,9 +45,14 @@ func TestModule(t *testing.T) {
 		},
 	}
 
-	// Create a mock dispatcher
+	// Create a mock dispatcher with the required outbound
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: "test-canary",
+		Outbounds: yarpc.Outbounds{
+			"shard-distributor-canary": {
+				Unary: outbound,
+			},
+		},
 	})
 
 	// Create a test app with the library, check that it starts and stops
@@ -56,9 +62,9 @@ func TestModule(t *testing.T) {
 			fx.Annotate(clock.NewMockedTimeSource(), fx.As(new(clock.TimeSource))),
 			fx.Annotate(log.NewNoop(), fx.As(new(log.Logger))),
 			fx.Annotate(mockClientConfigProvider, fx.As(new(yarpc.ClientConfig))),
+			fx.Annotate(transport, fx.As(new(peer.Transport))),
 			zaptest.NewLogger(t),
 			config,
-			transport,
 			dispatcher,
 		),
 		Module(NamespacesNames{FixedNamespace: "shard-distributor-canary", EphemeralNamespace: "shard-distributor-canary-ephemeral", ExternalAssignmentNamespace: "test-external-assignment", SharddistributorServiceName: "cadence-shard-distributor"}),
