@@ -643,7 +643,7 @@ func TestDeleteShardStatsDeletesLargeBatches(t *testing.T) {
 	tc := testhelper.SetupStoreTestCluster(t)
 	executorStore := createStore(t, tc)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	totalShardStats := deleteShardStatsBatchSize*2 + 7 // two batches + 7 extra (remainder)

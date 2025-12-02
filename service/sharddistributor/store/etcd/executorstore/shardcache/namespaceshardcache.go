@@ -19,7 +19,8 @@ import (
 type namespaceShardToExecutor struct {
 	sync.RWMutex
 
-	shardToExecutor     map[string]*store.ShardOwner
+	shardToExecutor     map[string]*store.ShardOwner   // shardID -> shardOwner
+	shardOwners         map[string]*store.ShardOwner   // executorID -> shardOwner
 	executorState       map[*store.ShardOwner][]string // executor -> shardIDs
 	executorRevision    map[string]int64
 	namespace           string
@@ -40,6 +41,7 @@ func newNamespaceShardToExecutor(etcdPrefix, namespace string, client *clientv3.
 		shardToExecutor:     make(map[string]*store.ShardOwner),
 		executorState:       make(map[*store.ShardOwner][]string),
 		executorRevision:    make(map[string]int64),
+		shardOwners:         make(map[string]*store.ShardOwner),
 		namespace:           namespace,
 		etcdPrefix:          etcdPrefix,
 		changeUpdateChannel: watchChan,
@@ -59,29 +61,27 @@ func (n *namespaceShardToExecutor) Start(wg *sync.WaitGroup) {
 }
 
 func (n *namespaceShardToExecutor) GetShardOwner(ctx context.Context, shardID string) (*store.ShardOwner, error) {
-	n.RLock()
-	shardOwner, ok := n.shardToExecutor[shardID]
-	n.RUnlock()
-
-	if ok {
-		return shardOwner, nil
-	}
-
-	// Force refresh the cache
-	err := n.refresh(ctx)
+	shardOwner, err := n.getShardOwnerInMap(ctx, &n.shardToExecutor, shardID)
 	if err != nil {
-		return nil, fmt.Errorf("refresh for namespace %s: %w", n.namespace, err)
+		return nil, fmt.Errorf("get shard owner in map: %w", err)
 	}
-
-	// Check the cache again after refresh
-	n.RLock()
-	shardOwner, ok = n.shardToExecutor[shardID]
-	n.RUnlock()
-	if ok {
+	if shardOwner != nil {
 		return shardOwner, nil
 	}
 
 	return nil, store.ErrShardNotFound
+}
+
+func (n *namespaceShardToExecutor) GetExecutor(ctx context.Context, executorID string) (*store.ShardOwner, error) {
+	shardOwner, err := n.getShardOwnerInMap(ctx, &n.shardOwners, executorID)
+	if err != nil {
+		return nil, fmt.Errorf("get shard owner in map: %w", err)
+	}
+	if shardOwner != nil {
+		return shardOwner, nil
+	}
+
+	return nil, store.ErrExecutorNotFound
 }
 
 func (n *namespaceShardToExecutor) GetExecutorModRevisionCmp() ([]clientv3.Cmp, error) {
@@ -180,8 +180,7 @@ func (n *namespaceShardToExecutor) refreshExecutorState(ctx context.Context) err
 	n.shardToExecutor = make(map[string]*store.ShardOwner)
 	n.executorState = make(map[*store.ShardOwner][]string)
 	n.executorRevision = make(map[string]int64)
-
-	shardOwners := make(map[string]*store.ShardOwner)
+	n.shardOwners = make(map[string]*store.ShardOwner)
 
 	for _, kv := range resp.Kvs {
 		executorID, keyType, keyErr := etcdkeys.ParseExecutorKey(n.etcdPrefix, n.namespace, string(kv.Key))
@@ -190,7 +189,7 @@ func (n *namespaceShardToExecutor) refreshExecutorState(ctx context.Context) err
 		}
 		switch keyType {
 		case etcdkeys.ExecutorAssignedStateKey:
-			shardOwner := getOrCreateShardOwner(shardOwners, executorID)
+			shardOwner := getOrCreateShardOwner(n.shardOwners, executorID)
 
 			var assignedState etcdtypes.AssignedState
 			err = common.DecompressAndUnmarshal(kv.Value, &assignedState)
@@ -208,7 +207,7 @@ func (n *namespaceShardToExecutor) refreshExecutorState(ctx context.Context) err
 			n.executorState[shardOwner] = shardIDs
 
 		case etcdkeys.ExecutorMetadataKey:
-			shardOwner := getOrCreateShardOwner(shardOwners, executorID)
+			shardOwner := getOrCreateShardOwner(n.shardOwners, executorID)
 			metadataKey := strings.TrimPrefix(string(kv.Key), etcdkeys.BuildMetadataKey(n.etcdPrefix, n.namespace, executorID, ""))
 			shardOwner.Metadata[metadataKey] = string(kv.Value)
 
@@ -231,4 +230,30 @@ func getOrCreateShardOwner(shardOwners map[string]*store.ShardOwner, executorID 
 		shardOwners[executorID] = shardOwner
 	}
 	return shardOwner
+}
+
+// getShardOwnerInMap retrieves a shard owner from the map if it exists, otherwise it refreshes the cache and tries again
+// it takes a pointer to the map. When the cache is refreshed, the map is updated, so we need to pass a pointer to the map
+func (n *namespaceShardToExecutor) getShardOwnerInMap(ctx context.Context, m *map[string]*store.ShardOwner, key string) (*store.ShardOwner, error) {
+	n.RLock()
+	shardOwner, ok := (*m)[key]
+	n.RUnlock()
+	if ok {
+		return shardOwner, nil
+	}
+
+	// Force refresh the cache
+	err := n.refresh(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("refresh for namespace %s: %w", n.namespace, err)
+	}
+
+	// Check the cache again after refresh
+	n.RLock()
+	shardOwner, ok = (*m)[key]
+	n.RUnlock()
+	if ok {
+		return shardOwner, nil
+	}
+	return nil, nil
 }

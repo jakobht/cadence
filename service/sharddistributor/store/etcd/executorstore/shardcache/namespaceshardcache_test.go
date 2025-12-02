@@ -44,9 +44,11 @@ func TestNamespaceShardToExecutor_Lifecycle(t *testing.T) {
 	})
 
 	// Check the cache is populated
+	namespaceShardToExecutor.RLock()
 	_, ok := namespaceShardToExecutor.executorRevision["executor-1"]
 	assert.True(t, ok)
 	assert.Equal(t, "executor-1", namespaceShardToExecutor.shardToExecutor["shard-1"].ExecutorID)
+	namespaceShardToExecutor.RUnlock()
 
 	// Add executor-2 with shard-2 to trigger watch update
 	setupExecutorWithShards(t, testCluster, "executor-2", []string{"shard-2"}, map[string]string{
@@ -56,9 +58,11 @@ func TestNamespaceShardToExecutor_Lifecycle(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Check that executor-2 and shard-2 is in the cache
+	namespaceShardToExecutor.RLock()
 	_, ok = namespaceShardToExecutor.executorRevision["executor-2"]
 	assert.True(t, ok)
 	assert.Equal(t, "executor-2", namespaceShardToExecutor.shardToExecutor["shard-2"].ExecutorID)
+	namespaceShardToExecutor.RUnlock()
 
 	// Verify executor-2 owns shard-2 with correct metadata
 	verifyShardOwner(t, namespaceShardToExecutor, "shard-2", "executor-2", map[string]string{
@@ -157,17 +161,6 @@ func setupExecutorWithShards(t *testing.T, testCluster *testhelper.StoreTestClus
 	require.True(t, txnResp.Succeeded)
 }
 
-// verifyShardOwner checks that a shard has the expected owner and metadata
-func verifyShardOwner(t *testing.T, cache *namespaceShardToExecutor, shardID, expectedExecutorID string, expectedMetadata map[string]string) {
-	owner, err := cache.GetShardOwner(context.Background(), shardID)
-	require.NoError(t, err)
-	require.NotNil(t, owner)
-	assert.Equal(t, expectedExecutorID, owner.ExecutorID)
-	for key, expectedValue := range expectedMetadata {
-		assert.Equal(t, expectedValue, owner.Metadata[key])
-	}
-}
-
 func verifyExecutorInState(t *testing.T, state map[*store.ShardOwner][]string, executorID string, shards []string, metadata map[string]string) {
 	executorInState := false
 	for executor, executorShards := range state {
@@ -179,4 +172,23 @@ func verifyExecutorInState(t *testing.T, state map[*store.ShardOwner][]string, e
 		}
 	}
 	assert.True(t, executorInState)
+}
+
+// verifyShardOwner checks that a shard has the expected owner and metadata
+func verifyShardOwner(t *testing.T, cache *namespaceShardToExecutor, shardID, expectedExecutorID string, expectedMetadata map[string]string) {
+	owner, err := cache.GetShardOwner(context.Background(), shardID)
+	require.NoError(t, err)
+	require.NotNil(t, owner)
+	assert.Equal(t, expectedExecutorID, owner.ExecutorID)
+	for key, expectedValue := range expectedMetadata {
+		assert.Equal(t, expectedValue, owner.Metadata[key])
+	}
+
+	executor, err := cache.GetExecutor(context.Background(), expectedExecutorID)
+	require.NoError(t, err)
+	require.NotNil(t, executor)
+	assert.Equal(t, expectedExecutorID, executor.ExecutorID)
+	for key, expectedValue := range expectedMetadata {
+		assert.Equal(t, expectedValue, executor.Metadata[key])
+	}
 }

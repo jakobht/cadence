@@ -116,28 +116,34 @@ func (h *handlerImpl) assignEphemeralShard(ctx context.Context, namespace string
 	// Get the current state of the namespace and find the executor with the least assigned shards
 	state, err := h.storage.GetState(ctx, namespace)
 	if err != nil {
-		return nil, &types.InternalServiceError{Message: fmt.Sprintf("failed to get namespace state: %v", err)}
+		return nil, &types.InternalServiceError{Message: fmt.Sprintf("get namespace state: %v", err)}
 	}
 
-	var executor string
+	var executorID string
 	minAssignedShards := math.MaxInt
 
 	for assignedExecutor, assignment := range state.ShardAssignments {
 		if len(assignment.AssignedShards) < minAssignedShards {
 			minAssignedShards = len(assignment.AssignedShards)
-			executor = assignedExecutor
+			executorID = assignedExecutor
 		}
 	}
 
 	// Assign the shard to the executor with the least assigned shards
-	err = h.storage.AssignShard(ctx, namespace, shardID, executor)
+	err = h.storage.AssignShard(ctx, namespace, shardID, executorID)
 	if err != nil {
-		return nil, &types.InternalServiceError{Message: fmt.Sprintf("failed to assign ephemeral shard: %v", err)}
+		return nil, &types.InternalServiceError{Message: fmt.Sprintf("assign ephemeral shard: %v", err)}
+	}
+
+	executor, err := h.storage.GetExecutor(ctx, namespace, executorID)
+	if err != nil {
+		return nil, &types.InternalServiceError{Message: fmt.Sprintf("get executor: %v", err)}
 	}
 
 	return &types.GetShardOwnerResponse{
-		Owner:     executor,
+		Owner:     executor.ExecutorID,
 		Namespace: namespace,
+		Metadata:  executor.Metadata,
 	}, nil
 }
 
