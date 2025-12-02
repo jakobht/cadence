@@ -1,8 +1,6 @@
 package canary
 
 import (
-	"context"
-
 	"go.uber.org/fx"
 	"go.uber.org/yarpc"
 
@@ -84,13 +82,11 @@ func opts(names NamespacesNames) fx.Option {
 		)),
 		fx.Provide(sharddistributorv1.NewFxShardDistributorExecutorCanaryAPIYARPCProcedures()),
 
-		fx.Invoke(func(lc fx.Lifecycle, chooser spectatorclient.SpectatorPeerChooserInterface, spectators *spectatorclient.Spectators) {
-			lc.Append(fx.Hook{
-				OnStart: func(ctx context.Context) error {
-					chooser.SetSpectators(spectators)
-					return nil
-				},
-			})
+		// There is a circular dependency between the spectator client and the peer chooser, since
+		// the yarpc dispatcher needs the peer chooser and the peer chooser needs the spectators, which needs the yarpc dispatcher.
+		// To break the circular dependency, we set the spectators on the peer chooser here.
+		fx.Invoke(func(chooser spectatorclient.SpectatorPeerChooserInterface, spectators *spectatorclient.Spectators) {
+			chooser.SetSpectators(spectators)
 		}),
 	)
 }
