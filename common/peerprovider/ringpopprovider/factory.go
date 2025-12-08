@@ -7,12 +7,13 @@ import (
 	"net"
 	"strings"
 
-	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/common/peerprovider/ringpopprovider/config"
 	"github.com/uber/ringpop-go/discovery"
 	"github.com/uber/ringpop-go/discovery/jsonfile"
 	"github.com/uber/ringpop-go/discovery/statichosts"
+
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/peerprovider/ringpopprovider/config"
 )
 
 type dnsHostResolver interface {

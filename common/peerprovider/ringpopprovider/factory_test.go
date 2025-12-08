@@ -1,17 +1,16 @@
 package ringpopprovider
 
 import (
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-
 	"context"
 	"fmt"
 	"net"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"gopkg.in/yaml.v2"
 
 	"github.com/uber/cadence/common/log/testlogger"
 	ringpopproviderconfig "github.com/uber/cadence/common/peerprovider/ringpopprovider/config"
-	"gopkg.in/yaml.v2"
 )
 
 type mockResolver struct {
