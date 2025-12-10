@@ -111,6 +111,9 @@ func (e *executorImpl[SP]) setMigrationMode(mode types.MigrationMode) {
 }
 
 func (e *executorImpl[SP]) getMigrationMode() types.MigrationMode {
+	if e.namespace == "local_pass_shadow" {
+		return types.MigrationModeLOCALPASSTHROUGHSHADOW
+	}
 	return types.MigrationMode(e.migrationMode.Load())
 }
 

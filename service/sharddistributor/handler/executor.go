@@ -50,6 +50,10 @@ func NewExecutorHandler(
 
 func (h *executor) Heartbeat(ctx context.Context, request *types.ExecutorHeartbeatRequest) (*types.ExecutorHeartbeatResponse, error) {
 	previousHeartbeat, assignedShards, err := h.storage.GetHeartbeat(ctx, request.Namespace, request.ExecutorID)
+
+	if request.Namespace == "local_pass_shadow" {
+		h.logger.Info("Heartbeat from LocalPassShadow executor", tag.Dynamic("heartbeat", request))
+	}
 	// We ignore Executor not found errors, since it just means that this executor heartbeat the first time.
 	if err != nil && !errors.Is(err, store.ErrExecutorNotFound) {
 		return nil, &types.InternalServiceError{Message: fmt.Sprintf("failed to get heartbeat: %v", err)}
