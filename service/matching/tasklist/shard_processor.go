@@ -37,15 +37,20 @@ func NewShardProcessor(params ShardProcessorParams) (ShardProcessor, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &shardProcessorImpl{
+	shardprocessor := &shardProcessorImpl{
 		shardID:     params.ShardID,
 		taskLists:   params.TaskLists,
 		shardReport: executorclient.ShardReport{},
 		reportTime:  params.TimeSource.Now(),
 		reportTTL:   params.ReportTTL,
 		timeSource:  params.TimeSource,
-	}, nil
-
+	}
+	shardprocessor.SetShardStatus(types.ShardStatusREADY)
+	shardprocessor.shardReport = executorclient.ShardReport{
+		ShardLoad: shardprocessor.getShardLoad(),
+		Status:    types.ShardStatusREADY,
+	}
+	return shardprocessor, nil
 }
 
 func (sp *shardProcessorImpl) Start(ctx context.Context) error {

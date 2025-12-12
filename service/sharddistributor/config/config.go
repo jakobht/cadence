@@ -144,6 +144,9 @@ func NewMigrationConfig(dc *dynamicconfig.Collection) *MigrationConfig {
 }
 
 func (c *MigrationConfig) GetMigrationMode(namespace string) types.MigrationMode {
+	if namespace == "local_pass_shadow" {
+		return types.MigrationModeLOCALPASSTHROUGHSHADOW
+	}
 	mode, ok := ConfigMode[c.MigrationMode(namespace)]
 	if !ok {
 		return ConfigMode[MigrationModeONBOARDED]

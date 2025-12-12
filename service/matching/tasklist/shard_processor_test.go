@@ -54,7 +54,7 @@ func TestGetShardReport(t *testing.T) {
 		shardReport := sp.GetShardReport()
 		require.NotNil(t, shardReport)
 		require.Equal(t, float64(0), shardReport.ShardLoad)
-		require.Equal(t, types.ShardStatusINVALID, shardReport.Status)
+		require.Equal(t, types.ShardStatusREADY, shardReport.Status)
 	})
 }
 
