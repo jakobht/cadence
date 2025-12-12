@@ -2,14 +2,14 @@ package factory
 
 import (
 	"github.com/uber-go/tally"
+	"go.uber.org/fx"
+
 	sharddistributorv1 "github.com/uber/cadence/.gen/proto/sharddistributor/v1"
 	"github.com/uber/cadence/client/sharddistributor"
 	"github.com/uber/cadence/client/wrappers/grpc"
 	"github.com/uber/cadence/client/wrappers/retryable"
 	"github.com/uber/cadence/client/wrappers/timeout"
 	"github.com/uber/cadence/common"
-
-	"go.uber.org/fx"
 )
 
 type Params struct {

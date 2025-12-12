@@ -62,6 +62,9 @@ import (
 	"github.com/uber/cadence/service/frontend"
 	"github.com/uber/cadence/service/history"
 	"github.com/uber/cadence/service/matching"
+	"github.com/uber/cadence/service/sharddistributor/client/clientcommon"
+	"github.com/uber/cadence/service/sharddistributor/client/spectatorclient"
+	shardmanagerconfig "github.com/uber/cadence/service/sharddistributor/config"
 	"github.com/uber/cadence/service/worker"
 	diagnosticsInvariant "github.com/uber/cadence/service/worker/diagnostics/invariant"
 	"github.com/uber/cadence/service/worker/diagnostics/invariant/failure"
@@ -169,16 +172,41 @@ func (s *server) startService() common.Daemon {
 		s.logger.Fatal("ringpop provider failed", tag.Error(err))
 	}
 
+	shardDistributorClient := s.createShardDistributorClient(params, dc)
+	spectatorParams := spectatorclient.Params{
+		Client:       shardDistributorClient,
+		MetricsScope: params.MetricScope,
+		Logger:       params.Logger,
+		Config: clientcommon.Config{Namespaces: []clientcommon.NamespaceConfig{
+			{Namespace: "cadence-matching", HeartBeatInterval: 1 * time.Second, MigrationMode: shardmanagerconfig.MigrationModeONBOARDED},
+		}},
+		TimeSource: params.TimeSource,
+	}
+	spectator, err := spectatorclient.NewSpectatorWithNamespace(
+		spectatorParams,
+		"cadence-matching",
+	)
+	if err != nil {
+		s.logger.Fatal("error creating spectator", tag.Error(err))
+	}
+
 	params.HashRings = make(map[string]membership.SingleProvider)
 	for _, s := range service.ListWithRing {
 		params.HashRings[s] = membership.NewHashring(s, peerProvider, clock.NewRealTimeSource(), params.Logger, params.MetricsClient.Scope(metrics.HashringScope))
 	}
 
+	// TODO before merge!! Move this to config
+	serviceToNamespaceMap := map[string]string{
+		service.Matching: "cadence-matching",
+	}
+
+	wrappedRings := s.wrapHashRingsWithShardDistributor(params.HashRings, spectator, dc, params.Logger, serviceToNamespaceMap)
+
 	params.MembershipResolver, err = membership.NewResolver(
 		peerProvider,
 		params.MetricsClient,
 		params.Logger,
-		params.HashRings,
+		wrappedRings,
 	)
 
 	if err != nil {
@@ -275,7 +303,31 @@ func (s *server) startService() common.Daemon {
 	return daemon
 }
 
-func (*server) createShardDistributorClient(params resource.Params, dc *dynamicconfig.Collection) sharddistributorClient.Client {
+func (*server) wrapHashRingsWithShardDistributor(
+	hashRings map[string]membership.SingleProvider,
+	spectator spectatorclient.Spectator,
+	dc *dynamicconfig.Collection,
+	logger log.Logger,
+	serviceToNamespaceMap map[string]string,
+) map[string]membership.SingleProvider {
+	if _, ok := hashRings[service.Matching]; ok {
+		hashRings[service.Matching] = membership.NewShardDistributorResolver(
+			serviceToNamespaceMap[service.Matching],
+			spectator,
+			dc.GetStringProperty(dynamicproperties.MatchingShardDistributionMode),
+			hashRings[service.Matching],
+			logger,
+			// TODO before merge!! Read this from config
+			membership.PortGRPC,
+		)
+	}
+	return hashRings
+}
+
+func (*server) createShardDistributorClient(
+	params resource.Params,
+	dc *dynamicconfig.Collection,
+) sharddistributorClient.Client {
 	shardDistributorClientConfig, ok := params.RPCFactory.GetDispatcher().OutboundConfig(service.ShardDistributor)
 	var shardDistributorClient sharddistributorClient.Client
 	if ok {

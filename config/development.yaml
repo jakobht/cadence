@@ -173,6 +173,9 @@ shardDistribution:
     - name: test-external-assignment
       mode: distributed_pass
       type: ephemeral
+    - name: cadence-matching-dev
+      type: ephemeral
+      mode: onboarded
   leaderStore:
     storageParams:
       endpoints: [localhost:2379]
