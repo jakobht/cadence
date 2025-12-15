@@ -243,8 +243,8 @@ func (e *matchingEngineImpl) String() string {
 
 // Returns taskListManager for a task list. If not already cached gets new range from DB and
 // if successful creates one.
-func (e *matchingEngineImpl) getTaskListManager(taskList *tasklist.Identifier, taskListKind types.TaskListKind) (tasklist.Manager, error) {
-	sp, _ := e.executor.GetShardProcess(context.Background(), taskList.GetName())
+func (e *matchingEngineImpl) getTaskListManager(ctx context.Context, taskList *tasklist.Identifier, taskListKind types.TaskListKind) (tasklist.Manager, error) {
+	sp, _ := e.executor.GetShardProcess(ctx, taskList.GetName())
 	if sp != nil {
 		// The first check is an optimization so almost all requests will have a task list manager
 		// and return avoiding the write lock
@@ -255,7 +255,7 @@ func (e *matchingEngineImpl) getTaskListManager(taskList *tasklist.Identifier, t
 		}
 		e.taskListsLock.RUnlock()
 	}
-	err := e.errIfShardLoss(taskList)
+	err := e.errIfShardLoss(ctx, taskList)
 	if err != nil {
 		return nil, err
 	}
@@ -310,11 +310,14 @@ func (e *matchingEngineImpl) getTaskListManager(taskList *tasklist.Identifier, t
 		return nil, err
 	}
 
-	err = e.executor.AssignShardsFromLocalLogic(context.Background(), map[string]*types.ShardAssignment{
-		shardID: {Status: types.AssignmentStatusREADY},
-	})
-	if err != nil && !e.executor.IsOnboardedToSD() {
-		logger.Info("Error in local assignment", tag.Error(err))
+	// If the ShardDistributor is not responsible for the shard assignment, the assignment is handled by the local logic
+	if !e.executor.IsOnboardedToSD() {
+		err = e.executor.AssignShardsFromLocalLogic(ctx, map[string]*types.ShardAssignment{
+			taskList.GetName(): {Status: types.AssignmentStatusREADY},
+		})
+		if err != nil {
+			logger.Error("Error in local assignment", tag.Error(err))
+		}
 	}
 
 	logger.Info("Task list manager state changed", tag.LifeCycleStarted)
@@ -424,7 +427,7 @@ func (e *matchingEngineImpl) AddDecisionTask(
 			tag.Dynamic("taskListBaseName", taskListID.GetRoot()))
 	}
 
-	tlMgr, err := e.getTaskListManager(taskListID, taskListKind)
+	tlMgr, err := e.getTaskListManager(hCtx, taskListID, taskListKind)
 	if err != nil {
 		return nil, err
 	}
@@ -506,7 +509,7 @@ func (e *matchingEngineImpl) AddActivityTask(
 			tag.Dynamic("taskListBaseName", taskListID.GetRoot()))
 	}
 
-	tlMgr, err := e.getTaskListManager(taskListID, taskListKind)
+	tlMgr, err := e.getTaskListManager(hCtx, taskListID, taskListKind)
 	if err != nil {
 		return nil, err
 	}
@@ -582,7 +585,7 @@ pollLoop:
 		pollerCtx := tasklist.ContextWithPollerID(hCtx.Context, pollerID)
 		pollerCtx = tasklist.ContextWithIdentity(pollerCtx, request.GetIdentity())
 		pollerCtx = tasklist.ContextWithIsolationGroup(pollerCtx, req.GetIsolationGroup())
-		tlMgr, err := e.getTaskListManager(taskListID, taskListKind)
+		tlMgr, err := e.getTaskListManager(hCtx.Context, taskListID, taskListKind)
 		if err != nil {
 			return nil, fmt.Errorf("couldn't load tasklist manager: %w", err)
 		}
@@ -771,7 +774,7 @@ pollLoop:
 		pollerCtx = tasklist.ContextWithIdentity(pollerCtx, request.GetIdentity())
 		pollerCtx = tasklist.ContextWithIsolationGroup(pollerCtx, req.GetIsolationGroup())
 		taskListKind := request.TaskList.GetKind()
-		tlMgr, err := e.getTaskListManager(taskListID, taskListKind)
+		tlMgr, err := e.getTaskListManager(hCtx, taskListID, taskListKind)
 		if err != nil {
 			return nil, fmt.Errorf("couldn't load tasklist manager: %w", err)
 		}
@@ -904,7 +907,7 @@ func (e *matchingEngineImpl) QueryWorkflow(
 		return nil, err
 	}
 
-	tlMgr, err := e.getTaskListManager(taskListID, taskListKind)
+	tlMgr, err := e.getTaskListManager(hCtx, taskListID, taskListKind)
 	if err != nil {
 		return nil, err
 	}
@@ -1002,7 +1005,7 @@ func (e *matchingEngineImpl) CancelOutstandingPoll(
 		return err
 	}
 
-	tlMgr, err := e.getTaskListManager(taskListID, taskListKind)
+	tlMgr, err := e.getTaskListManager(hCtx, taskListID, taskListKind)
 	if err != nil {
 		return err
 	}
@@ -1028,7 +1031,7 @@ func (e *matchingEngineImpl) DescribeTaskList(
 		return nil, err
 	}
 
-	tlMgr, err := e.getTaskListManager(taskListID, taskListKind)
+	tlMgr, err := e.getTaskListManager(hCtx, taskListID, taskListKind)
 	if err != nil {
 		return nil, err
 	}
@@ -1130,7 +1133,7 @@ func (e *matchingEngineImpl) UpdateTaskListPartitionConfig(
 	if !taskListID.IsRoot() {
 		return nil, &types.BadRequestError{Message: "Only root partition's partition config can be updated."}
 	}
-	tlMgr, err := e.getTaskListManager(taskListID, taskListKind)
+	tlMgr, err := e.getTaskListManager(hCtx, taskListID, taskListKind)
 	if err != nil {
 		return nil, err
 	}
@@ -1162,7 +1165,7 @@ func (e *matchingEngineImpl) RefreshTaskListPartitionConfig(
 	if taskListID.IsRoot() && request.PartitionConfig != nil {
 		return nil, &types.BadRequestError{Message: "PartitionConfig must be nil for root partition."}
 	}
-	tlMgr, err := e.getTaskListManager(taskListID, taskListKind)
+	tlMgr, err := e.getTaskListManager(hCtx, taskListID, taskListKind)
 	if err != nil {
 		return nil, err
 	}
@@ -1421,15 +1424,18 @@ func (e *matchingEngineImpl) emitInfoOrDebugLog(
 	}
 }
 
-func (e *matchingEngineImpl) errIfShardLoss(taskList *tasklist.Identifier) error {
+func (e *matchingEngineImpl) errIfShardLoss(ctx context.Context, taskList *tasklist.Identifier) error {
 	if !e.config.EnableTasklistOwnershipGuard() {
 		return nil
 	}
 
-	sp, err := e.executor.GetShardProcess(context.Background(), taskList.GetName())
+	sp, err := e.executor.GetShardProcess(ctx, taskList.GetName())
 	if e.executor.IsOnboardedToSD() {
-		if err != nil || sp == nil {
+		if err != nil {
 			return fmt.Errorf("failed to lookup ownership in SD: %w", err)
+		}
+		if sp == nil {
+			return fmt.Errorf("failed to lookup ownership in SD: shard process is nil")
 		}
 		return nil
 	}
@@ -1551,7 +1557,7 @@ func (e *matchingEngineImpl) disconnectTaskListPollersAfterDomainFailover(taskLi
 	if err != nil {
 		return
 	}
-	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
+	tlMgr, err := e.getTaskListManager(context.Background(), taskList, taskListKind)
 	if err != nil {
 		e.logger.Error("Couldn't load tasklist manager", tag.Error(err))
 		return

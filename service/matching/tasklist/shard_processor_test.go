@@ -17,7 +17,7 @@ func paramsForTaskListManager(taskListID *Identifier) ShardProcessorParams {
 	var mutex sync.RWMutex
 	taskList := make(map[Identifier]Manager)
 	params := ShardProcessorParams{
-		ShardID:       FromTaskListToShardID(taskListID.GetName()),
+		ShardID:       taskListID.GetName(),
 		TaskListsLock: &mutex,
 		TaskLists:     taskList,
 		ReportTTL:     1 * time.Millisecond,

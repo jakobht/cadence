@@ -1,11 +1,8 @@
 package tasklist
 
 import (
-	"strconv"
 	"sync"
 	"time"
-
-	"github.com/dgryski/go-farm"
 
 	"github.com/uber/cadence/common/clock"
 )
@@ -28,10 +25,4 @@ func (spf ShardProcessorFactory) NewShardProcessor(shardID string) (ShardProcess
 		TimeSource:    spf.TimeSource,
 	}
 	return NewShardProcessor(params)
-}
-
-func FromTaskListToShardID(taskListname string) string {
-	shardID := farm.Fingerprint32([]byte(taskListname))
-	str := strconv.FormatUint(uint64(shardID), 10)
-	return str
 }

@@ -53,10 +53,16 @@ func NewShardProcessor(params ShardProcessorParams) (ShardProcessor, error) {
 	return shardprocessor, nil
 }
 
+// Start is now not doing anything since the shard lifecycle management is still handled by the logic in matching.
+// In the future the executor client will start the shard processor when a shard is assigned.
+// Ideally we want to have a tasklist mapping to a shard process, but in order to do that we need a major refactoring
+// of tasklists partitions and reloading processes
 func (sp *shardProcessorImpl) Start(ctx context.Context) error {
 	return nil
 }
 
+// Stop is noop since the shard lifecycle management is still handled by the logic in matching.
+// In the future the executor client will stop the shard processor modelling the tasklist when a shard is not assigned to this executor anymore.
 func (sp *shardProcessorImpl) Stop() {
 
 }
@@ -65,6 +71,7 @@ func (sp *shardProcessorImpl) GetShardReport() executorclient.ShardReport {
 	sp.reportLock.Lock()
 	defer sp.reportLock.Unlock()
 	load := sp.shardReport.ShardLoad
+
 	if sp.reportTime.Add(sp.reportTTL).Before(sp.timeSource.Now()) {
 		load = sp.getShardLoad()
 	}
@@ -83,6 +90,11 @@ func (sp *shardProcessorImpl) getShardLoad() float64 {
 	sp.taskListsLock.RLock()
 	defer sp.taskListsLock.RUnlock()
 	var load float64
+
+	// We assign a shard only based on the task list name
+	// so task lists of differt task type (decisions/activities), of different kind (normal, sticky, ephemeral) or partitions
+	// will be assigned all to the same matching instance (executor)
+	// we need to sum the rps for each of the tasklist to calculate the load.
 	for _, tlMgr := range sp.taskLists {
 		if tlMgr.TaskListID().name == sp.shardID {
 			lbh := tlMgr.LoadBalancerHints()
