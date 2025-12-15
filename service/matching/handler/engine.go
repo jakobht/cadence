@@ -189,7 +189,7 @@ func (e *matchingEngineImpl) Stop() {
 func (e *matchingEngineImpl) setupExecutor(shardDistributorExecutorClient executorclient.Client) {
 	config := clientcommon.Config{
 		Namespaces: []clientcommon.NamespaceConfig{
-			{Namespace: "local_pass_shadow", HeartBeatInterval: 1 * time.Second, MigrationMode: sdconfig.MigrationModeLOCALPASSTHROUGHSHADOW, TTLShard: 5 * time.Minute, TTLReport: 1 * time.Minute}}}
+			{Namespace: "cadence-matching", HeartBeatInterval: 1 * time.Second, MigrationMode: sdconfig.MigrationModeLOCALPASSTHROUGH, TTLShard: 5 * time.Minute, TTLReport: 1 * time.Minute}}}
 
 	taskListFactory := &tasklist.ShardProcessorFactory{
 		TaskListsLock: &e.taskListsLock,

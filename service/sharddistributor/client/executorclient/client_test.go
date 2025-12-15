@@ -64,13 +64,6 @@ func TestModuleWithNamespace(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockLogger := log.NewNoop()
 
-	// Create executor yarpc client mock
-	mockYARPCClient := NewMockShardDistributorExecutorAPIYARPCClient(ctrl)
-	mockYARPCClient.EXPECT().
-		Heartbeat(gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(&sharddistributorv1.HeartbeatResponse{}, nil).
-		AnyTimes()
-
 	shardDistributorExecutorClient := NewMockClient(ctrl)
 	shardDistributorExecutorClient.EXPECT().
 		Heartbeat(gomock.Any(), gomock.Any(), gomock.Any()).
