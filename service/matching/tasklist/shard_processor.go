@@ -47,7 +47,7 @@ func NewShardProcessor(params ShardProcessorParams) (ShardProcessor, error) {
 	}
 	shardprocessor.SetShardStatus(types.ShardStatusREADY)
 	shardprocessor.shardReport = executorclient.ShardReport{
-		ShardLoad: shardprocessor.getShardLoad(),
+		ShardLoad: 0,
 		Status:    types.ShardStatusREADY,
 	}
 	return shardprocessor, nil
