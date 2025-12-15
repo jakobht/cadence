@@ -80,25 +80,16 @@ func (sp *shardProcessorImpl) SetShardStatus(status types.ShardStatus) {
 }
 
 func (sp *shardProcessorImpl) getShardLoad() float64 {
-	taskLists := sp.getTaskLists()
+	sp.taskListsLock.RLock()
+	defer sp.taskListsLock.RUnlock()
 	var load float64
-	for _, taskList := range taskLists {
-		if taskList.TaskListID().name == sp.shardID {
-			lbh := taskList.LoadBalancerHints()
+	for _, tlMgr := range sp.taskLists {
+		if tlMgr.TaskListID().name == sp.shardID {
+			lbh := tlMgr.LoadBalancerHints()
 			load = load + lbh.RatePerSecond
 		}
 	}
 	return load
-}
-
-func (sp *shardProcessorImpl) getTaskLists() []Manager {
-	sp.taskListsLock.RLock()
-	defer sp.taskListsLock.RUnlock()
-	lists := make([]Manager, 0, len(sp.taskLists))
-	for _, tlMgr := range sp.taskLists {
-		lists = append(lists, tlMgr)
-	}
-	return lists
 }
 
 func validateSPParams(params ShardProcessorParams) error {
