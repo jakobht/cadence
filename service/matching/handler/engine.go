@@ -190,7 +190,11 @@ func (e *matchingEngineImpl) setupExecutor(shardDistributorExecutorClient execut
 	config := clientcommon.Config{
 		Namespaces: []clientcommon.NamespaceConfig{
 			// TTL for shard is aligned with the default value of the liveness time for a tasklist
-			{Namespace: "cadence-matching", HeartBeatInterval: 1 * time.Second, MigrationMode: sdconfig.MigrationModeLOCALPASSTHROUGH, TTLShard: 5 * time.Minute, TTLReport: 1 * time.Minute}}}
+			{Namespace: "cadence-matching",
+				HeartBeatInterval: 1 * time.Second,
+				MigrationMode:     sdconfig.MigrationModeLOCALPASSTHROUGH,
+				TTLShard:          5 * time.Minute,
+				TTLReport:         1 * time.Minute}}}
 
 	taskListFactory := &tasklist.ShardProcessorFactory{
 		TaskListsLock: &e.taskListsLock,
@@ -244,6 +248,8 @@ func (e *matchingEngineImpl) String() string {
 // Returns taskListManager for a task list. If not already cached gets new range from DB and
 // if successful creates one.
 func (e *matchingEngineImpl) getTaskListManager(ctx context.Context, taskList *tasklist.Identifier, taskListKind types.TaskListKind) (tasklist.Manager, error) {
+	// We have a shard-processor shared by all the task lists with the same name.
+	// For now there is no 1:1 mapping between shards and tasklists. (#tasklists >= #shards)
 	sp, _ := e.executor.GetShardProcess(ctx, taskList.GetName())
 	if sp != nil {
 		// The first check is an optimization so almost all requests will have a task list manager
@@ -1429,6 +1435,8 @@ func (e *matchingEngineImpl) errIfShardLoss(ctx context.Context, taskList *taskl
 		return nil
 	}
 
+	// We have a shard-processor shared by all the task lists with the same name.
+	// For now there is no 1:1 mapping between shards and tasklists. (#tasklists >= #shards)
 	sp, err := e.executor.GetShardProcess(ctx, taskList.GetName())
 	if e.executor.IsOnboardedToSD() {
 		if err != nil {
