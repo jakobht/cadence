@@ -475,6 +475,9 @@ func TestQueryWorkflow(t *testing.T) {
 					Kind: types.TaskListKindSticky.Ptr(),
 				},
 			},
+			hCtx: &handlerContext{
+				Context: context.Background(),
+			},
 			mockSetup: func(mockManager *tasklist.MockManager, queryResultMap *lockableQueryTaskMap, mockCtrl *gomock.Controller, executor *executorclient.MockExecutor[tasklist.ShardProcessor]) {
 				executor.EXPECT().GetShardProcess(gomock.Any(), gomock.Any()).Return(tasklist.NewMockShardProcessor(mockCtrl), nil)
 				mockManager.EXPECT().HasPollerAfter(gomock.Any()).Return(false)
