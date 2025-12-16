@@ -14,6 +14,8 @@ type NamespaceConfig struct {
 	Namespace         string        `yaml:"namespace"`
 	HeartBeatInterval time.Duration `yaml:"heartbeat_interval"`
 	MigrationMode     string        `yaml:"migration_mode"`
+	TTLShard          time.Duration `yaml:"ttl_shard"`  // time after which shards are stopped if they are not used
+	TTLReport         time.Duration `yaml:"ttl_report"` // time after which the shard report status (including load) needs to be updated
 }
 
 // GetMigrationMode converts the string migration mode to types.MigrationMode using the shared configMode map
