@@ -190,9 +190,9 @@ func (e *matchingEngineImpl) setupExecutor(shardDistributorExecutorClient execut
 	config := clientcommon.Config{
 		Namespaces: []clientcommon.NamespaceConfig{
 			// TTL for shard is aligned with the default value of the liveness time for a tasklist
-			{Namespace: "cadence-matching",
+			{Namespace: "cadence-matching-staging2",
 				HeartBeatInterval: 1 * time.Second,
-				MigrationMode:     sdconfig.MigrationModeLOCALPASSTHROUGH,
+				MigrationMode:     sdconfig.MigrationModeONBOARDED,
 				TTLShard:          5 * time.Minute,
 				TTLReport:         1 * time.Minute}}}
 
@@ -217,8 +217,17 @@ func (e *matchingEngineImpl) setupExecutor(shardDistributorExecutorClient execut
 	if err != nil {
 		panic(err)
 	}
-	e.executor = executor
 
+	tchannelPort := "7935"
+	grpcPort := "7835"
+	hostIP := "127.0.0.1"
+
+	executor.SetMetadata(map[string]string{
+		"tchannel": tchannelPort,
+		"grpc":     grpcPort,
+		"hostIP":   hostIP,
+	})
+	e.executor = executor
 }
 
 func (e *matchingEngineImpl) getTaskLists(maxCount int) []tasklist.Manager {

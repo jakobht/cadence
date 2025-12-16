@@ -1,5 +1,8 @@
 matching.shardDistributionMode:
-  - value: "hash_ring-shadow-shard_distributor"
+  - value: "shard_distributor"
+    constraints: {}
+shardDistributor.migrationMode:
+  - value: "onboarded"
     constraints: {}
 frontend.enableClientVersionCheck:
 - value: true

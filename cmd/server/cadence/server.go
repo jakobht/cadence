@@ -181,13 +181,13 @@ func (s *server) startService() common.Daemon {
 			MetricsScope: params.MetricScope,
 			Logger:       params.Logger,
 			Config: clientcommon.Config{Namespaces: []clientcommon.NamespaceConfig{
-				{Namespace: "cadence-matching", HeartBeatInterval: 1 * time.Second, MigrationMode: shardmanagerconfig.MigrationModeONBOARDED},
+				{Namespace: "cadence-matching-staging2", HeartBeatInterval: 1 * time.Second, MigrationMode: shardmanagerconfig.MigrationModeONBOARDED},
 			}},
 			TimeSource: clock.NewRealTimeSource(),
 		}
 		spectator, err = spectatorclient.NewSpectatorWithNamespace(
 			spectatorParams,
-			"cadence-matching",
+			"cadence-matching-staging2",
 		)
 		if err != nil {
 			s.logger.Fatal("error creating spectator", tag.Error(err))

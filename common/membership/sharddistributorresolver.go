@@ -25,6 +25,7 @@ package membership
 import (
 	"context"
 	"fmt"
+	"net"
 	"strconv"
 	"time"
 
@@ -192,8 +193,15 @@ func (s shardDistributorResolver) lookUpInShardDistributor(key string) (HostInfo
 		portMap[portType] = uint16(port)
 	}
 
-	// TODO: fix this to return the HostInfo correctly
-	return HostInfo{addr: owner.ExecutorID}, nil
+	hostaddress := owner.Metadata["hostIP"]
+	if hostaddress == "" {
+		return HostInfo{}, fmt.Errorf("hostIP not found in metadata")
+	}
+
+	address := net.JoinHostPort(hostaddress, strconv.Itoa(int(portMap[PortTchannel])))
+
+	hostInfo := NewDetailedHostInfo(address, owner.ExecutorID, portMap)
+	return hostInfo, nil
 }
 
 func logDifferencesInHostInfo(logger log.Logger, hashRingResult, shardDistributorResult HostInfo) {

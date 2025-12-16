@@ -173,7 +173,7 @@ shardDistribution:
     - name: test-external-assignment
       mode: distributed_pass
       type: ephemeral
-    - name: cadence-matching
+    - name: cadence-matching-staging2
       type: ephemeral
       mode: onboarded
   leaderStore:
