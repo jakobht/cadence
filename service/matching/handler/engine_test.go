@@ -382,7 +382,8 @@ func TestCancelOutstandingPoll(t *testing.T) {
 				},
 				executor: executor,
 			}
-			err = engine.CancelOutstandingPoll(nil, tc.req)
+			hCtx := &handlerContext{Context: context.Background()}
+			err = engine.CancelOutstandingPoll(hCtx, tc.req)
 			if tc.wantErr {
 				require.Error(t, err)
 			} else {

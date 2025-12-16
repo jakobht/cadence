@@ -427,7 +427,7 @@ func (e *matchingEngineImpl) AddDecisionTask(
 			tag.Dynamic("taskListBaseName", taskListID.GetRoot()))
 	}
 
-	tlMgr, err := e.getTaskListManager(hCtx, taskListID, taskListKind)
+	tlMgr, err := e.getTaskListManager(hCtx.Context, taskListID, taskListKind)
 	if err != nil {
 		return nil, err
 	}
@@ -509,7 +509,7 @@ func (e *matchingEngineImpl) AddActivityTask(
 			tag.Dynamic("taskListBaseName", taskListID.GetRoot()))
 	}
 
-	tlMgr, err := e.getTaskListManager(hCtx, taskListID, taskListKind)
+	tlMgr, err := e.getTaskListManager(hCtx.Context, taskListID, taskListKind)
 	if err != nil {
 		return nil, err
 	}
@@ -774,7 +774,7 @@ pollLoop:
 		pollerCtx = tasklist.ContextWithIdentity(pollerCtx, request.GetIdentity())
 		pollerCtx = tasklist.ContextWithIsolationGroup(pollerCtx, req.GetIsolationGroup())
 		taskListKind := request.TaskList.GetKind()
-		tlMgr, err := e.getTaskListManager(hCtx, taskListID, taskListKind)
+		tlMgr, err := e.getTaskListManager(hCtx.Context, taskListID, taskListKind)
 		if err != nil {
 			return nil, fmt.Errorf("couldn't load tasklist manager: %w", err)
 		}
@@ -907,7 +907,7 @@ func (e *matchingEngineImpl) QueryWorkflow(
 		return nil, err
 	}
 
-	tlMgr, err := e.getTaskListManager(hCtx, taskListID, taskListKind)
+	tlMgr, err := e.getTaskListManager(hCtx.Context, taskListID, taskListKind)
 	if err != nil {
 		return nil, err
 	}
@@ -1005,7 +1005,7 @@ func (e *matchingEngineImpl) CancelOutstandingPoll(
 		return err
 	}
 
-	tlMgr, err := e.getTaskListManager(hCtx, taskListID, taskListKind)
+	tlMgr, err := e.getTaskListManager(hCtx.Context, taskListID, taskListKind)
 	if err != nil {
 		return err
 	}
@@ -1031,7 +1031,7 @@ func (e *matchingEngineImpl) DescribeTaskList(
 		return nil, err
 	}
 
-	tlMgr, err := e.getTaskListManager(hCtx, taskListID, taskListKind)
+	tlMgr, err := e.getTaskListManager(hCtx.Context, taskListID, taskListKind)
 	if err != nil {
 		return nil, err
 	}
@@ -1133,7 +1133,7 @@ func (e *matchingEngineImpl) UpdateTaskListPartitionConfig(
 	if !taskListID.IsRoot() {
 		return nil, &types.BadRequestError{Message: "Only root partition's partition config can be updated."}
 	}
-	tlMgr, err := e.getTaskListManager(hCtx, taskListID, taskListKind)
+	tlMgr, err := e.getTaskListManager(hCtx.Context, taskListID, taskListKind)
 	if err != nil {
 		return nil, err
 	}
@@ -1165,7 +1165,7 @@ func (e *matchingEngineImpl) RefreshTaskListPartitionConfig(
 	if taskListID.IsRoot() && request.PartitionConfig != nil {
 		return nil, &types.BadRequestError{Message: "PartitionConfig must be nil for root partition."}
 	}
-	tlMgr, err := e.getTaskListManager(hCtx, taskListID, taskListKind)
+	tlMgr, err := e.getTaskListManager(hCtx.Context, taskListID, taskListKind)
 	if err != nil {
 		return nil, err
 	}
