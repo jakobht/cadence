@@ -26,6 +26,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/uber/cadence/common/dynamicconfig/dynamicproperties"
 	"github.com/uber/cadence/common/log"
@@ -82,6 +83,7 @@ func (s shardDistributorResolver) Stop() {
 }
 
 func (s shardDistributorResolver) Lookup(key string) (HostInfo, error) {
+	s.logger.Info("Lookup", tag.Value(key))
 	if s.shardDistributionMode() != "hash_ring" && s.spectator == nil {
 		// This will avoid panics when the shard distributor is not configured
 		s.logger.Warn("No shard distributor client, defaulting to hash ring", tag.Value(s.shardDistributionMode()))
@@ -91,33 +93,44 @@ func (s shardDistributorResolver) Lookup(key string) (HostInfo, error) {
 
 	switch modeKey(s.shardDistributionMode()) {
 	case modeKeyHashRing:
+		s.logger.Info("Lookup in hash ring", tag.Value(key))
 		return s.ring.Lookup(key)
 	case modeKeyShardDistributor:
+		s.logger.Info("Lookup in shard distributor", tag.Value(key))
 		return s.lookUpInShardDistributor(key)
 	case modeKeyHashRingShadowShardDistributor:
 		hashRingResult, err := s.ring.Lookup(key)
 		if err != nil {
 			return HostInfo{}, err
 		}
-		shardDistributorResult, err := s.lookUpInShardDistributor(key)
-		if err != nil {
-			s.logger.Warn("Failed to lookup in shard distributor shadow", tag.Error(err))
-		} else {
-			logDifferencesInHostInfo(s.logger, hashRingResult, shardDistributorResult)
-		}
+		// Asynchronously lookup in shard distributor to avoid blocking the main thread
+		go func() {
+			s.logger.Info("Looking up in shard distributor shadow", tag.Value(key))
+			shardDistributorResult, err := s.lookUpInShardDistributor(key)
+			s.logger.Info("Lookup in shard distributor shadow result", tag.Value(key), tag.Value(shardDistributorResult), tag.Error(err))
+			if err != nil {
+				s.logger.Warn("Failed to lookup in shard distributor shadow", tag.Error(err))
+			} else {
+				logDifferencesInHostInfo(s.logger, hashRingResult, shardDistributorResult)
+			}
+		}()
 
 		return hashRingResult, nil
 	case modeKeyShardDistributorShadowHashRing:
+		s.logger.Info("Lookup in shard distributor shadow hash ring", tag.Value(key))
 		shardDistributorResult, err := s.lookUpInShardDistributor(key)
 		if err != nil {
 			return HostInfo{}, err
 		}
-		hashRingResult, err := s.ring.Lookup(key)
-		if err != nil {
-			s.logger.Warn("Failed to lookup in hash ring shadow", tag.Error(err))
-		} else {
-			logDifferencesInHostInfo(s.logger, hashRingResult, shardDistributorResult)
-		}
+		// Asynchronously lookup in hash ring to avoid blocking the main thread
+		go func() {
+			hashRingResult, err := s.ring.Lookup(key)
+			if err != nil {
+				s.logger.Warn("Failed to lookup in hash ring shadow", tag.Error(err))
+			} else {
+				logDifferencesInHostInfo(s.logger, hashRingResult, shardDistributorResult)
+			}
+		}()
 
 		return shardDistributorResult, nil
 	}
@@ -155,7 +168,9 @@ func (s shardDistributorResolver) Refresh() error {
 
 // TODO: cache the hostinfos, creating them on every request is relatively expensive (we need to do string parsing etc.)
 func (s shardDistributorResolver) lookUpInShardDistributor(key string) (HostInfo, error) {
-	owner, err := s.spectator.GetShardOwner(context.Background(), key)
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+	owner, err := s.spectator.GetShardOwner(ctx, key)
 	if err != nil {
 		return HostInfo{}, err
 	}

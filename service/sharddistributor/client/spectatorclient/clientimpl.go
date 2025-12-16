@@ -45,8 +45,8 @@ type spectatorImpl struct {
 	stateMu      sync.RWMutex
 	shardToOwner map[string]*ShardOwner
 
-	// WaitGroup to ensure first state is received before allowing queries
-	firstStateWG sync.WaitGroup
+	// Channel to signal when first state is received
+	firstStateCh chan struct{}
 }
 
 func (s *spectatorImpl) Start(ctx context.Context) error {
@@ -156,7 +156,7 @@ func (s *spectatorImpl) handleResponse(response *types.WatchNamespaceStateRespon
 
 	// Signal that first state has been received
 	if isFirstState {
-		s.firstStateWG.Done()
+		close(s.firstStateCh)
 	}
 
 	s.logger.Debug("Received namespace state update",
@@ -169,7 +169,13 @@ func (s *spectatorImpl) handleResponse(response *types.WatchNamespaceStateRespon
 // If not found in cache, it falls back to querying the shard distributor directly.
 func (s *spectatorImpl) GetShardOwner(ctx context.Context, shardKey string) (*ShardOwner, error) {
 	// Wait for first state to be received to avoid flooding shard distributor on startup
-	s.firstStateWG.Wait()
+	select {
+	case <-s.firstStateCh:
+		// First state received, continue
+	case <-ctx.Done():
+		// Context cancelled or timed out before first state received
+		return nil, fmt.Errorf("context cancelled while waiting for first state: %w", ctx.Err())
+	}
 
 	// Check cache first
 	s.stateMu.RLock()

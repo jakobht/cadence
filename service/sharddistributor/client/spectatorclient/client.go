@@ -99,15 +99,14 @@ func newSpectatorImpl(params Params, namespace string) (Spectator, error) {
 
 func newSpectatorWithConfig(params Params, namespaceConfig *clientcommon.NamespaceConfig) (Spectator, error) {
 	impl := &spectatorImpl{
-		namespace:  namespaceConfig.Namespace,
-		config:     *namespaceConfig,
-		client:     params.Client,
-		logger:     params.Logger,
-		scope:      params.MetricsScope,
-		timeSource: params.TimeSource,
+		namespace:    namespaceConfig.Namespace,
+		config:       *namespaceConfig,
+		client:       params.Client,
+		logger:       params.Logger,
+		scope:        params.MetricsScope,
+		timeSource:   params.TimeSource,
+		firstStateCh: make(chan struct{}),
 	}
-	// Set WaitGroup to 1 to block until first state is received
-	impl.firstStateWG.Add(1)
 
 	return impl, nil
 }

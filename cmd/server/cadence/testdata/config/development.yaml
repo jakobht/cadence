@@ -38,7 +38,7 @@ persistence:
         hosts: "127.0.0.1"
         keyspace: "cadence_visibility"
 services:
-  shard-distributor:
+  cadence-shard-distributor:
     rpc:
       port: 7941
       grpcPort: 7943

@@ -21,6 +21,7 @@
 package cadence
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -173,21 +174,31 @@ func (s *server) startService() common.Daemon {
 	}
 
 	shardDistributorClient := s.createShardDistributorClient(params, dc)
-	spectatorParams := spectatorclient.Params{
-		Client:       shardDistributorClient,
-		MetricsScope: params.MetricScope,
-		Logger:       params.Logger,
-		Config: clientcommon.Config{Namespaces: []clientcommon.NamespaceConfig{
-			{Namespace: "cadence-matching", HeartBeatInterval: 1 * time.Second, MigrationMode: shardmanagerconfig.MigrationModeONBOARDED},
-		}},
-		TimeSource: params.TimeSource,
-	}
-	spectator, err := spectatorclient.NewSpectatorWithNamespace(
-		spectatorParams,
-		"cadence-matching",
-	)
-	if err != nil {
-		s.logger.Fatal("error creating spectator", tag.Error(err))
+	var spectator spectatorclient.Spectator
+	if shardDistributorClient != nil {
+		spectatorParams := spectatorclient.Params{
+			Client:       shardDistributorClient,
+			MetricsScope: params.MetricScope,
+			Logger:       params.Logger,
+			Config: clientcommon.Config{Namespaces: []clientcommon.NamespaceConfig{
+				{Namespace: "cadence-matching", HeartBeatInterval: 1 * time.Second, MigrationMode: shardmanagerconfig.MigrationModeONBOARDED},
+			}},
+			TimeSource: clock.NewRealTimeSource(),
+		}
+		spectator, err = spectatorclient.NewSpectatorWithNamespace(
+			spectatorParams,
+			"cadence-matching",
+		)
+		if err != nil {
+			s.logger.Fatal("error creating spectator", tag.Error(err))
+		}
+
+		// Start the spectator to begin watching namespace state
+		if err := spectator.Start(context.Background()); err != nil {
+			s.logger.Fatal("error starting spectator", tag.Error(err))
+		}
+	} else {
+		s.logger.Warn("Shard distributor client not configured, spectator will not be started")
 	}
 
 	params.HashRings = make(map[string]membership.SingleProvider)
@@ -333,7 +344,11 @@ func (*server) createShardDistributorClient(
 	if ok {
 		if !rpc.IsGRPCOutbound(shardDistributorClientConfig) {
 			params.Logger.Error("shard distributor client does not support non-GRPC outbound will fail back to hashring")
+			return nil
 		}
+		hasStream := shardDistributorClientConfig.Outbounds.Stream != nil
+		params.Logger.Info("Creating shard distributor client with outbound config",
+			tag.Value(hasStream))
 
 		shardDistributorClient = grpc.NewShardDistributorClient(
 			sharddistributorv1.NewShardDistributorAPIYARPCClient(shardDistributorClientConfig),
