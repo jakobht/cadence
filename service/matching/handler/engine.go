@@ -176,7 +176,6 @@ func NewEngine(
 func (e *matchingEngineImpl) Start() {
 	e.executor.Start(context.Background())
 	e.registerDomainFailoverCallback()
-	e.executor.Start(context.Background())
 }
 
 func (e *matchingEngineImpl) Stop() {
@@ -186,7 +185,6 @@ func (e *matchingEngineImpl) Stop() {
 	for _, l := range e.getTaskLists(math.MaxInt32) {
 		l.Stop()
 	}
-	e.executor.Stop()
 	e.unregisterDomainFailoverCallback()
 	e.shutdownCompletion.Wait()
 }
@@ -197,7 +195,7 @@ func (e *matchingEngineImpl) setupExecutor(shardDistributorExecutorClient execut
 			// TTL for shard is aligned with the default value of the liveness time for a tasklist
 			{Namespace: "cadence-matching-staging2",
 				HeartBeatInterval: 1 * time.Second,
-				MigrationMode:     sdconfig.MigrationModeONBOARDED,
+				MigrationMode:     sdconfig.MigrationModeLOCALPASSTHROUGH,
 				TTLShard:          5 * time.Minute,
 				TTLReport:         1 * time.Minute}}}
 
