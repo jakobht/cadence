@@ -207,12 +207,7 @@ func (s *server) startService() common.Daemon {
 		params.HashRings[s] = membership.NewHashring(s, peerProvider, clock.NewRealTimeSource(), params.Logger, params.MetricsClient.Scope(metrics.HashringScope))
 	}
 
-	// TODO before merge!! Move this to config
-	serviceToNamespaceMap := map[string]string{
-		service.Matching: "cadence-matching",
-	}
-
-	wrappedRings := s.wrapHashRingsWithShardDistributor(params.HashRings, spectator, dc, params.Logger, serviceToNamespaceMap)
+	wrappedRings := s.wrapHashRingsWithShardDistributor(params.HashRings, spectator, dc, params.Logger)
 
 	params.MembershipResolver, err = membership.NewResolver(
 		peerProvider,
@@ -320,17 +315,13 @@ func (*server) wrapHashRingsWithShardDistributor(
 	spectator spectatorclient.Spectator,
 	dc *dynamicconfig.Collection,
 	logger log.Logger,
-	serviceToNamespaceMap map[string]string,
 ) map[string]membership.SingleProvider {
 	if _, ok := hashRings[service.Matching]; ok {
 		hashRings[service.Matching] = membership.NewShardDistributorResolver(
-			serviceToNamespaceMap[service.Matching],
 			spectator,
 			dc.GetStringProperty(dynamicproperties.MatchingShardDistributionMode),
 			hashRings[service.Matching],
 			logger,
-			// TODO before merge!! Read this from config
-			membership.PortGRPC,
 		)
 	}
 	return hashRings

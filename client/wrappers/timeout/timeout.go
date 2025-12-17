@@ -43,7 +43,7 @@ const (
 	// HistoryDefaultTimeout is the default timeout used to make calls
 	HistoryDefaultTimeout = time.Second * 30
 	// ShardDistributorDefaultTimeout is the default timeout used to make calls
-	ShardDistributorDefaultTimeout = time.Second * 1
+	ShardDistributorDefaultTimeout = time.Second * 10
 	// ShardDistributorExecutorDefaultTimeout is the default timeout used to make calls
 	ShardDistributorExecutorDefaultTimeout = time.Second * 10
 )

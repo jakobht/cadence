@@ -45,7 +45,6 @@ var (
 )
 
 type shardDistributorResolver struct {
-	namespace             string
 	shardDistributionMode dynamicproperties.StringPropertyFn
 	spectator             spectatorclient.Spectator
 	ring                  SingleProvider
@@ -57,15 +56,12 @@ func (s shardDistributorResolver) AddressToHost(owner string) (HostInfo, error) 
 }
 
 func NewShardDistributorResolver(
-	namespace string,
 	spectator spectatorclient.Spectator,
 	shardDistributionMode dynamicproperties.StringPropertyFn,
 	ring SingleProvider,
 	logger log.Logger,
-	namedPort string,
 ) SingleProvider {
 	return &shardDistributorResolver{
-		namespace:             namespace,
 		spectator:             spectator,
 		shardDistributionMode: shardDistributionMode,
 		ring:                  ring,
