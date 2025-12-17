@@ -338,9 +338,10 @@ func (*server) createShardDistributorClient(
 			params.Logger.Error("shard distributor client does not support non-GRPC outbound will fail back to hashring")
 			return nil
 		}
-		hasStream := shardDistributorClientConfig.Outbounds.Stream != nil
-		params.Logger.Info("Creating shard distributor client with outbound config",
-			tag.Value(hasStream))
+		if shardDistributorClientConfig.Outbounds.Stream == nil {
+			params.Logger.Error("shard distributor client does not support stream outbound will fail back to hashring")
+			return nil
+		}
 
 		shardDistributorClient = grpc.NewShardDistributorClient(
 			sharddistributorv1.NewShardDistributorAPIYARPCClient(shardDistributorClientConfig),

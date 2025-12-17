@@ -218,12 +218,10 @@ func GetListenIP(config config.RPC) (net.IP, error) {
 	}
 
 	if config.BindOnLocalHost {
-		fmt.Println("Bind on local host")
 		return net.IPv4(127, 0, 0, 1), nil
 	}
 
 	if len(config.BindOnIP) > 0 {
-		fmt.Println("Bind on IP", config.BindOnIP)
 		ip := net.ParseIP(config.BindOnIP)
 		if ip != nil && ip.To4() != nil {
 			return ip.To4(), nil
@@ -233,6 +231,5 @@ func GetListenIP(config config.RPC) (net.IP, error) {
 		}
 		return nil, fmt.Errorf("unable to parse bindOnIP value or it is not an IPv4 or IPv6 address: %s", config.BindOnIP)
 	}
-	fmt.Println("No Bind on local host or IP, using auto-detection")
 	return ListenIP()
 }

@@ -237,6 +237,7 @@ func (o directOutbound) Build(grpc *grpc.Transport, tchannel *tchannel.Transport
 			return nil, err
 		}
 		outbound = grpc.NewOutbound(directChooser)
+		// Shard manager needs stream outbound, it only supports GRPC, so we don't need to create a tchannel stream outbound
 		streamOutbound = grpc.NewOutbound(directChooser)
 	} else {
 		directChooser, err = o.pcf.CreatePeerChooser(tchannel, opts)
@@ -244,7 +245,6 @@ func (o directOutbound) Build(grpc *grpc.Transport, tchannel *tchannel.Transport
 			return nil, err
 		}
 		outbound = tchannel.NewOutbound(directChooser)
-		// TChannel doesn't support streaming
 	}
 
 	return &Outbounds{
