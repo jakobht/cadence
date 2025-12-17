@@ -76,12 +76,12 @@ func TestShardDistributorResolver_Lookup_modeHashRingShadowShardDistributor(t *t
 	}
 
 	cases := []struct {
-		name                     string
-		hashRingAddr             string
-		hashRingError            error
-		shardDistributorHostIP   string
-		shardDistributorError    error
-		expectedLog              string
+		name                   string
+		hashRingAddr           string
+		hashRingError          error
+		shardDistributorHostIP string
+		shardDistributorError  error
+		expectedLog            string
 	}{
 		{
 			name:                   "hash ring and shard distributor agree",
