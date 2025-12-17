@@ -1,9 +1,3 @@
-matching.shardDistributionMode:
-  - value: "shard_distributor"
-    constraints: {}
-shardDistributor.migrationMode:
-  - value: "onboarded"
-    constraints: {}
 frontend.enableClientVersionCheck:
 - value: true
   constraints: {}
