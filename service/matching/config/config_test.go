@@ -223,7 +223,7 @@ func TestGetTasksBatchSizeValidation(t *testing.T) {
 			assert.NoError(t, err)
 
 			dc := dynamicconfig.NewCollection(client, testlogger.New(t))
-			config := NewConfig(dc, "test-host", isolationGroupsHelper)
+			config := NewConfig(dc, "test-host", config.RPC{}, isolationGroupsHelper)
 
 			// Test that GetTasksBatchSize returns the raw value (validation happens at usage site)
 			result := config.GetTasksBatchSize("test-domain", "test-tasklist", int(types.TaskListTypeDecision))
