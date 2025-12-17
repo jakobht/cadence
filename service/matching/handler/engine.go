@@ -228,8 +228,6 @@ func (e *matchingEngineImpl) setupExecutor(shardDistributorExecutorClient execut
 		e.logger.Fatal("Failed to get listen IP", tag.Error(err))
 	}
 
-	fmt.Println("Host IP", hostIP.String())
-
 	executor.SetMetadata(map[string]string{
 		"tchannel": fmt.Sprintf("%d", e.config.RPCConfig.Port),
 		"grpc":     fmt.Sprintf("%d", e.config.RPCConfig.GRPCPort),

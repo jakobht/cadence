@@ -144,6 +144,11 @@ func (s *matchingEngineSuite) SetupTest() {
 	s.mockMembershipResolver.EXPECT().WhoAmI().Return(membership.HostInfo{}, nil).AnyTimes()
 	s.mockMembershipResolver.EXPECT().Subscribe(service.Matching, "matching-engine", gomock.Any()).AnyTimes()
 	s.mockIsolationStore = dynamicconfig.NewMockClient(s.controller)
+	s.mockShardExecutorClient = executorclient.NewMockClient(s.controller)
+	s.mockShardExecutorClient.EXPECT().Heartbeat(gomock.Any(), gomock.Any()).Return(&types.ExecutorHeartbeatResponse{
+		MigrationMode:    types.MigrationModeLOCALPASSTHROUGH,
+		ShardAssignments: map[string]*types.ShardAssignment{},
+	}, nil).AnyTimes()
 	dcClient := dynamicconfig.NewInMemoryClient()
 	s.NoError(dcClient.UpdateValue(dynamicproperties.EnableTasklistIsolation, true))
 	dc := dynamicconfig.NewCollection(dcClient, s.logger)
