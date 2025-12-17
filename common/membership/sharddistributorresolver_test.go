@@ -28,11 +28,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
-	"github.com/uber/cadence/client/sharddistributor"
 	"github.com/uber/cadence/common/dynamicconfig/dynamicproperties"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/sharddistributor/client/spectatorclient"
 )
 
 func TestShardDistributorResolver_Lookup_modeHashRing(t *testing.T) {
@@ -267,15 +267,15 @@ func TestShardDistributorResolver_AddressToHost(t *testing.T) {
 	resolver.AddressToHost("test")
 }
 
-func newShardDistributorResolver(t *testing.T) (*shardDistributorResolver, *MockSingleProvider, *sharddistributor.MockClient) {
+func newShardDistributorResolver(t *testing.T) (*shardDistributorResolver, *MockSingleProvider, *spectatorclient.MockSpectator) {
 	ctrl := gomock.NewController(t)
 	namespace := "test-namespace"
-	client := sharddistributor.NewMockClient(ctrl)
+	spectator := spectatorclient.NewMockSpectator(ctrl)
 	shardDistributionMode := dynamicproperties.GetStringPropertyFn("")
 	ring := NewMockSingleProvider(ctrl)
 	logger := log.NewNoop()
 
-	resolver := NewShardDistributorResolver(namespace, client, shardDistributionMode, ring, logger).(*shardDistributorResolver)
+	resolver := NewShardDistributorResolver(namespace, spectator, shardDistributionMode, ring, logger, "test-port").(*shardDistributorResolver)
 
-	return resolver, ring, client
+	return resolver, ring, spectator
 }
