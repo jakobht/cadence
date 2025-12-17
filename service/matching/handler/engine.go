@@ -175,6 +175,7 @@ func NewEngine(
 
 func (e *matchingEngineImpl) Start() {
 	e.registerDomainFailoverCallback()
+	e.executor.Start(context.Background())
 }
 
 func (e *matchingEngineImpl) Stop() {
@@ -183,6 +184,7 @@ func (e *matchingEngineImpl) Stop() {
 	for _, l := range e.getTaskLists(math.MaxInt32) {
 		l.Stop()
 	}
+	e.executor.Stop()
 	e.unregisterDomainFailoverCallback()
 	e.shutdownCompletion.Wait()
 }
