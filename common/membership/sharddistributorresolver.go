@@ -80,7 +80,6 @@ func (s shardDistributorResolver) Stop() {
 }
 
 func (s shardDistributorResolver) Lookup(key string) (HostInfo, error) {
-	s.logger.Info("Lookup", tag.Value(key))
 	if s.shardDistributionMode() != "hash_ring" && s.spectator == nil {
 		// This will avoid panics when the shard distributor is not configured
 		s.logger.Warn("No shard distributor client, defaulting to hash ring", tag.Value(s.shardDistributionMode()))
@@ -90,10 +89,8 @@ func (s shardDistributorResolver) Lookup(key string) (HostInfo, error) {
 
 	switch modeKey(s.shardDistributionMode()) {
 	case modeKeyHashRing:
-		s.logger.Info("Lookup in hash ring", tag.Value(key))
 		return s.ring.Lookup(key)
 	case modeKeyShardDistributor:
-		s.logger.Info("Lookup in shard distributor", tag.Value(key))
 		return s.lookUpInShardDistributor(key)
 	case modeKeyHashRingShadowShardDistributor:
 		hashRingResult, err := s.ring.Lookup(key)
@@ -102,9 +99,7 @@ func (s shardDistributorResolver) Lookup(key string) (HostInfo, error) {
 		}
 		// Asynchronously lookup in shard distributor to avoid blocking the main thread
 		go func() {
-			s.logger.Info("Looking up in shard distributor shadow", tag.Value(key))
 			shardDistributorResult, err := s.lookUpInShardDistributor(key)
-			s.logger.Info("Lookup in shard distributor shadow result", tag.Value(key), tag.Value(shardDistributorResult), tag.Error(err))
 			if err != nil {
 				s.logger.Warn("Failed to lookup in shard distributor shadow", tag.Error(err))
 			} else {
@@ -114,7 +109,6 @@ func (s shardDistributorResolver) Lookup(key string) (HostInfo, error) {
 
 		return hashRingResult, nil
 	case modeKeyShardDistributorShadowHashRing:
-		s.logger.Info("Lookup in shard distributor shadow hash ring", tag.Value(key))
 		shardDistributorResult, err := s.lookUpInShardDistributor(key)
 		if err != nil {
 			return HostInfo{}, err
