@@ -36,6 +36,7 @@ import (
 	"github.com/uber/cadence/client/wrappers/errorinjectors"
 	"github.com/uber/cadence/client/wrappers/grpc"
 	"github.com/uber/cadence/client/wrappers/metered"
+	"github.com/uber/cadence/client/wrappers/retryable"
 	timeoutwrapper "github.com/uber/cadence/client/wrappers/timeout"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
@@ -348,6 +349,11 @@ func (*server) createShardDistributorClient(
 		)
 
 		shardDistributorClient = timeoutwrapper.NewShardDistributorClient(shardDistributorClient, timeoutwrapper.ShardDistributorDefaultTimeout)
+		shardDistributorClient = retryable.NewShardDistributorClient(
+			shardDistributorClient,
+			common.CreateShardDistributorServiceRetryPolicy(),
+			common.IsServiceTransientError,
+		)
 		if errorRate := dc.GetFloat64Property(dynamicproperties.ShardDistributorErrorInjectionRate)(); errorRate != 0 {
 			shardDistributorClient = errorinjectors.NewShardDistributorClient(shardDistributorClient, errorRate, params.Logger)
 		}

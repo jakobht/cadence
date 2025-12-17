@@ -46,8 +46,8 @@ type spectatorImpl struct {
 	shardToOwner map[string]*ShardOwner
 
 	// Channel to signal when first state is received
-	firstStateCh     chan struct{}
-	firstStateOnce   sync.Once
+	firstStateCh   chan struct{}
+	firstStateOnce sync.Once
 }
 
 func (s *spectatorImpl) Start(ctx context.Context) error {
