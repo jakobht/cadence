@@ -50,6 +50,7 @@ import (
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/rpc"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/matching/config"
@@ -218,14 +219,19 @@ func (e *matchingEngineImpl) setupExecutor(shardDistributorExecutorClient execut
 		panic(err)
 	}
 
-	tchannelPort := "7935"
-	grpcPort := "7835"
-	hostIP := "127.0.0.1"
+	// Get the IP address to advertise to external services
+	// This respects bindOnLocalHost config (127.0.0.1 for local dev, external IP for production)
+	hostIP, err := rpc.GetListenIP(e.config.RPCConfig)
+	if err != nil {
+		e.logger.Fatal("Failed to get listen IP", tag.Error(err))
+	}
+
+	fmt.Println("Host IP", hostIP.String())
 
 	executor.SetMetadata(map[string]string{
-		"tchannel": tchannelPort,
-		"grpc":     grpcPort,
-		"hostIP":   hostIP,
+		"tchannel": fmt.Sprintf("%d", e.config.RPCConfig.Port),
+		"grpc":     fmt.Sprintf("%d", e.config.RPCConfig.GRPCPort),
+		"hostIP":   hostIP.String(),
 	})
 	e.executor = executor
 }

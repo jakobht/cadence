@@ -135,6 +135,7 @@ func (s *server) startService() common.Daemon {
 		Logger:            s.logger.WithTags(tag.Service(service.FullName(s.name))),
 		PersistenceConfig: s.cfg.Persistence,
 		DynamicConfig:     s.dynamicCfgClient,
+		RPCConfig:         svcCfg.RPC,
 	}
 
 	clusterGroupMetadata := s.cfg.ClusterGroupMetadata

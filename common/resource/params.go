@@ -73,6 +73,9 @@ type (
 		ESClient           es.GenericClient
 		ESConfig           *config.ElasticSearchConfig
 
+		// RPC configuration
+		RPCConfig config.RPC
+
 		DynamicConfig              dynamicconfig.Client
 		ClusterRedirectionPolicy   *config.ClusterRedirectionPolicy
 		PublicClient               workflowserviceclient.Interface
