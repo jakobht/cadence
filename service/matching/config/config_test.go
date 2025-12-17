@@ -78,6 +78,7 @@ func TestNewConfig(t *testing.T) {
 		"LocalPollWaitTime":                         {dynamicproperties.LocalPollWaitTime, time.Duration(10)},
 		"LocalTaskWaitTime":                         {dynamicproperties.LocalTaskWaitTime, time.Duration(10)},
 		"HostName":                                  {nil, hostname},
+		"RPCConfig":                                 {nil, config.RPC{}},
 		"TaskDispatchRPS":                           {nil, 100000.0},
 		"TaskDispatchRPSTTL":                        {nil, time.Minute},
 		"MaxTimeBetweenTaskDeletes":                 {nil, time.Second},
