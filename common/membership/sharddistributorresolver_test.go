@@ -41,8 +41,7 @@ func TestShardDistributorResolver_Lookup_modeHashRing(t *testing.T) {
 		return string(modeKeyHashRing)
 	}
 
-	ring.EXPECT().LookupRaw("test-key").Return("test-owner", nil)
-	ring.EXPECT().AddressToHost("test-owner").Return(HostInfo{addr: "test-addr"}, nil)
+	ring.EXPECT().Lookup("test-key").Return(HostInfo{addr: "test-addr"}, nil)
 
 	host, err := resolver.Lookup("test-key")
 	assert.NoError(t, err)
@@ -107,14 +106,12 @@ func TestShardDistributorResolver_Lookup_modeHashRingShadowShardDistributor(t *t
 			logger, logs := testlogger.NewObserved(t)
 			resolver.logger = logger
 
-			ring.EXPECT().LookupRaw("test-key").Return(tc.hashRingOwner, tc.hashRingError)
+			ring.EXPECT().Lookup("test-key").Return(HostInfo{addr: tc.hashRingOwner}, tc.hashRingError)
 			// If the hash ring lookup fails, we should just bail out and not call the shard distributor
 			if tc.hashRingError == nil {
 				shardDistributorMock.EXPECT().GetShardOwner(gomock.Any(),
 					&types.GetShardOwnerRequest{ShardKey: "test-key", Namespace: "test-namespace"}).
 					Return(&types.GetShardOwnerResponse{Owner: tc.shardDistributorOwner}, tc.shardDistributorError)
-
-				ring.EXPECT().AddressToHost("test-owner").Return(HostInfo{addr: "test-addr"}, nil)
 			}
 
 			host, err := resolver.Lookup("test-key")
@@ -182,8 +179,7 @@ func TestShardDistributorResolver_Lookup_modeShardDistributorShadowHashRing(t *t
 
 			// If the hash ring lookup fails, we should just bail out and not call the shard distributor
 			if tc.shardDistributorError == nil {
-				ring.EXPECT().LookupRaw("test-key").Return(tc.hashRingOwner, tc.hashRingError)
-				ring.EXPECT().AddressToHost("test-owner").Return(HostInfo{addr: "test-addr"}, nil)
+				ring.EXPECT().Lookup("test-key").Return(HostInfo{addr: tc.hashRingOwner}, tc.hashRingError)
 			}
 
 			host, err := resolver.Lookup("test-key")
@@ -209,8 +205,7 @@ func TestShardDistributorResolver_Lookup_UnknownMode(t *testing.T) {
 		return "unknown"
 	}
 
-	ring.EXPECT().LookupRaw("test-key").Return("test-owner", nil)
-	ring.EXPECT().AddressToHost("test-owner").Return(HostInfo{addr: "test-addr"}, nil)
+	ring.EXPECT().Lookup("test-key").Return(HostInfo{addr: "test-addr"}, nil)
 
 	host, err := resolver.Lookup("test-key")
 	assert.NoError(t, err)
@@ -269,13 +264,12 @@ func TestShardDistributorResolver_AddressToHost(t *testing.T) {
 
 func newShardDistributorResolver(t *testing.T) (*shardDistributorResolver, *MockSingleProvider, *spectatorclient.MockSpectator) {
 	ctrl := gomock.NewController(t)
-	namespace := "test-namespace"
 	spectator := spectatorclient.NewMockSpectator(ctrl)
 	shardDistributionMode := dynamicproperties.GetStringPropertyFn("")
 	ring := NewMockSingleProvider(ctrl)
 	logger := log.NewNoop()
 
-	resolver := NewShardDistributorResolver(namespace, spectator, shardDistributionMode, ring, logger, "test-port").(*shardDistributorResolver)
+	resolver := NewShardDistributorResolver(spectator, shardDistributionMode, ring, logger).(*shardDistributorResolver)
 
 	return resolver, ring, spectator
 }

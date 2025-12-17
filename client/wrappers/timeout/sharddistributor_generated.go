@@ -6,7 +6,6 @@ package timeout
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"go.uber.org/yarpc"
@@ -36,18 +35,8 @@ func NewShardDistributorClient(
 
 func (c *sharddistributorClient) GetShardOwner(ctx context.Context, gp1 *types.GetShardOwnerRequest, p1 ...yarpc.CallOption) (gp2 *types.GetShardOwnerResponse, err error) {
 	ctx, cancel := createContext(ctx, c.timeout)
-	fmt.Println("GetShardOwner timeout", c.timeout)
 	defer cancel()
-
-	gp2, err = c.client.GetShardOwner(ctx, gp1, p1...)
-	if err != nil {
-		fmt.Println("GetShardOwner error", err)
-		return nil, err
-	}
-
-	fmt.Println("GetShardOwner result", gp2)
-
-	return
+	return c.client.GetShardOwner(ctx, gp1, p1...)
 }
 
 func (c *sharddistributorClient) WatchNamespaceState(ctx context.Context, wp1 *types.WatchNamespaceStateRequest, p1 ...yarpc.CallOption) (w1 sharddistributor.WatchNamespaceStateClient, err error) {

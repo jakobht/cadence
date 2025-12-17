@@ -29,6 +29,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/dynamicconfig/dynamicproperties"
 	"github.com/uber/cadence/common/log/testlogger"
@@ -114,7 +115,7 @@ func TestNewConfig(t *testing.T) {
 	}
 	dc := dynamicconfig.NewCollection(client, testlogger.New(t))
 
-	config := NewConfig(dc, hostname, isolationGroupsHelper)
+	config := NewConfig(dc, hostname, config.RPC{}, isolationGroupsHelper)
 
 	assertFieldsMatch(t, *config, fields)
 }
