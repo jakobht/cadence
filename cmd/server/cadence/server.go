@@ -64,9 +64,7 @@ import (
 	"github.com/uber/cadence/service/frontend"
 	"github.com/uber/cadence/service/history"
 	"github.com/uber/cadence/service/matching"
-	"github.com/uber/cadence/service/sharddistributor/client/clientcommon"
 	"github.com/uber/cadence/service/sharddistributor/client/spectatorclient"
-	shardmanagerconfig "github.com/uber/cadence/service/sharddistributor/config"
 	"github.com/uber/cadence/service/worker"
 	diagnosticsInvariant "github.com/uber/cadence/service/worker/diagnostics/invariant"
 	"github.com/uber/cadence/service/worker/diagnostics/invariant/failure"
@@ -177,19 +175,21 @@ func (s *server) startService() common.Daemon {
 
 	shardDistributorClient := s.createShardDistributorClient(params, dc)
 	var spectator spectatorclient.Spectator
-	if shardDistributorClient != nil {
+	if shardDistributorClient != nil && len(s.cfg.ShardDistributorMatchingConfig.Namespaces) > 0 {
+		if len(s.cfg.ShardDistributorMatchingConfig.Namespaces) > 1 {
+			s.logger.Fatal("spectator does not support multiple namespaces", tag.Value(s.cfg.ShardDistributorMatchingConfig.Namespaces))
+		}
 		spectatorParams := spectatorclient.Params{
 			Client:       shardDistributorClient,
 			MetricsScope: params.MetricScope,
 			Logger:       params.Logger,
-			Config: clientcommon.Config{Namespaces: []clientcommon.NamespaceConfig{
-				{Namespace: "cadence-matching-staging2", HeartBeatInterval: 1 * time.Second, MigrationMode: shardmanagerconfig.MigrationModeONBOARDED},
-			}},
-			TimeSource: clock.NewRealTimeSource(),
+			Config:       s.cfg.ShardDistributorMatchingConfig,
+			TimeSource:   clock.NewRealTimeSource(),
 		}
+		namespace := s.cfg.ShardDistributorMatchingConfig.Namespaces[0].Namespace
 		spectator, err = spectatorclient.NewSpectatorWithNamespace(
 			spectatorParams,
-			"cadence-matching-staging2",
+			namespace,
 		)
 		if err != nil {
 			s.logger.Fatal("error creating spectator", tag.Error(err))
