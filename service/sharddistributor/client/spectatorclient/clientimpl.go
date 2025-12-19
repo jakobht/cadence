@@ -96,11 +96,12 @@ func (s *spectatorImpl) watchLoop() {
 
 			s.logger.Error("Failed to create stream, retrying", tag.Error(err), tag.ShardNamespace(s.namespace))
 			if err := s.timeSource.SleepWithContext(s.ctx, backoff.JitDuration(streamRetryInterval, streamRetryJitterCoeff)); err != nil {
+				s.logger.Info("Shutting down waiting to retry stream creation, exiting watch loop", tag.ShardNamespace(s.namespace))
 				return // Context cancelled during sleep
 			}
 			continue
 		}
-
+		s.logger.Info("Stream created, entering receive loop", tag.ShardNamespace(s.namespace))
 		s.receiveLoop(stream)
 
 		if s.ctx.Err() != nil {
