@@ -18,6 +18,12 @@ import (
 	csync "github.com/uber/cadence/service/sharddistributor/client/spectatorclient/sync"
 )
 
+// stateFn represents a state in the election state machine.
+// Each state is a function that blocks until a transition occurs
+// and returns the next state function, or nil to stop.
+// Note this is a recursive type definition.
+type stateFn func(ctx context.Context) stateFn
+
 const (
 	streamRetryInterval    = 1 * time.Second
 	streamRetryJitterCoeff = 0.1 // 10% jitter (900ms - 1100ms)
@@ -37,8 +43,8 @@ type spectatorImpl struct {
 	scope      tally.Scope
 	logger     log.Logger
 	timeSource clock.TimeSource
+	stream     sharddistributor.WatchNamespaceStateClient
 
-	ctx    context.Context
 	cancel context.CancelFunc
 	stopWG sync.WaitGroup
 
@@ -54,12 +60,12 @@ type spectatorImpl struct {
 func (s *spectatorImpl) Start(ctx context.Context) error {
 	// Create a cancellable context for the lifetime of the spectator
 	// Use context.WithoutCancel to inherit values but not cancellation from fx lifecycle ctx
-	s.ctx, s.cancel = context.WithCancel(context.WithoutCancel(ctx))
+	ctx, s.cancel = context.WithCancel(context.WithoutCancel(ctx))
 
 	s.stopWG.Add(1)
 	go func() {
 		defer s.stopWG.Done()
-		s.watchLoop()
+		s.watchLoop(ctx)
 	}()
 
 	return nil
@@ -74,85 +80,101 @@ func (s *spectatorImpl) Stop() {
 	s.stopWG.Wait()
 }
 
-func (s *spectatorImpl) watchLoop() {
-	defer s.logger.Info("Shutting down, stopping watch loop", tag.ShardNamespace(s.namespace))
 
+func (s *spectatorImpl) watchLoop(ctx context.Context) {
+	defer s.logger.Info("Shutting down, stopping watch loop", tag.ShardNamespace(s.namespace))
 	s.logger.Info("Starting watch loop for namespace", tag.ShardNamespace(s.namespace))
 
-	for {
-		if s.ctx.Err() != nil {
-			return
-		}
+	var state stateFn
+	if s.enabled() {
+		state = s.connectState
+	} else {
+		state = s.disabledState
+	}
 
-		if !s.enabled() {
-			// If spectator is disabled, sleep for a second and continue
-			s.firstStateSignal.Reset()
-
-			err := s.timeSource.SleepWithContext(s.ctx, backoff.JitDuration(streamRetryInterval, streamRetryJitterCoeff))
-			if err != nil {
-				return
-			}
-			continue
-		}
-
-		// Create new stream
-		stream, err := s.client.WatchNamespaceState(s.ctx, &types.WatchNamespaceStateRequest{
-			Namespace: s.namespace,
-		})
-		if err != nil {
-			if s.ctx.Err() != nil {
-				return
-			}
-
-			s.logger.Error("Failed to create stream, retrying", tag.Error(err), tag.ShardNamespace(s.namespace))
-			if err := s.timeSource.SleepWithContext(s.ctx, backoff.JitDuration(streamRetryInterval, streamRetryJitterCoeff)); err != nil {
-				return // Context cancelled during sleep
-			}
-			continue
-		}
-		s.logger.Info("Stream created, entering receive loop", tag.ShardNamespace(s.namespace))
-		s.receiveLoop(stream)
-
-		if s.ctx.Err() != nil {
-			return
-		}
-
-		// Server shutdown or network issue - recreate stream (load balancer will route to new server)
-		s.logger.Info("Stream ended, reconnecting", tag.ShardNamespace(s.namespace))
-		if err := s.timeSource.SleepWithContext(s.ctx, backoff.JitDuration(streamRetryInterval, streamRetryJitterCoeff)); err != nil {
-			return // Context cancelled during sleep
-		}
+	for state != nil {
+		state = state(ctx)
 	}
 }
 
-func (s *spectatorImpl) receiveLoop(stream sharddistributor.WatchNamespaceStateClient) {
+func (s *spectatorImpl) connectState(ctx context.Context) stateFn {
+	defer s.logger.Info("Exiting connect state", tag.ShardNamespace(s.namespace))
+	s.logger.Info("Starting connect state for namespace", tag.ShardNamespace(s.namespace))
+
+	if !s.enabled() {
+		return s.disabledState
+	}
+
+	stream, err := s.client.WatchNamespaceState(ctx, &types.WatchNamespaceStateRequest{
+		Namespace: s.namespace,
+	})
+
+	if err != nil {
+		if ctx.Err() != nil {
+			return nil
+		}
+
+		s.logger.Error("Failed to create stream, retrying", tag.Error(err), tag.ShardNamespace(s.namespace))
+		if err := s.timeSource.SleepWithContext(ctx, backoff.JitDuration(streamRetryInterval, streamRetryJitterCoeff)); err != nil {
+			return nil
+		}
+		return s.connectState
+	}
+
+	s.stream = stream
+
+	return s.enabledState
+}
+
+func (s *spectatorImpl) enabledState(ctx context.Context) stateFn {
+	defer s.logger.Info("Exiting enabled state", tag.ShardNamespace(s.namespace))
 	defer func() {
-		if err := stream.CloseSend(); err != nil {
+		if err := s.stream.CloseSend(); err != nil {
 			s.logger.Warn("Failed to close stream", tag.Error(err), tag.ShardNamespace(s.namespace))
 		}
 	}()
 
+	s.logger.Info("Starting enabled state for namespace", tag.ShardNamespace(s.namespace))
+
 	for {
 		if !s.enabled() {
-			// the loop was disabled, exit
-			s.firstStateSignal.Reset()
-			return
+			return s.disabledState
 		}
 
-		response, err := stream.Recv()
+		response, err := s.stream.Recv()
 		if err != nil {
-			if s.ctx.Err() != nil {
-				// Client shutdown - Recv() unblocked due to context cancellation
+			if ctx.Err() != nil {
 				s.logger.Info("Recv interrupted by client shutdown", tag.ShardNamespace(s.namespace))
+				return nil
 			} else {
-				// Server error - io.EOF, network error, server shutdown, etc.
 				s.logger.Warn("Stream error (server issue), will reconnect", tag.Error(err), tag.ShardNamespace(s.namespace))
+				if err := s.timeSource.SleepWithContext(ctx, backoff.JitDuration(streamRetryInterval, streamRetryJitterCoeff)); err != nil {
+					return nil
+				}
+				return s.connectState
 			}
-			return // Exit receiveLoop, watchLoop will handle reconnection or shutdown
 		}
 
 		// Process the response
 		s.handleResponse(response)
+	}
+}
+
+func (s *spectatorImpl) disabledState(ctx context.Context) stateFn {
+	defer s.logger.Info("Exiting disabled state", tag.ShardNamespace(s.namespace))
+	s.logger.Info("Starting disabled state for namespace", tag.ShardNamespace(s.namespace))
+	// We reset the first state signal to ensure we wait for the first state to be received when we re-enable.
+	s.firstStateSignal.Reset()
+
+	for {
+		// Sleep for a short period of time before checking again.
+		// If the context is cancelled, we return nil to exit the loop.
+		if err := s.timeSource.SleepWithContext(ctx, backoff.JitDuration(streamRetryInterval, streamRetryJitterCoeff)); err != nil {
+			return nil
+		}
+		if s.enabled() {
+			return s.connectState
+		}
 	}
 }
 
@@ -169,19 +191,13 @@ func (s *spectatorImpl) handleResponse(response *types.WatchNamespaceStateRespon
 		}
 	}
 
-	// Check if this is the first state we're receiving
-	isFirstState := false
 	s.stateMu.Lock()
-	if s.shardToOwner == nil {
-		isFirstState = true
-	}
 	s.shardToOwner = shardToOwner
 	s.stateMu.Unlock()
 
-	// Signal that first state has been received (only once)
-	if isFirstState {
-		s.firstStateSignal.Done()
-	}
+	// Signal that first state has been received - this function is free to call
+	// multiple times.
+    s.firstStateSignal.Done()
 
 	s.logger.Debug("Received namespace state update",
 		tag.ShardNamespace(s.namespace),
