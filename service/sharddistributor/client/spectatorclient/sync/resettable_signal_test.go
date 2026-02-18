@@ -90,6 +90,7 @@ func TestResettableSignal_MultipleWaitersReset(t *testing.T) {
 	const numWaiters = 5
 	results := make([]chan error, numWaiters)
 	for i := 0; i < numWaiters; i++ {
+		i := i // capture the loop variable, the linter insists
 		results[i] = make(chan error)
 		go func() {
 			results[i] <- signal.Wait(context.Background())

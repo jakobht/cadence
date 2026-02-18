@@ -12,26 +12,23 @@ var ErrReset = errors.New("signal was reset")
 // resettableSignal is a synchronization primitive that allows waiting for a one-time
 // signal with context support, and can be reset to wait for a new signal.
 // Similar to sync.WaitGroup but for single completion events with reset capability.
-type resettableSignal struct {
+type ResettableSignal struct {
 	mu      sync.Mutex
 	doneCh  chan struct{}
 	resetCh chan struct{}
 	done    bool
 }
 
-// ResettableSignal must be created via NewResettableSignal(). Zero value is invalid.
-type ResettableSignal = *resettableSignal
-
 // NewResettableSignal creates a new resettable signal in waiting state
-func NewResettableSignal() *resettableSignal {
-	return &resettableSignal{
+func NewResettableSignal() *ResettableSignal {
+	return &ResettableSignal{
 		doneCh:  make(chan struct{}),
 		resetCh: make(chan struct{}),
 	}
 }
 
 // Done signals that the event has completed. Safe to call multiple times (idempotent).
-func (s *resettableSignal) Done() {
+func (s *ResettableSignal) Done() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -46,7 +43,7 @@ func (s *resettableSignal) Done() {
 //   - nil if Done() was called
 //   - ctx.Err() if context was cancelled
 //   - ErrReset if Reset() was called while waiting
-func (s *resettableSignal) Wait(ctx context.Context) error {
+func (s *ResettableSignal) Wait(ctx context.Context) error {
 	s.mu.Lock()
 	doneCh := s.doneCh
 	resetCh := s.resetCh
@@ -70,7 +67,7 @@ func (s *resettableSignal) Wait(ctx context.Context) error {
 
 // Reset resets the signal to waiting state. Any goroutines currently blocked in Wait()
 // will immediately be unblocked with ErrReset.
-func (s *resettableSignal) Reset() {
+func (s *ResettableSignal) Reset() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

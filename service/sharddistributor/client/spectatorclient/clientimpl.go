@@ -54,7 +54,7 @@ type spectatorImpl struct {
 	shardToOwner map[string]*ShardOwner
 
 	// Signal to notify when first state is received
-	firstStateSignal csync.ResettableSignal
+	firstStateSignal *csync.ResettableSignal
 }
 
 func (s *spectatorImpl) Start(ctx context.Context) error {
@@ -145,13 +145,14 @@ func (s *spectatorImpl) enabledState(ctx context.Context) stateFn {
 			if ctx.Err() != nil {
 				s.logger.Info("Recv interrupted by client shutdown", tag.ShardNamespace(s.namespace))
 				return nil
-			} else {
-				s.logger.Warn("Stream error (server issue), will reconnect", tag.Error(err), tag.ShardNamespace(s.namespace))
-				if err := s.timeSource.SleepWithContext(ctx, backoff.JitDuration(streamRetryInterval, streamRetryJitterCoeff)); err != nil {
-					return nil
-				}
-				return s.connectState
 			}
+
+			s.logger.Warn("Stream error (server issue), will reconnect", tag.Error(err), tag.ShardNamespace(s.namespace))
+			if err := s.timeSource.SleepWithContext(ctx, backoff.JitDuration(streamRetryInterval, streamRetryJitterCoeff)); err != nil {
+				return nil
+			}
+			return s.connectState
+
 		}
 
 		// Process the response
