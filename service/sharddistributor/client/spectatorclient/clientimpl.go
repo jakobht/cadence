@@ -80,7 +80,6 @@ func (s *spectatorImpl) Stop() {
 	s.stopWG.Wait()
 }
 
-
 func (s *spectatorImpl) watchLoop(ctx context.Context) {
 	defer s.logger.Info("Shutting down, stopping watch loop", tag.ShardNamespace(s.namespace))
 	s.logger.Info("Starting watch loop for namespace", tag.ShardNamespace(s.namespace))
@@ -197,7 +196,7 @@ func (s *spectatorImpl) handleResponse(response *types.WatchNamespaceStateRespon
 
 	// Signal that first state has been received - this function is free to call
 	// multiple times.
-    s.firstStateSignal.Done()
+	s.firstStateSignal.Done()
 
 	s.logger.Debug("Received namespace state update",
 		tag.ShardNamespace(s.namespace),
