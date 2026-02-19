@@ -188,7 +188,6 @@ func (s *server) startService() common.Daemon {
 			Config:       s.cfg.ShardDistributorMatchingConfig,
 			TimeSource:   clock.NewRealTimeSource(),
 			Enabled: func() bool {
-				matchingShardDistributionMode()
 				return membership.ModeKey(matchingShardDistributionMode()) != membership.ModeKeyHashRing
 			},
 		}
