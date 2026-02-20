@@ -44,16 +44,87 @@ func (m *MockManagerRegistry) EXPECT() *MockManagerRegistryMockRecorder {
 	return m.recorder
 }
 
-// UnregisterManager mocks base method.
-func (m *MockManagerRegistry) UnregisterManager(mgr Manager) {
+// AllManagers mocks base method.
+func (m *MockManagerRegistry) AllManagers() []Manager {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "UnregisterManager", mgr)
+	ret := m.ctrl.Call(m, "AllManagers")
+	ret0, _ := ret[0].([]Manager)
+	return ret0
 }
 
-// UnregisterManager indicates an expected call of UnregisterManager.
-func (mr *MockManagerRegistryMockRecorder) UnregisterManager(mgr any) *gomock.Call {
+// AllManagers indicates an expected call of AllManagers.
+func (mr *MockManagerRegistryMockRecorder) AllManagers() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnregisterManager", reflect.TypeOf((*MockManagerRegistry)(nil).UnregisterManager), mgr)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AllManagers", reflect.TypeOf((*MockManagerRegistry)(nil).AllManagers))
+}
+
+// ManagerByTaskListIdentifier mocks base method.
+func (m *MockManagerRegistry) ManagerByTaskListIdentifier(id Identifier) (Manager, bool) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ManagerByTaskListIdentifier", id)
+	ret0, _ := ret[0].(Manager)
+	ret1, _ := ret[1].(bool)
+	return ret0, ret1
+}
+
+// ManagerByTaskListIdentifier indicates an expected call of ManagerByTaskListIdentifier.
+func (mr *MockManagerRegistryMockRecorder) ManagerByTaskListIdentifier(id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ManagerByTaskListIdentifier", reflect.TypeOf((*MockManagerRegistry)(nil).ManagerByTaskListIdentifier), id)
+}
+
+// ManagersByDomainID mocks base method.
+func (m *MockManagerRegistry) ManagersByDomainID(domainID string) []Manager {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ManagersByDomainID", domainID)
+	ret0, _ := ret[0].([]Manager)
+	return ret0
+}
+
+// ManagersByDomainID indicates an expected call of ManagersByDomainID.
+func (mr *MockManagerRegistryMockRecorder) ManagersByDomainID(domainID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ManagersByDomainID", reflect.TypeOf((*MockManagerRegistry)(nil).ManagersByDomainID), domainID)
+}
+
+// ManagersByTaskListName mocks base method.
+func (m *MockManagerRegistry) ManagersByTaskListName(name string) []Manager {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ManagersByTaskListName", name)
+	ret0, _ := ret[0].([]Manager)
+	return ret0
+}
+
+// ManagersByTaskListName indicates an expected call of ManagersByTaskListName.
+func (mr *MockManagerRegistryMockRecorder) ManagersByTaskListName(name any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ManagersByTaskListName", reflect.TypeOf((*MockManagerRegistry)(nil).ManagersByTaskListName), name)
+}
+
+// Register mocks base method.
+func (m *MockManagerRegistry) Register(id Identifier, mgr Manager) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Register", id, mgr)
+}
+
+// Register indicates an expected call of Register.
+func (mr *MockManagerRegistryMockRecorder) Register(id, mgr any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Register", reflect.TypeOf((*MockManagerRegistry)(nil).Register), id, mgr)
+}
+
+// Unregister mocks base method.
+func (m *MockManagerRegistry) Unregister(mgr Manager) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Unregister", mgr)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// Unregister indicates an expected call of Unregister.
+func (mr *MockManagerRegistryMockRecorder) Unregister(mgr any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unregister", reflect.TypeOf((*MockManagerRegistry)(nil).Unregister), mgr)
 }
 
 // MockManager is a mock of Manager interface.

@@ -197,13 +197,12 @@ func TestSubscriptionAndShutdown(t *testing.T) {
 	engine := matchingEngineImpl{
 		shutdownCompletion: &shutdownWG,
 		membershipResolver: mockResolver,
-		config: &config.Config{
-			EnableTasklistOwnershipGuard: func(opts ...dynamicproperties.FilterOption) bool { return true },
-		},
-		shutdown:    make(chan struct{}),
-		logger:      log.NewNoop(),
-		domainCache: mockDomainCache,
-		executor:    mockExecutor,
+		taskListsRegistry:  tasklist.NewManagerRegistry(metrics.NewNoopMetricsClient()),
+		config:             &config.Config{EnableTasklistOwnershipGuard: func(opts ...dynamicproperties.FilterOption) bool { return true }},
+		shutdown:           make(chan struct{}),
+		logger:             log.NewNoop(),
+		domainCache:        mockDomainCache,
+		executor:           mockExecutor,
 	}
 
 	mockResolver.EXPECT().WhoAmI().Return(membership.NewDetailedHostInfo("host2", "host2", nil), nil).AnyTimes()
@@ -233,13 +232,12 @@ func TestSubscriptionAndErrorReturned(t *testing.T) {
 	engine := matchingEngineImpl{
 		shutdownCompletion: &shutdownWG,
 		membershipResolver: mockResolver,
-		config: &config.Config{
-			EnableTasklistOwnershipGuard: func(opts ...dynamicproperties.FilterOption) bool { return true },
-		},
-		shutdown:    make(chan struct{}),
-		logger:      log.NewNoop(),
-		domainCache: mockDomainCache,
-		executor:    mockExecutor,
+		taskListsRegistry:  tasklist.NewManagerRegistry(metrics.NewNoopMetricsClient()),
+		config:             &config.Config{EnableTasklistOwnershipGuard: func(opts ...dynamicproperties.FilterOption) bool { return true }},
+		shutdown:           make(chan struct{}),
+		logger:             log.NewNoop(),
+		domainCache:        mockDomainCache,
+		executor:           mockExecutor,
 	}
 
 	// this should trigger the error case on a membership event
@@ -288,12 +286,11 @@ func TestSubscribeToMembershipChangesQuitsIfSubscribeFails(t *testing.T) {
 	engine := matchingEngineImpl{
 		shutdownCompletion: &shutdownWG,
 		membershipResolver: mockResolver,
-		config: &config.Config{
-			EnableTasklistOwnershipGuard: func(opts ...dynamicproperties.FilterOption) bool { return true },
-		},
-		shutdown:    make(chan struct{}),
-		logger:      logger,
-		domainCache: mockDomainCache,
+		taskListsRegistry:  tasklist.NewManagerRegistry(metrics.NewNoopMetricsClient()),
+		config:             &config.Config{EnableTasklistOwnershipGuard: func(opts ...dynamicproperties.FilterOption) bool { return true }},
+		shutdown:           make(chan struct{}),
+		logger:             logger,
+		domainCache:        mockDomainCache,
 	}
 
 	mockResolver.EXPECT().Subscribe(service.Matching, "matching-engine", gomock.Any()).
@@ -337,13 +334,12 @@ func TestGetTasklistManagerShutdownScenario(t *testing.T) {
 	engine := matchingEngineImpl{
 		shutdownCompletion: &shutdownWG,
 		membershipResolver: mockResolver,
-		config: &config.Config{
-			EnableTasklistOwnershipGuard: func(opts ...dynamicproperties.FilterOption) bool { return true },
-		},
-		shutdown:    make(chan struct{}),
-		logger:      log.NewNoop(),
-		domainCache: mockDomainCache,
-		executor:    mockExecutor,
+		taskListsRegistry:  tasklist.NewManagerRegistry(metrics.NewNoopMetricsClient()),
+		config:             &config.Config{EnableTasklistOwnershipGuard: func(opts ...dynamicproperties.FilterOption) bool { return true }},
+		shutdown:           make(chan struct{}),
+		logger:             log.NewNoop(),
+		domainCache:        mockDomainCache,
+		executor:           mockExecutor,
 	}
 
 	// set this engine to be shutting down to trigger the tasklistGetTasklistByID guard

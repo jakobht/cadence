@@ -41,9 +41,23 @@ type (
 	// ManagerRegistry is implemented by components that track/own task list managers.
 	// Managers notify their registry when they stop so they can be cleaned up.
 	ManagerRegistry interface {
-		// UnregisterManager is called by a Manager when it stops, allowing the registry
-		// to clean up resources and remove the manager from its tracking structures.
-		UnregisterManager(mgr Manager)
+		// Register registers a manager for a given identifier.
+		// we can override the manager for the same identifier if it is already registered
+		// this case should be handled by the caller
+		Register(id Identifier, mgr Manager)
+
+		// Unregister unregisters a manager for a given identifier.
+		// it returns true if the manager was unregistered, false if it was not found
+		Unregister(mgr Manager) bool
+
+		// AllManagers returns a list of all managers.
+		AllManagers() []Manager
+
+		ManagersByDomainID(domainID string) []Manager
+		ManagersByTaskListName(name string) []Manager
+		// ManagerByTaskListIdentifier returns a manager for a given identifier.
+		// it returns the manager and true if it was found, false if it was not found
+		ManagerByTaskListIdentifier(id Identifier) (Manager, bool)
 	}
 
 	Manager interface {

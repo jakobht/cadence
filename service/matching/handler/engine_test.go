@@ -49,6 +49,20 @@ import (
 	"github.com/uber/cadence/service/sharddistributor/client/executorclient"
 )
 
+func mustNewIdentifier(t *testing.T, domainID, taskListName string, taskListType int) *tasklist.Identifier {
+	t.Helper()
+	id, err := tasklist.NewIdentifier(domainID, taskListName, taskListType)
+	require.NoError(t, err)
+	return id
+}
+
+// newMockManagerWithTaskListID returns a MockManager with TaskListID() stubbed to return id (AnyTimes).
+func newMockManagerWithTaskListID(ctrl *gomock.Controller, id *tasklist.Identifier) *tasklist.MockManager {
+	mgr := tasklist.NewMockManager(ctrl)
+	mgr.EXPECT().TaskListID().Return(id).AnyTimes()
+	return mgr
+}
+
 func TestGetTaskListsByDomain(t *testing.T) {
 	testCases := []struct {
 		name           string
@@ -171,42 +185,38 @@ func TestGetTaskListsByDomain(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			mockDomainCache := cache.NewMockDomainCache(mockCtrl)
-			decisionTasklistID, err := tasklist.NewIdentifier("test-domain-id", "decision0", 0)
-			require.NoError(t, err)
-			activityTasklistID, err := tasklist.NewIdentifier("test-domain-id", "activity0", 1)
-			require.NoError(t, err)
-			otherDomainTasklistID, err := tasklist.NewIdentifier("other-domain-id", "other0", 0)
-			require.NoError(t, err)
-			mockDecisionTaskListManager := tasklist.NewMockManager(mockCtrl)
-			mockActivityTaskListManager := tasklist.NewMockManager(mockCtrl)
-			mockOtherDomainTaskListManager := tasklist.NewMockManager(mockCtrl)
+			decisionTasklistID := mustNewIdentifier(t, "test-domain-id", "decision0", 0)
+			activityTasklistID := mustNewIdentifier(t, "test-domain-id", "activity0", 1)
+			otherDomainTasklistID := mustNewIdentifier(t, "other-domain-id", "other0", 0)
+			stickyTasklistID := mustNewIdentifier(t, "test-domain-id", "sticky0", 0)
+			mockDecisionTaskListManager := newMockManagerWithTaskListID(mockCtrl, decisionTasklistID)
+			mockActivityTaskListManager := newMockManagerWithTaskListID(mockCtrl, activityTasklistID)
+			mockOtherDomainTaskListManager := newMockManagerWithTaskListID(mockCtrl, otherDomainTasklistID)
+			mockStickyManager := newMockManagerWithTaskListID(mockCtrl, stickyTasklistID)
 			mockTaskListManagers := map[tasklist.Identifier]*tasklist.MockManager{
 				*decisionTasklistID:    mockDecisionTaskListManager,
 				*activityTasklistID:    mockActivityTaskListManager,
 				*otherDomainTasklistID: mockOtherDomainTaskListManager,
 			}
-			stickyTasklistID, err := tasklist.NewIdentifier("test-domain-id", "sticky0", 0)
-			require.NoError(t, err)
-			mockStickyManager := tasklist.NewMockManager(mockCtrl)
 			mockStickyManagers := map[tasklist.Identifier]*tasklist.MockManager{
 				*stickyTasklistID: mockStickyManager,
 			}
 			tc.mockSetup(mockDomainCache, mockTaskListManagers, mockStickyManagers)
 
+			taskListRegistry := tasklist.NewManagerRegistry(metrics.NewNoopMetricsClient())
 			engine := &matchingEngineImpl{
-				domainCache: mockDomainCache,
-				taskLists: map[tasklist.Identifier]tasklist.Manager{
-					*decisionTasklistID:    mockDecisionTaskListManager,
-					*activityTasklistID:    mockActivityTaskListManager,
-					*otherDomainTasklistID: mockOtherDomainTaskListManager,
-					*stickyTasklistID:      mockStickyManager,
-				},
+				domainCache:       mockDomainCache,
+				taskListsRegistry: taskListRegistry,
 				config: &config.Config{
 					EnableReturnAllTaskListKinds: func(opts ...dynamicproperties.FilterOption) bool {
 						return tc.returnAllKinds
 					},
 				},
 			}
+			taskListRegistry.Register(*decisionTasklistID, mockDecisionTaskListManager)
+			taskListRegistry.Register(*activityTasklistID, mockActivityTaskListManager)
+			taskListRegistry.Register(*otherDomainTasklistID, mockOtherDomainTaskListManager)
+			taskListRegistry.Register(*stickyTasklistID, mockStickyManager)
 			resp, err := engine.GetTaskListsByDomain(nil, &types.GetTaskListsByDomainRequest{Domain: "test-domain"})
 
 			if tc.wantErr {
@@ -372,19 +382,18 @@ func TestCancelOutstandingPoll(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
-			mockManager := tasklist.NewMockManager(mockCtrl)
+			tasklistID := mustNewIdentifier(t, "test-domain-id", "test-tasklist", 0)
+			mockManager := newMockManagerWithTaskListID(mockCtrl, tasklistID)
 			executor := executorclient.NewMockExecutor[tasklist.ShardProcessor](mockCtrl)
 			tc.mockSetup(mockCtrl, mockManager, executor)
-			tasklistID, err := tasklist.NewIdentifier("test-domain-id", "test-tasklist", 0)
-			require.NoError(t, err)
+			taskListRegistry := tasklist.NewManagerRegistry(metrics.NewNoopMetricsClient())
 			engine := &matchingEngineImpl{
-				taskLists: map[tasklist.Identifier]tasklist.Manager{
-					*tasklistID: mockManager,
-				},
-				executor: executor,
+				taskListsRegistry: taskListRegistry,
+				executor:          executor,
 			}
+			taskListRegistry.Register(*tasklistID, mockManager)
 			hCtx := &handlerContext{Context: context.Background()}
-			err = engine.CancelOutstandingPoll(hCtx, tc.req)
+			err := engine.CancelOutstandingPoll(hCtx, tc.req)
 			if tc.wantErr {
 				require.Error(t, err)
 			} else {
@@ -559,18 +568,17 @@ func TestQueryWorkflow(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
-			mockManager := tasklist.NewMockManager(mockCtrl)
+			tasklistID := mustNewIdentifier(t, "test-domain-id", "test-tasklist", 0)
+			mockManager := newMockManagerWithTaskListID(mockCtrl, tasklistID)
 			executor := executorclient.NewMockExecutor[tasklist.ShardProcessor](mockCtrl)
-			tasklistID, err := tasklist.NewIdentifier("test-domain-id", "test-tasklist", 0)
-			require.NoError(t, err)
+			taskListRegistry := tasklist.NewManagerRegistry(metrics.NewNoopMetricsClient())
 			engine := &matchingEngineImpl{
-				taskLists: map[tasklist.Identifier]tasklist.Manager{
-					*tasklistID: mockManager,
-				},
+				taskListsRegistry:    taskListRegistry,
 				timeSource:           clock.NewRealTimeSource(),
 				lockableQueryTaskMap: lockableQueryTaskMap{queryTaskMap: make(map[string]chan *queryResult)},
 				executor:             executor,
 			}
+			taskListRegistry.Register(*tasklistID, mockManager)
 			tc.mockSetup(mockManager, &engine.lockableQueryTaskMap, mockCtrl, executor)
 			resp, err := engine.QueryWorkflow(tc.hCtx, tc.req)
 			if tc.wantErr {
@@ -736,6 +744,7 @@ func TestIsShuttingDown(t *testing.T) {
 		shutdownCompletion: &wg,
 		shutdown:           make(chan struct{}),
 		executor:           mockExecutor,
+		taskListsRegistry:  tasklist.NewManagerRegistry(metrics.NewNoopMetricsClient()),
 	}
 	e.Start()
 	assert.False(t, e.isShuttingDown())
@@ -750,13 +759,13 @@ func TestGetTasklistsNotOwned(t *testing.T) {
 
 	resolver.EXPECT().WhoAmI().Return(membership.NewDetailedHostInfo("self", "host123", nil), nil)
 
-	tl1, _ := tasklist.NewIdentifier("", "tl1", 0)
-	tl2, _ := tasklist.NewIdentifier("", "tl2", 0)
-	tl3, _ := tasklist.NewIdentifier("", "tl3", 0)
+	tl1 := mustNewIdentifier(t, "", "tl1", 0)
+	tl2 := mustNewIdentifier(t, "", "tl2", 0)
+	tl3 := mustNewIdentifier(t, "", "tl3", 0)
 
-	tl1m := tasklist.NewMockManager(ctrl)
-	tl2m := tasklist.NewMockManager(ctrl)
-	tl3m := tasklist.NewMockManager(ctrl)
+	tl1m := newMockManagerWithTaskListID(ctrl, tl1)
+	tl2m := newMockManagerWithTaskListID(ctrl, tl2)
+	tl3m := newMockManagerWithTaskListID(ctrl, tl3)
 
 	resolver.EXPECT().Lookup(service.Matching, tl1.GetName()).Return(membership.NewDetailedHostInfo("", "host123", nil), nil)
 	resolver.EXPECT().Lookup(service.Matching, tl2.GetName()).Return(membership.NewDetailedHostInfo("", "host456", nil), nil)
@@ -765,17 +774,15 @@ func TestGetTasklistsNotOwned(t *testing.T) {
 	e := matchingEngineImpl{
 		shutdown:           make(chan struct{}),
 		membershipResolver: resolver,
-		taskListsLock:      sync.RWMutex{},
-		taskLists: map[tasklist.Identifier]tasklist.Manager{
-			*tl1: tl1m,
-			*tl2: tl2m,
-			*tl3: tl3m,
-		},
+		taskListsRegistry:  tasklist.NewManagerRegistry(metrics.NewNoopMetricsClient()),
 		config: &config.Config{
 			EnableTasklistOwnershipGuard: func(opts ...dynamicproperties.FilterOption) bool { return true },
 		},
 		logger: log.NewNoop(),
 	}
+	e.taskListsRegistry.Register(*tl1, tl1m)
+	e.taskListsRegistry.Register(*tl2, tl2m)
+	e.taskListsRegistry.Register(*tl3, tl3m)
 
 	tls, err := e.getNonOwnedTasklistsLocked()
 	assert.NoError(t, err)
@@ -790,13 +797,13 @@ func TestShutDownTasklistsNotOwned(t *testing.T) {
 
 	resolver.EXPECT().WhoAmI().Return(membership.NewDetailedHostInfo("self", "host123", nil), nil)
 
-	tl1, _ := tasklist.NewIdentifier("", "tl1", 0)
-	tl2, _ := tasklist.NewIdentifier("", "tl2", 0)
-	tl3, _ := tasklist.NewIdentifier("", "tl3", 0)
+	tl1 := mustNewIdentifier(t, "", "tl1", 0)
+	tl2 := mustNewIdentifier(t, "", "tl2", 0)
+	tl3 := mustNewIdentifier(t, "", "tl3", 0)
 
-	tl1m := tasklist.NewMockManager(ctrl)
-	tl2m := tasklist.NewMockManager(ctrl)
-	tl3m := tasklist.NewMockManager(ctrl)
+	tl1m := newMockManagerWithTaskListID(ctrl, tl1)
+	tl2m := newMockManagerWithTaskListID(ctrl, tl2)
+	tl3m := newMockManagerWithTaskListID(ctrl, tl3)
 
 	resolver.EXPECT().Lookup(service.Matching, tl1.GetName()).Return(membership.NewDetailedHostInfo("", "host123", nil), nil)
 	resolver.EXPECT().Lookup(service.Matching, tl2.GetName()).Return(membership.NewDetailedHostInfo("", "host456", nil), nil)
@@ -805,24 +812,21 @@ func TestShutDownTasklistsNotOwned(t *testing.T) {
 	e := matchingEngineImpl{
 		shutdown:           make(chan struct{}),
 		membershipResolver: resolver,
-		taskListsLock:      sync.RWMutex{},
-		taskLists: map[tasklist.Identifier]tasklist.Manager{
-			*tl1: tl1m,
-			*tl2: tl2m,
-			*tl3: tl3m,
-		},
+		taskListsRegistry:  tasklist.NewManagerRegistry(metrics.NewNoopMetricsClient()),
 		config: &config.Config{
 			EnableTasklistOwnershipGuard: func(opts ...dynamicproperties.FilterOption) bool { return true },
 		},
 		metricsClient: metrics.NewNoopMetricsClient(),
 		logger:        log.NewNoop(),
 	}
+	e.taskListsRegistry.Register(*tl1, tl1m)
+	e.taskListsRegistry.Register(*tl2, tl2m)
+	e.taskListsRegistry.Register(*tl3, tl3m)
 
 	wg := sync.WaitGroup{}
 
 	wg.Add(1)
 
-	tl2m.EXPECT().TaskListID().Return(tl2).AnyTimes()
 	tl2m.EXPECT().String().AnyTimes()
 
 	tl2m.EXPECT().Stop().Do(func() {
@@ -1029,23 +1033,22 @@ func TestUpdateTaskListPartitionConfig(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			mockDomainCache := cache.NewMockDomainCache(mockCtrl)
 			mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain", nil)
-			mockManager := tasklist.NewMockManager(mockCtrl)
+			tasklistID := mustNewIdentifier(t, "test-domain-id", "test-tasklist", 1)
+			mockManager := newMockManagerWithTaskListID(mockCtrl, tasklistID)
 			mockExecutor := executorclient.NewMockExecutor[tasklist.ShardProcessor](mockCtrl)
 			tc.mockSetup(mockManager, mockCtrl, mockExecutor)
-			tasklistID, err := tasklist.NewIdentifier("test-domain-id", "test-tasklist", 1)
-			require.NoError(t, err)
+			taskListRegistry := tasklist.NewManagerRegistry(metrics.NewNoopMetricsClient())
 			engine := &matchingEngineImpl{
-				taskLists: map[tasklist.Identifier]tasklist.Manager{
-					*tasklistID: mockManager,
-				},
-				timeSource:  clock.NewRealTimeSource(),
-				domainCache: mockDomainCache,
+				taskListsRegistry: taskListRegistry,
+				timeSource:        clock.NewRealTimeSource(),
+				domainCache:       mockDomainCache,
 				config: &config.Config{
 					EnableAdaptiveScaler: dynamicproperties.GetBoolPropertyFilteredByTaskListInfo(tc.enableAdaptiveScaler),
 				},
 				executor: mockExecutor,
 			}
-			_, err = engine.UpdateTaskListPartitionConfig(tc.hCtx, tc.req)
+			taskListRegistry.Register(*tasklistID, mockManager)
+			_, err := engine.UpdateTaskListPartitionConfig(tc.hCtx, tc.req)
 			if tc.expectError {
 				assert.ErrorContains(t, err, tc.expectedError)
 			} else {
@@ -1210,22 +1213,20 @@ func TestRefreshTaskListPartitionConfig(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
-			mockManager := tasklist.NewMockManager(mockCtrl)
+			tasklistID := mustNewIdentifier(t, "test-domain-id", "test-tasklist", 1)
+			tasklistID2 := mustNewIdentifier(t, "test-domain-id", "/__cadence_sys/test-tasklist/1", 1)
+			mockManager := newMockManagerWithTaskListID(mockCtrl, tasklistID)
 			mockExecutor := executorclient.NewMockExecutor[tasklist.ShardProcessor](mockCtrl)
 			tc.mockSetup(mockManager, mockCtrl, mockExecutor)
-			tasklistID, err := tasklist.NewIdentifier("test-domain-id", "test-tasklist", 1)
-			require.NoError(t, err)
-			tasklistID2, err := tasklist.NewIdentifier("test-domain-id", "/__cadence_sys/test-tasklist/1", 1)
-			require.NoError(t, err)
+			taskListRegistry := tasklist.NewManagerRegistry(metrics.NewNoopMetricsClient())
 			engine := &matchingEngineImpl{
-				taskLists: map[tasklist.Identifier]tasklist.Manager{
-					*tasklistID:  mockManager,
-					*tasklistID2: mockManager,
-				},
-				timeSource: clock.NewRealTimeSource(),
-				executor:   mockExecutor,
+				taskListsRegistry: taskListRegistry,
+				timeSource:        clock.NewRealTimeSource(),
+				executor:          mockExecutor,
 			}
-			_, err = engine.RefreshTaskListPartitionConfig(tc.hCtx, tc.req)
+			taskListRegistry.Register(*tasklistID, mockManager)
+			taskListRegistry.Register(*tasklistID2, mockManager)
+			_, err := engine.RefreshTaskListPartitionConfig(tc.hCtx, tc.req)
 			if tc.expectError {
 				assert.ErrorContains(t, err, tc.expectedError)
 			} else {
@@ -1241,67 +1242,82 @@ func Test_domainChangeCallback(t *testing.T) {
 
 	clusters := []string{"cluster0", "cluster1"}
 
-	mockTaskListManagerGlobal1 := tasklist.NewMockManager(mockCtrl)
-	mockTaskListManagerGlobal2 := tasklist.NewMockManager(mockCtrl)
-	mockStickyTaskListManagerGlobal2 := tasklist.NewMockManager(mockCtrl)
-	mockTaskListManagerGlobal3 := tasklist.NewMockManager(mockCtrl)
-	mockStickyTaskListManagerGlobal3 := tasklist.NewMockManager(mockCtrl)
-	mockTaskListManagerLocal1 := tasklist.NewMockManager(mockCtrl)
-	mockTaskListManagerActiveActive1 := tasklist.NewMockManager(mockCtrl)
+	tlGlobalDecision1 := mustNewIdentifier(t, "global-domain-1-id", "global-domain-1", persistence.TaskListTypeDecision)
+	tlGlobalActivity1 := mustNewIdentifier(t, "global-domain-1-id", "global-domain-1", persistence.TaskListTypeActivity)
+	tlGlobalDecision2 := mustNewIdentifier(t, "global-domain-2-id", "global-domain-2", persistence.TaskListTypeDecision)
+	tlGlobalActivity2 := mustNewIdentifier(t, "global-domain-2-id", "global-domain-2", persistence.TaskListTypeActivity)
+	tlGlobalSticky2 := mustNewIdentifier(t, "global-domain-2-id", "sticky-global-domain-2", persistence.TaskListTypeDecision)
+	tlGlobalActivity3 := mustNewIdentifier(t, "global-domain-3-id", "global-domain-3", persistence.TaskListTypeActivity)
+	tlGlobalDecision3 := mustNewIdentifier(t, "global-domain-3-id", "global-domain-3", persistence.TaskListTypeDecision)
+	tlGlobalSticky3 := mustNewIdentifier(t, "global-domain-3-id", "sticky-global-domain-3", persistence.TaskListTypeDecision)
+	tlLocalDecision1 := mustNewIdentifier(t, "local-domain-1-id", "local-domain-1", persistence.TaskListTypeDecision)
+	tlLocalActivity1 := mustNewIdentifier(t, "local-domain-1-id", "local-domain-1", persistence.TaskListTypeActivity)
+	tlActiveActiveDecision1 := mustNewIdentifier(t, "active-active-domain-1-id", "active-active-domain-1", persistence.TaskListTypeDecision)
+	tlActiveActiveActivity1 := mustNewIdentifier(t, "active-active-domain-1-id", "active-active-domain-1", persistence.TaskListTypeActivity)
+
+	newNormalManager := func(id *tasklist.Identifier) *tasklist.MockManager {
+		mgr := newMockManagerWithTaskListID(mockCtrl, id)
+		mgr.EXPECT().GetTaskListKind().Return(types.TaskListKindNormal).AnyTimes()
+		mgr.EXPECT().DescribeTaskList(gomock.Any()).Return(&types.DescribeTaskListResponse{}).AnyTimes()
+		return mgr
+	}
+	newStickyManager := func(id *tasklist.Identifier) *tasklist.MockManager {
+		mgr := newMockManagerWithTaskListID(mockCtrl, id)
+		mgr.EXPECT().GetTaskListKind().Return(types.TaskListKindSticky).AnyTimes()
+		mgr.EXPECT().DescribeTaskList(gomock.Any()).Return(&types.DescribeTaskListResponse{}).AnyTimes()
+		return mgr
+	}
+
+	mockGlobalDecision1 := newNormalManager(tlGlobalDecision1)
+	mockGlobalActivity1 := newNormalManager(tlGlobalActivity1)
+	mockGlobalDecision2 := newNormalManager(tlGlobalDecision2)
+	mockGlobalActivity2 := newNormalManager(tlGlobalActivity2)
+	mockGlobalSticky2 := newStickyManager(tlGlobalSticky2)
+	mockGlobalDecision3 := newNormalManager(tlGlobalDecision3)
+	mockGlobalActivity3 := newNormalManager(tlGlobalActivity3)
+	mockGlobalSticky3 := newStickyManager(tlGlobalSticky3)
+	mockLocalDecision1 := newNormalManager(tlLocalDecision1)
+	mockLocalActivity1 := newNormalManager(tlLocalActivity1)
+	mockActiveActiveDecision1 := newNormalManager(tlActiveActiveDecision1)
+	mockActiveActiveActivity1 := newNormalManager(tlActiveActiveActivity1)
 
 	mockExecutor := executorclient.NewMockExecutor[tasklist.ShardProcessor](mockCtrl)
 	mockExecutor.EXPECT().GetShardProcess(gomock.Any(), gomock.Any()).Return(tasklist.NewMockShardProcessor(mockCtrl), nil).AnyTimes()
-
-	tlIdentifierDecisionGlobal1, _ := tasklist.NewIdentifier("global-domain-1-id", "global-domain-1", persistence.TaskListTypeDecision)
-	tlIdentifierActivityGlobal1, _ := tasklist.NewIdentifier("global-domain-1-id", "global-domain-1", persistence.TaskListTypeActivity)
-	tlIdentifierDecisionGlobal2, _ := tasklist.NewIdentifier("global-domain-2-id", "global-domain-2", persistence.TaskListTypeDecision)
-	tlIdentifierActivityGlobal2, _ := tasklist.NewIdentifier("global-domain-2-id", "global-domain-2", persistence.TaskListTypeActivity)
-	tlIdentifierStickyGlobal2, _ := tasklist.NewIdentifier("global-domain-2-id", "sticky-global-domain-2", persistence.TaskListTypeDecision)
-	tlIdentifierActivityGlobal3, _ := tasklist.NewIdentifier("global-domain-3-id", "global-domain-3", persistence.TaskListTypeActivity)
-	tlIdentifierDecisionGlobal3, _ := tasklist.NewIdentifier("global-domain-3-id", "global-domain-3", persistence.TaskListTypeDecision)
-	tlIdentifierStickyGlobal3, _ := tasklist.NewIdentifier("global-domain-3-id", "sticky-global-domain-3", persistence.TaskListTypeDecision)
-	tlIdentifierDecisionLocal1, _ := tasklist.NewIdentifier("local-domain-1-id", "local-domain-1", persistence.TaskListTypeDecision)
-	tlIdentifierActivityLocal1, _ := tasklist.NewIdentifier("local-domain-1-id", "local-domain-1", persistence.TaskListTypeActivity)
-	tlIdentifierDecisionActiveActive1, _ := tasklist.NewIdentifier("active-active-domain-1-id", "active-active-domain-1", persistence.TaskListTypeDecision)
-	tlIdentifierActivityActiveActive1, _ := tasklist.NewIdentifier("active-active-domain-1-id", "active-active-domain-1", persistence.TaskListTypeActivity)
 
 	engine := &matchingEngineImpl{
 		domainCache:                 mockDomainCache,
 		failoverNotificationVersion: 1,
 		config:                      defaultTestConfig(),
 		logger:                      log.NewNoop(),
-		taskLists: map[tasklist.Identifier]tasklist.Manager{
-			*tlIdentifierDecisionGlobal1:       mockTaskListManagerGlobal1,
-			*tlIdentifierActivityGlobal1:       mockTaskListManagerGlobal1,
-			*tlIdentifierDecisionGlobal2:       mockTaskListManagerGlobal2,
-			*tlIdentifierActivityGlobal2:       mockTaskListManagerGlobal2,
-			*tlIdentifierStickyGlobal2:         mockStickyTaskListManagerGlobal2,
-			*tlIdentifierDecisionGlobal3:       mockTaskListManagerGlobal3,
-			*tlIdentifierActivityGlobal3:       mockTaskListManagerGlobal3,
-			*tlIdentifierStickyGlobal3:         mockStickyTaskListManagerGlobal3,
-			*tlIdentifierDecisionLocal1:        mockTaskListManagerLocal1,
-			*tlIdentifierActivityLocal1:        mockTaskListManagerLocal1,
-			*tlIdentifierDecisionActiveActive1: mockTaskListManagerActiveActive1,
-			*tlIdentifierActivityActiveActive1: mockTaskListManagerActiveActive1,
-		},
-		executor: mockExecutor,
+		taskListsRegistry:           tasklist.NewManagerRegistry(metrics.NewNoopMetricsClient()),
+		executor:                    mockExecutor,
 	}
+	engine.taskListsRegistry.Register(*tlGlobalDecision1, mockGlobalDecision1)
+	engine.taskListsRegistry.Register(*tlGlobalActivity1, mockGlobalActivity1)
+	engine.taskListsRegistry.Register(*tlGlobalDecision2, mockGlobalDecision2)
+	engine.taskListsRegistry.Register(*tlGlobalActivity2, mockGlobalActivity2)
+	engine.taskListsRegistry.Register(*tlGlobalSticky2, mockGlobalSticky2)
+	engine.taskListsRegistry.Register(*tlGlobalDecision3, mockGlobalDecision3)
+	engine.taskListsRegistry.Register(*tlGlobalActivity3, mockGlobalActivity3)
+	engine.taskListsRegistry.Register(*tlGlobalSticky3, mockGlobalSticky3)
+	engine.taskListsRegistry.Register(*tlLocalDecision1, mockLocalDecision1)
+	engine.taskListsRegistry.Register(*tlLocalActivity1, mockLocalActivity1)
+	engine.taskListsRegistry.Register(*tlActiveActiveDecision1, mockActiveActiveDecision1)
+	engine.taskListsRegistry.Register(*tlActiveActiveActivity1, mockActiveActiveActivity1)
 
-	mockTaskListManagerGlobal1.EXPECT().ReleaseBlockedPollers().Times(0)
-	mockTaskListManagerGlobal2.EXPECT().GetTaskListKind().Return(types.TaskListKindNormal).Times(4)
-	mockStickyTaskListManagerGlobal2.EXPECT().GetTaskListKind().Return(types.TaskListKindSticky).Times(2)
-	mockTaskListManagerGlobal2.EXPECT().DescribeTaskList(gomock.Any()).Return(&types.DescribeTaskListResponse{}).Times(2)
-	mockStickyTaskListManagerGlobal2.EXPECT().DescribeTaskList(gomock.Any()).Return(&types.DescribeTaskListResponse{}).Times(1)
-	mockTaskListManagerGlobal2.EXPECT().ReleaseBlockedPollers().Times(2)
-	mockStickyTaskListManagerGlobal2.EXPECT().ReleaseBlockedPollers().Times(1)
-	mockTaskListManagerGlobal3.EXPECT().GetTaskListKind().Return(types.TaskListKindNormal).Times(4)
-	mockStickyTaskListManagerGlobal3.EXPECT().GetTaskListKind().Return(types.TaskListKindSticky).Times(2)
-	mockTaskListManagerGlobal3.EXPECT().DescribeTaskList(gomock.Any()).Return(&types.DescribeTaskListResponse{}).Times(2)
-	mockStickyTaskListManagerGlobal3.EXPECT().DescribeTaskList(gomock.Any()).Return(&types.DescribeTaskListResponse{}).Times(1)
-	mockTaskListManagerGlobal3.EXPECT().ReleaseBlockedPollers().Return(errors.New("some-error")).Times(2)
-	mockStickyTaskListManagerGlobal3.EXPECT().ReleaseBlockedPollers().Return(errors.New("some-error")).Times(1)
-	mockTaskListManagerLocal1.EXPECT().ReleaseBlockedPollers().Times(0)
-	mockTaskListManagerActiveActive1.EXPECT().ReleaseBlockedPollers().Times(0)
+	// Eligible for failover handling is defined by isDomainEligibleToDisconnectPollers.
+	mockGlobalDecision1.EXPECT().ReleaseBlockedPollers().Times(0)       // global-domain-1 has failover version 0 (<= current 1), so not eligible.
+	mockGlobalActivity1.EXPECT().ReleaseBlockedPollers().Times(0)       // global-domain-1 has failover version 0 (<= current 1), so not eligible.
+	mockGlobalDecision2.EXPECT().ReleaseBlockedPollers().Times(1)       // global-domain-2 is global, non-active-active, and version 4 > 1.
+	mockGlobalActivity2.EXPECT().ReleaseBlockedPollers().Times(1)       // global-domain-2 is global, non-active-active, and version 4 > 1.
+	mockGlobalSticky2.EXPECT().ReleaseBlockedPollers().Times(1)         // sticky task list under eligible global-domain-2.
+	mockGlobalDecision3.EXPECT().ReleaseBlockedPollers().Times(1)       // global-domain-3 is eligible.
+	mockGlobalActivity3.EXPECT().ReleaseBlockedPollers().Times(1)       // global-domain-3 is eligible.
+	mockGlobalSticky3.EXPECT().ReleaseBlockedPollers().Times(1)         // sticky task list under eligible global-domain-3.
+	mockLocalDecision1.EXPECT().ReleaseBlockedPollers().Times(0)        // local domains are not eligible.
+	mockLocalActivity1.EXPECT().ReleaseBlockedPollers().Times(0)        // local domains are not eligible.
+	mockActiveActiveDecision1.EXPECT().ReleaseBlockedPollers().Times(0) // active-active domains are not eligible.
+	mockActiveActiveActivity1.EXPECT().ReleaseBlockedPollers().Times(0) // active-active domains are not eligible.
 
 	domains := []*cache.DomainCacheEntry{
 		cache.NewDomainCacheEntryForTest(
@@ -1374,7 +1390,7 @@ func Test_domainChangeCallback(t *testing.T) {
 
 	engine.domainChangeCallback(domains)
 
-	assert.Equal(t, int64(5), engine.failoverNotificationVersion)
+	assert.Equal(t, int64(5), engine.failoverNotificationVersion, "5 is the highest failover notification version in the fixtures (global-domain-3)")
 }
 
 func Test_registerDomainFailoverCallback(t *testing.T) {
@@ -1402,7 +1418,7 @@ func Test_registerDomainFailoverCallback(t *testing.T) {
 		failoverNotificationVersion: 0,
 		config:                      defaultTestConfig(),
 		logger:                      log.NewNoop(),
-		taskLists:                   map[tasklist.Identifier]tasklist.Manager{},
+		taskListsRegistry:           tasklist.NewManagerRegistry(metrics.NewNoopMetricsClient()),
 	}
 
 	engine.registerDomainFailoverCallback()

@@ -236,8 +236,8 @@ func (s *matchingEngineSuite) TestOnlyUnloadMatchingInstance() {
 		ClusterMetadata: s.matchingEngine.clusterMetadata,
 		IsolationState:  s.matchingEngine.isolationState,
 		MatchingClient:  s.matchingEngine.matchingClient,
-		Registry:        s.matchingEngine, // Engine implements ManagerRegistry
-		TaskList:        taskListID,       // same taskListID as above
+		Registry:        s.matchingEngine.taskListsRegistry,
+		TaskList:        taskListID, // same taskListID as above
 		TaskListKind:    tlKind,
 		Cfg:             s.matchingEngine.config,
 		TimeSource:      s.matchingEngine.timeSource,

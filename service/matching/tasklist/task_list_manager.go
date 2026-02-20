@@ -318,7 +318,7 @@ func (c *taskListManagerImpl) Stop() {
 	}
 
 	// Notify parent registry to unregister this manager
-	c.registry.UnregisterManager(c)
+	c.registry.Unregister(c)
 
 	if c.adaptiveScaler != nil {
 		c.adaptiveScaler.Stop()
