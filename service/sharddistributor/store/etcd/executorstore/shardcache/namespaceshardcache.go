@@ -13,6 +13,7 @@ import (
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/service/sharddistributor/store"
 	"github.com/uber/cadence/service/sharddistributor/store/etcd/etcdclient"
 	"github.com/uber/cadence/service/sharddistributor/store/etcd/etcdkeys"
@@ -40,9 +41,10 @@ type namespaceShardToExecutor struct {
 	client           etcdclient.Client
 	timeSource       clock.TimeSource
 	pubSub           *executorStatePubSub
+	metricsClient    metrics.Client
 }
 
-func newNamespaceShardToExecutor(etcdPrefix, namespace string, client etcdclient.Client, stopCh chan struct{}, logger log.Logger, timeSource clock.TimeSource) (*namespaceShardToExecutor, error) {
+func newNamespaceShardToExecutor(etcdPrefix, namespace string, client etcdclient.Client, stopCh chan struct{}, logger log.Logger, timeSource clock.TimeSource, metricsClient metrics.Client) (*namespaceShardToExecutor, error) {
 	return &namespaceShardToExecutor{
 		shardToExecutor:  make(map[string]*store.ShardOwner),
 		executorState:    make(map[*store.ShardOwner][]string),
@@ -55,6 +57,7 @@ func newNamespaceShardToExecutor(etcdPrefix, namespace string, client etcdclient
 		client:           client,
 		timeSource:       timeSource,
 		pubSub:           newExecutorStatePubSub(logger, namespace),
+		metricsClient:    metricsClient,
 	}, nil
 }
 
@@ -171,6 +174,10 @@ func (n *namespaceShardToExecutor) watch(triggerCh chan<- struct{}) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	scope := n.metricsClient.Scope(metrics.ShardDistributorWatchScope).
+		Tagged(metrics.NamespaceTag(n.namespace)).
+		Tagged(metrics.ShardDistributorWatchTypeTag("cache_refresh"))
+
 	watchChan := n.client.Watch(
 		// WithRequireLeader ensures that the etcd cluster has a leader
 		clientv3.WithRequireLeader(ctx),
@@ -193,8 +200,13 @@ func (n *namespaceShardToExecutor) watch(triggerCh chan<- struct{}) error {
 				return fmt.Errorf("watch channel closed")
 			}
 
+			// Track watch metrics
+			sw := scope.StartTimer(metrics.ShardDistributorWatchProcessingLatency)
+			scope.AddCounter(metrics.ShardDistributorWatchEventsReceived, int64(len(watchResp.Events)))
+
 			// Only trigger refresh if the change is related to executor assigned state or metadata
 			if !n.hasExecutorStateChanged(watchResp) {
+				sw.Stop()
 				continue
 			}
 
@@ -203,6 +215,7 @@ func (n *namespaceShardToExecutor) watch(triggerCh chan<- struct{}) error {
 			default:
 				n.logger.Info("Cache is being refreshed, skipping trigger")
 			}
+			sw.Stop()
 		}
 	}
 }

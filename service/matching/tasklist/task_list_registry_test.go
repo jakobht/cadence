@@ -31,7 +31,7 @@ func TestTaskListRegistry_RegisterLookupAndUnregister(t *testing.T) {
 	metricsClient := metricsmocks.Client{}
 	metricsScope := metricsmocks.Scope{}
 	metricsClient.On("Scope", metrics.MatchingTaskListMgrScope).Return(&metricsScope)
-	registry := NewManagerRegistry(&metricsClient)
+	registry := NewTaskListRegistry(&metricsClient)
 
 	id := mustNewIdentifierForTest(t, "domain-a", "task-list-a")
 
@@ -63,13 +63,17 @@ func TestTaskListRegistry_RegisterLookupAndUnregister(t *testing.T) {
 	_, ok = registry.ManagerByTaskListIdentifier(*id)
 	assert.False(t, ok)
 
+	impl := registry.(*taskListRegistryImpl)
+	assert.Empty(t, impl.taskListsByDomainID, "should be empty because there are no other task lists for this domain")
+	assert.Empty(t, impl.taskListsByTaskListName, "should be empty because there are no other task lists for this task list name")
+
 	metricsClient.AssertExpectations(t)
 	metricsScope.AssertExpectations(t)
 }
 
 func TestTaskListRegistry_Filters(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	registry := NewManagerRegistry(metrics.NewNoopMetricsClient())
+	registry := NewTaskListRegistry(metrics.NewNoopMetricsClient())
 
 	domainA1 := mustNewIdentifierForTest(t, "domain-a", "shared-name")
 	domainA2 := mustNewIdentifierForTest(t, "domain-a", "other-name")

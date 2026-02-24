@@ -94,7 +94,7 @@ type (
 		ClusterMetadata cluster.Metadata
 		IsolationState  isolationgroup.State
 		MatchingClient  matching.Client
-		Registry        ManagerRegistry // Registry that owns this manager, notified on Stop()
+		Registry        TaskListRegistry
 		TaskList        *Identifier
 		TaskListKind    types.TaskListKind
 		Cfg             *config.Config
@@ -140,7 +140,7 @@ type (
 		stopWG        sync.WaitGroup
 		stopped       int32
 		stoppedLock   sync.RWMutex
-		registry      ManagerRegistry // parent registry that tracks this manager
+		registry      TaskListRegistry
 		throttleRetry *backoff.ThrottleRetry
 
 		qpsTracker     stats.QPSTrackerGroup

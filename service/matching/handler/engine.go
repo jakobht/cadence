@@ -89,7 +89,7 @@ type (
 
 	matchingEngineImpl struct {
 		taskListCreationLock           sync.Mutex
-		taskListsRegistry              tasklist.ManagerRegistry
+		taskListRegistry               tasklist.TaskListRegistry
 		shutdownCompletion             *sync.WaitGroup
 		shutdown                       chan struct{}
 		taskManager                    persistence.TaskManager
@@ -142,7 +142,7 @@ func NewEngine(
 	ShardDistributorMatchingConfig clientcommon.Config,
 ) Engine {
 	e := &matchingEngineImpl{
-		taskListsRegistry:              tasklist.NewManagerRegistry(metricsClient),
+		taskListRegistry:               tasklist.NewTaskListRegistry(metricsClient),
 		shutdown:                       make(chan struct{}),
 		shutdownCompletion:             &sync.WaitGroup{},
 		taskManager:                    taskManager,
@@ -179,7 +179,7 @@ func (e *matchingEngineImpl) Stop() {
 	close(e.shutdown)
 	e.executor.Stop()
 	// Executes Stop() on each task list outside of lock
-	for _, l := range e.taskListsRegistry.AllManagers() {
+	for _, l := range e.taskListRegistry.AllManagers() {
 		l.Stop()
 	}
 	e.unregisterDomainFailoverCallback()
@@ -190,7 +190,7 @@ func (e *matchingEngineImpl) setupExecutor(shardDistributorExecutorClient execut
 	cfg, reportTTL := e.getValidatedShardDistributorConfig()
 
 	taskListFactory := &tasklist.ShardProcessorFactory{
-		TaskListsRegistry: e.taskListsRegistry,
+		TaskListsRegistry: e.taskListRegistry,
 		ReportTTL:         reportTTL,
 		TimeSource:        e.timeSource,
 	}
@@ -243,7 +243,7 @@ func (e *matchingEngineImpl) String() string {
 	// Executes taskList.String() on each task list outside of lock
 	buf := new(bytes.Buffer)
 
-	for i, tl := range e.taskListsRegistry.AllManagers() {
+	for i, tl := range e.taskListRegistry.AllManagers() {
 		if i >= 1000 {
 			break
 		}
@@ -261,7 +261,7 @@ func (e *matchingEngineImpl) getOrCreateTaskListManager(ctx context.Context, tas
 	if sp != nil {
 		// The first check is an optimization so almost all requests will have a task list manager
 		// and return avoiding the write lock
-		if result, ok := e.taskListsRegistry.ManagerByTaskListIdentifier(*taskList); ok {
+		if result, ok := e.taskListRegistry.ManagerByTaskListIdentifier(*taskList); ok {
 			return result, nil
 		}
 	}
@@ -272,7 +272,7 @@ func (e *matchingEngineImpl) getOrCreateTaskListManager(ctx context.Context, tas
 
 	// If it gets here, write lock and check again in case a task list is created between the two locks
 	e.taskListCreationLock.Lock()
-	if result, ok := e.taskListsRegistry.ManagerByTaskListIdentifier(*taskList); ok {
+	if result, ok := e.taskListRegistry.ManagerByTaskListIdentifier(*taskList); ok {
 		e.taskListCreationLock.Unlock()
 		return result, nil
 	}
@@ -293,7 +293,7 @@ func (e *matchingEngineImpl) getOrCreateTaskListManager(ctx context.Context, tas
 		ClusterMetadata: e.clusterMetadata,
 		IsolationState:  e.isolationState,
 		MatchingClient:  e.matchingClient,
-		Registry:        e.taskListsRegistry,
+		Registry:        e.taskListRegistry,
 		TaskList:        taskList,
 		TaskListKind:    taskListKind,
 		Cfg:             e.config,
@@ -308,7 +308,7 @@ func (e *matchingEngineImpl) getOrCreateTaskListManager(ctx context.Context, tas
 		return nil, err
 	}
 
-	e.taskListsRegistry.Register(*taskList, mgr)
+	e.taskListRegistry.Register(*taskList, mgr)
 	e.taskListCreationLock.Unlock()
 
 	err = mgr.Start(context.Background())
@@ -1098,7 +1098,7 @@ func (e *matchingEngineImpl) getTaskListsByDomainAndKind(domainID string, taskLi
 	decisionTaskListMap := make(map[string]*types.DescribeTaskListResponse)
 	activityTaskListMap := make(map[string]*types.DescribeTaskListResponse)
 
-	for _, tlm := range e.taskListsRegistry.ManagersByDomainID(domainID) {
+	for _, tlm := range e.taskListRegistry.ManagersByDomainID(domainID) {
 		if taskListKind == nil || tlm.GetTaskListKind() == *taskListKind {
 			tl := tlm.TaskListID()
 			if types.TaskListType(tl.GetType()) == types.TaskListTypeDecision {
@@ -1237,7 +1237,7 @@ func (e *matchingEngineImpl) getAllPartitions(
 }
 
 func (e *matchingEngineImpl) unloadTaskList(tlMgr tasklist.Manager) {
-	unregistered := e.taskListsRegistry.Unregister(tlMgr)
+	unregistered := e.taskListRegistry.Unregister(tlMgr)
 	if unregistered {
 		tlMgr.Stop()
 	}

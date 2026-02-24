@@ -197,7 +197,7 @@ func TestSubscriptionAndShutdown(t *testing.T) {
 	engine := matchingEngineImpl{
 		shutdownCompletion: &shutdownWG,
 		membershipResolver: mockResolver,
-		taskListsRegistry:  tasklist.NewManagerRegistry(metrics.NewNoopMetricsClient()),
+		taskListRegistry:   tasklist.NewTaskListRegistry(metrics.NewNoopMetricsClient()),
 		config:             &config.Config{EnableTasklistOwnershipGuard: func(opts ...dynamicproperties.FilterOption) bool { return true }},
 		shutdown:           make(chan struct{}),
 		logger:             log.NewNoop(),
@@ -232,7 +232,7 @@ func TestSubscriptionAndErrorReturned(t *testing.T) {
 	engine := matchingEngineImpl{
 		shutdownCompletion: &shutdownWG,
 		membershipResolver: mockResolver,
-		taskListsRegistry:  tasklist.NewManagerRegistry(metrics.NewNoopMetricsClient()),
+		taskListRegistry:   tasklist.NewTaskListRegistry(metrics.NewNoopMetricsClient()),
 		config:             &config.Config{EnableTasklistOwnershipGuard: func(opts ...dynamicproperties.FilterOption) bool { return true }},
 		shutdown:           make(chan struct{}),
 		logger:             log.NewNoop(),
@@ -286,7 +286,7 @@ func TestSubscribeToMembershipChangesQuitsIfSubscribeFails(t *testing.T) {
 	engine := matchingEngineImpl{
 		shutdownCompletion: &shutdownWG,
 		membershipResolver: mockResolver,
-		taskListsRegistry:  tasklist.NewManagerRegistry(metrics.NewNoopMetricsClient()),
+		taskListRegistry:   tasklist.NewTaskListRegistry(metrics.NewNoopMetricsClient()),
 		config:             &config.Config{EnableTasklistOwnershipGuard: func(opts ...dynamicproperties.FilterOption) bool { return true }},
 		shutdown:           make(chan struct{}),
 		logger:             logger,
@@ -334,7 +334,7 @@ func TestGetTasklistManagerShutdownScenario(t *testing.T) {
 	engine := matchingEngineImpl{
 		shutdownCompletion: &shutdownWG,
 		membershipResolver: mockResolver,
-		taskListsRegistry:  tasklist.NewManagerRegistry(metrics.NewNoopMetricsClient()),
+		taskListRegistry:   tasklist.NewTaskListRegistry(metrics.NewNoopMetricsClient()),
 		config:             &config.Config{EnableTasklistOwnershipGuard: func(opts ...dynamicproperties.FilterOption) bool { return true }},
 		shutdown:           make(chan struct{}),
 		logger:             log.NewNoop(),

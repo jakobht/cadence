@@ -38,7 +38,7 @@ import (
 func TestShardDistributorResolver_Lookup_modeHashRing(t *testing.T) {
 	resolver, ring, _ := newShardDistributorResolver(t)
 	resolver.shardDistributionMode = func(...dynamicproperties.FilterOption) string {
-		return string(modeKeyHashRing)
+		return string(ModeKeyHashRing)
 	}
 
 	ring.EXPECT().Lookup("test-key").Return(HostInfo{addr: "test-addr"}, nil)
@@ -51,7 +51,7 @@ func TestShardDistributorResolver_Lookup_modeHashRing(t *testing.T) {
 func TestShardDistributorResolver_Lookup_modeShardDistributor(t *testing.T) {
 	resolver, _, shardDistributorMock := newShardDistributorResolver(t)
 	resolver.shardDistributionMode = func(...dynamicproperties.FilterOption) string {
-		return string(modeKeyShardDistributor)
+		return string(ModeKeyShardDistributor)
 	}
 
 	shardDistributorMock.EXPECT().GetShardOwner(gomock.Any(), "test-key").
@@ -72,7 +72,7 @@ func TestShardDistributorResolver_Lookup_modeShardDistributor(t *testing.T) {
 func TestShardDistributorResolver_Lookup_modeHashRingShadowShardDistributor(t *testing.T) {
 	resolver, ring, shardDistributorMock := newShardDistributorResolver(t)
 	resolver.shardDistributionMode = func(...dynamicproperties.FilterOption) string {
-		return string(modeKeyHashRingShadowShardDistributor)
+		return string(ModeKeyHashRingShadowShardDistributor)
 	}
 
 	cases := []struct {
@@ -158,7 +158,7 @@ func TestShardDistributorResolver_Lookup_modeHashRingShadowShardDistributor(t *t
 func TestShardDistributorResolver_Lookup_modeShardDistributorShadowHashRing(t *testing.T) {
 	resolver, ring, shardDistributorMock := newShardDistributorResolver(t)
 	resolver.shardDistributionMode = func(...dynamicproperties.FilterOption) string {
-		return string(modeKeyShardDistributorShadowHashRing)
+		return string(ModeKeyShardDistributorShadowHashRing)
 	}
 
 	cases := []struct {

@@ -21,7 +21,7 @@
 // SOFTWARE.
 
 //go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination interfaces_mock.go github.com/uber/cadence/service/matching/tasklist Manager
-//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination interfaces_mock.go github.com/uber/cadence/service/matching/tasklist ManagerRegistry
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination interfaces_mock.go github.com/uber/cadence/service/matching/tasklist TaskListRegistry
 //go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination interfaces_mock.go github.com/uber/cadence/service/matching/tasklist TaskMatcher
 //go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination interfaces_mock.go github.com/uber/cadence/service/matching/tasklist Forwarder
 //go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination interfaces_mock.go github.com/uber/cadence/service/matching/tasklist TaskCompleter
@@ -38,9 +38,9 @@ import (
 )
 
 type (
-	// ManagerRegistry is implemented by components that track/own task list managers.
-	// Managers notify their registry when they stop so they can be cleaned up.
-	ManagerRegistry interface {
+	// TaskListRegistry is a registry of task list managers
+	// it tracks all task list managers and provides a way to get them by identifier, domain ID, or task list name
+	TaskListRegistry interface {
 		// Register registers a manager for a given identifier.
 		// we can override the manager for the same identifier if it is already registered
 		// this case should be handled by the caller

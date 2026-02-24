@@ -203,10 +203,10 @@ func TestGetTaskListsByDomain(t *testing.T) {
 			}
 			tc.mockSetup(mockDomainCache, mockTaskListManagers, mockStickyManagers)
 
-			taskListRegistry := tasklist.NewManagerRegistry(metrics.NewNoopMetricsClient())
+			taskListRegistry := tasklist.NewTaskListRegistry(metrics.NewNoopMetricsClient())
 			engine := &matchingEngineImpl{
-				domainCache:       mockDomainCache,
-				taskListsRegistry: taskListRegistry,
+				domainCache:      mockDomainCache,
+				taskListRegistry: taskListRegistry,
 				config: &config.Config{
 					EnableReturnAllTaskListKinds: func(opts ...dynamicproperties.FilterOption) bool {
 						return tc.returnAllKinds
@@ -386,10 +386,10 @@ func TestCancelOutstandingPoll(t *testing.T) {
 			mockManager := newMockManagerWithTaskListID(mockCtrl, tasklistID)
 			executor := executorclient.NewMockExecutor[tasklist.ShardProcessor](mockCtrl)
 			tc.mockSetup(mockCtrl, mockManager, executor)
-			taskListRegistry := tasklist.NewManagerRegistry(metrics.NewNoopMetricsClient())
+			taskListRegistry := tasklist.NewTaskListRegistry(metrics.NewNoopMetricsClient())
 			engine := &matchingEngineImpl{
-				taskListsRegistry: taskListRegistry,
-				executor:          executor,
+				taskListRegistry: taskListRegistry,
+				executor:         executor,
 			}
 			taskListRegistry.Register(*tasklistID, mockManager)
 			hCtx := &handlerContext{Context: context.Background()}
@@ -571,9 +571,9 @@ func TestQueryWorkflow(t *testing.T) {
 			tasklistID := mustNewIdentifier(t, "test-domain-id", "test-tasklist", 0)
 			mockManager := newMockManagerWithTaskListID(mockCtrl, tasklistID)
 			executor := executorclient.NewMockExecutor[tasklist.ShardProcessor](mockCtrl)
-			taskListRegistry := tasklist.NewManagerRegistry(metrics.NewNoopMetricsClient())
+			taskListRegistry := tasklist.NewTaskListRegistry(metrics.NewNoopMetricsClient())
 			engine := &matchingEngineImpl{
-				taskListsRegistry:    taskListRegistry,
+				taskListRegistry:     taskListRegistry,
 				timeSource:           clock.NewRealTimeSource(),
 				lockableQueryTaskMap: lockableQueryTaskMap{queryTaskMap: make(map[string]chan *queryResult)},
 				executor:             executor,
@@ -744,7 +744,7 @@ func TestIsShuttingDown(t *testing.T) {
 		shutdownCompletion: &wg,
 		shutdown:           make(chan struct{}),
 		executor:           mockExecutor,
-		taskListsRegistry:  tasklist.NewManagerRegistry(metrics.NewNoopMetricsClient()),
+		taskListRegistry:   tasklist.NewTaskListRegistry(metrics.NewNoopMetricsClient()),
 	}
 	e.Start()
 	assert.False(t, e.isShuttingDown())
@@ -774,15 +774,15 @@ func TestGetTasklistsNotOwned(t *testing.T) {
 	e := matchingEngineImpl{
 		shutdown:           make(chan struct{}),
 		membershipResolver: resolver,
-		taskListsRegistry:  tasklist.NewManagerRegistry(metrics.NewNoopMetricsClient()),
+		taskListRegistry:   tasklist.NewTaskListRegistry(metrics.NewNoopMetricsClient()),
 		config: &config.Config{
 			EnableTasklistOwnershipGuard: func(opts ...dynamicproperties.FilterOption) bool { return true },
 		},
 		logger: log.NewNoop(),
 	}
-	e.taskListsRegistry.Register(*tl1, tl1m)
-	e.taskListsRegistry.Register(*tl2, tl2m)
-	e.taskListsRegistry.Register(*tl3, tl3m)
+	e.taskListRegistry.Register(*tl1, tl1m)
+	e.taskListRegistry.Register(*tl2, tl2m)
+	e.taskListRegistry.Register(*tl3, tl3m)
 
 	tls, err := e.getNonOwnedTasklistsLocked()
 	assert.NoError(t, err)
@@ -812,16 +812,16 @@ func TestShutDownTasklistsNotOwned(t *testing.T) {
 	e := matchingEngineImpl{
 		shutdown:           make(chan struct{}),
 		membershipResolver: resolver,
-		taskListsRegistry:  tasklist.NewManagerRegistry(metrics.NewNoopMetricsClient()),
+		taskListRegistry:   tasklist.NewTaskListRegistry(metrics.NewNoopMetricsClient()),
 		config: &config.Config{
 			EnableTasklistOwnershipGuard: func(opts ...dynamicproperties.FilterOption) bool { return true },
 		},
 		metricsClient: metrics.NewNoopMetricsClient(),
 		logger:        log.NewNoop(),
 	}
-	e.taskListsRegistry.Register(*tl1, tl1m)
-	e.taskListsRegistry.Register(*tl2, tl2m)
-	e.taskListsRegistry.Register(*tl3, tl3m)
+	e.taskListRegistry.Register(*tl1, tl1m)
+	e.taskListRegistry.Register(*tl2, tl2m)
+	e.taskListRegistry.Register(*tl3, tl3m)
 
 	wg := sync.WaitGroup{}
 
@@ -1037,11 +1037,11 @@ func TestUpdateTaskListPartitionConfig(t *testing.T) {
 			mockManager := newMockManagerWithTaskListID(mockCtrl, tasklistID)
 			mockExecutor := executorclient.NewMockExecutor[tasklist.ShardProcessor](mockCtrl)
 			tc.mockSetup(mockManager, mockCtrl, mockExecutor)
-			taskListRegistry := tasklist.NewManagerRegistry(metrics.NewNoopMetricsClient())
+			taskListRegistry := tasklist.NewTaskListRegistry(metrics.NewNoopMetricsClient())
 			engine := &matchingEngineImpl{
-				taskListsRegistry: taskListRegistry,
-				timeSource:        clock.NewRealTimeSource(),
-				domainCache:       mockDomainCache,
+				taskListRegistry: taskListRegistry,
+				timeSource:       clock.NewRealTimeSource(),
+				domainCache:      mockDomainCache,
 				config: &config.Config{
 					EnableAdaptiveScaler: dynamicproperties.GetBoolPropertyFilteredByTaskListInfo(tc.enableAdaptiveScaler),
 				},
@@ -1218,11 +1218,11 @@ func TestRefreshTaskListPartitionConfig(t *testing.T) {
 			mockManager := newMockManagerWithTaskListID(mockCtrl, tasklistID)
 			mockExecutor := executorclient.NewMockExecutor[tasklist.ShardProcessor](mockCtrl)
 			tc.mockSetup(mockManager, mockCtrl, mockExecutor)
-			taskListRegistry := tasklist.NewManagerRegistry(metrics.NewNoopMetricsClient())
+			taskListRegistry := tasklist.NewTaskListRegistry(metrics.NewNoopMetricsClient())
 			engine := &matchingEngineImpl{
-				taskListsRegistry: taskListRegistry,
-				timeSource:        clock.NewRealTimeSource(),
-				executor:          mockExecutor,
+				taskListRegistry: taskListRegistry,
+				timeSource:       clock.NewRealTimeSource(),
+				executor:         mockExecutor,
 			}
 			taskListRegistry.Register(*tasklistID, mockManager)
 			taskListRegistry.Register(*tasklistID2, mockManager)
@@ -1289,21 +1289,21 @@ func Test_domainChangeCallback(t *testing.T) {
 		failoverNotificationVersion: 1,
 		config:                      defaultTestConfig(),
 		logger:                      log.NewNoop(),
-		taskListsRegistry:           tasklist.NewManagerRegistry(metrics.NewNoopMetricsClient()),
+		taskListRegistry:            tasklist.NewTaskListRegistry(metrics.NewNoopMetricsClient()),
 		executor:                    mockExecutor,
 	}
-	engine.taskListsRegistry.Register(*tlGlobalDecision1, mockGlobalDecision1)
-	engine.taskListsRegistry.Register(*tlGlobalActivity1, mockGlobalActivity1)
-	engine.taskListsRegistry.Register(*tlGlobalDecision2, mockGlobalDecision2)
-	engine.taskListsRegistry.Register(*tlGlobalActivity2, mockGlobalActivity2)
-	engine.taskListsRegistry.Register(*tlGlobalSticky2, mockGlobalSticky2)
-	engine.taskListsRegistry.Register(*tlGlobalDecision3, mockGlobalDecision3)
-	engine.taskListsRegistry.Register(*tlGlobalActivity3, mockGlobalActivity3)
-	engine.taskListsRegistry.Register(*tlGlobalSticky3, mockGlobalSticky3)
-	engine.taskListsRegistry.Register(*tlLocalDecision1, mockLocalDecision1)
-	engine.taskListsRegistry.Register(*tlLocalActivity1, mockLocalActivity1)
-	engine.taskListsRegistry.Register(*tlActiveActiveDecision1, mockActiveActiveDecision1)
-	engine.taskListsRegistry.Register(*tlActiveActiveActivity1, mockActiveActiveActivity1)
+	engine.taskListRegistry.Register(*tlGlobalDecision1, mockGlobalDecision1)
+	engine.taskListRegistry.Register(*tlGlobalActivity1, mockGlobalActivity1)
+	engine.taskListRegistry.Register(*tlGlobalDecision2, mockGlobalDecision2)
+	engine.taskListRegistry.Register(*tlGlobalActivity2, mockGlobalActivity2)
+	engine.taskListRegistry.Register(*tlGlobalSticky2, mockGlobalSticky2)
+	engine.taskListRegistry.Register(*tlGlobalDecision3, mockGlobalDecision3)
+	engine.taskListRegistry.Register(*tlGlobalActivity3, mockGlobalActivity3)
+	engine.taskListRegistry.Register(*tlGlobalSticky3, mockGlobalSticky3)
+	engine.taskListRegistry.Register(*tlLocalDecision1, mockLocalDecision1)
+	engine.taskListRegistry.Register(*tlLocalActivity1, mockLocalActivity1)
+	engine.taskListRegistry.Register(*tlActiveActiveDecision1, mockActiveActiveDecision1)
+	engine.taskListRegistry.Register(*tlActiveActiveActivity1, mockActiveActiveActivity1)
 
 	// Eligible for failover handling is defined by isDomainEligibleToDisconnectPollers.
 	mockGlobalDecision1.EXPECT().ReleaseBlockedPollers().Times(0)       // global-domain-1 has failover version 0 (<= current 1), so not eligible.
@@ -1418,7 +1418,7 @@ func Test_registerDomainFailoverCallback(t *testing.T) {
 		failoverNotificationVersion: 0,
 		config:                      defaultTestConfig(),
 		logger:                      log.NewNoop(),
-		taskListsRegistry:           tasklist.NewManagerRegistry(metrics.NewNoopMetricsClient()),
+		taskListRegistry:            tasklist.NewTaskListRegistry(metrics.NewNoopMetricsClient()),
 	}
 
 	engine.registerDomainFailoverCallback()

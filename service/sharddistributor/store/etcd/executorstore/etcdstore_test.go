@@ -14,6 +14,7 @@ import (
 
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log/testlogger"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/sharddistributor/config"
 	"github.com/uber/cadence/service/sharddistributor/store"
@@ -770,11 +771,12 @@ func createStore(t *testing.T, tc *testhelper.StoreTestCluster) store.Store {
 	require.NoError(t, err)
 
 	store, err := NewStore(ExecutorStoreParams{
-		Client:     tc.Client,
-		ETCDConfig: etcdConfig,
-		Lifecycle:  fxtest.NewLifecycle(t),
-		Logger:     testlogger.New(t),
-		TimeSource: clock.NewMockedTimeSourceAt(time.Now()),
+		Client:        tc.Client,
+		ETCDConfig:    etcdConfig,
+		Lifecycle:     fxtest.NewLifecycle(t),
+		Logger:        testlogger.New(t),
+		TimeSource:    clock.NewMockedTimeSourceAt(time.Now()),
+		MetricsClient: metrics.NewNoopMetricsClient(),
 		Config: &config.Config{
 			LoadBalancingMode: func(namespace string) string { return config.LoadBalancingModeNAIVE },
 		},

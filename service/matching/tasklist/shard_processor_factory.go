@@ -8,7 +8,7 @@ import (
 
 // ShardProcessorFactory is a generic factory for creating ShardProcessor instances.
 type ShardProcessorFactory struct {
-	TaskListsRegistry ManagerRegistry
+	TaskListsRegistry TaskListRegistry
 	ReportTTL         time.Duration
 	TimeSource        clock.TimeSource
 }

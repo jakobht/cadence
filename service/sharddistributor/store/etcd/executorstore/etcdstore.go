@@ -14,6 +14,7 @@ import (
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/sharddistributor/config"
 	"github.com/uber/cadence/service/sharddistributor/store"
@@ -29,13 +30,14 @@ var (
 )
 
 type executorStoreImpl struct {
-	client       etcdclient.Client
-	prefix       string
-	logger       log.Logger
-	shardCache   *shardcache.ShardToExecutorCache
-	timeSource   clock.TimeSource
-	recordWriter *common.RecordWriter
-	cfg          *config.Config
+	client        etcdclient.Client
+	prefix        string
+	logger        log.Logger
+	shardCache    *shardcache.ShardToExecutorCache
+	timeSource    clock.TimeSource
+	recordWriter  *common.RecordWriter
+	cfg           *config.Config
+	metricsClient metrics.Client
 }
 
 // shardStatisticsUpdate holds the staged statistics for a shard so we can write them
@@ -49,17 +51,18 @@ type shardStatisticsUpdate struct {
 type ExecutorStoreParams struct {
 	fx.In
 
-	Client     etcdclient.Client `name:"executorstore"`
-	ETCDConfig ETCDConfig
-	Lifecycle  fx.Lifecycle
-	Logger     log.Logger
-	TimeSource clock.TimeSource
-	Config     *config.Config
+	Client        etcdclient.Client `name:"executorstore"`
+	ETCDConfig    ETCDConfig
+	Lifecycle     fx.Lifecycle
+	Logger        log.Logger
+	TimeSource    clock.TimeSource
+	Config        *config.Config
+	MetricsClient metrics.Client
 }
 
 // NewStore creates a new etcd-backed store and provides it to the fx application.
 func NewStore(p ExecutorStoreParams) (store.Store, error) {
-	shardCache := shardcache.NewShardToExecutorCache(p.ETCDConfig.Prefix, p.Client, p.Logger, p.TimeSource)
+	shardCache := shardcache.NewShardToExecutorCache(p.ETCDConfig.Prefix, p.Client, p.Logger, p.TimeSource, p.MetricsClient)
 
 	timeSource := p.TimeSource
 	if timeSource == nil {
@@ -72,13 +75,14 @@ func NewStore(p ExecutorStoreParams) (store.Store, error) {
 	}
 
 	store := &executorStoreImpl{
-		client:       p.Client,
-		prefix:       p.ETCDConfig.Prefix,
-		logger:       p.Logger,
-		shardCache:   shardCache,
-		timeSource:   timeSource,
-		recordWriter: recordWriter,
-		cfg:          p.Config,
+		client:        p.Client,
+		prefix:        p.ETCDConfig.Prefix,
+		logger:        p.Logger,
+		shardCache:    shardCache,
+		timeSource:    timeSource,
+		recordWriter:  recordWriter,
+		cfg:           p.Config,
+		metricsClient: p.MetricsClient,
 	}
 
 	p.Lifecycle.Append(fx.StartStopHook(store.Start, store.Stop))
@@ -275,6 +279,11 @@ func (s *executorStoreImpl) SubscribeToExecutorStatusChanges(ctx context.Context
 
 	go func() {
 		defer close(revisionChan)
+
+		scope := s.metricsClient.Scope(metrics.ShardDistributorWatchScope).
+			Tagged(metrics.NamespaceTag(namespace)).
+			Tagged(metrics.ShardDistributorWatchTypeTag("rebalance"))
+
 		watchChan := s.client.Watch(ctx,
 			etcdkeys.BuildExecutorsPrefix(s.prefix, namespace),
 			clientv3.WithPrefix(),
@@ -286,7 +295,12 @@ func (s *executorStoreImpl) SubscribeToExecutorStatusChanges(ctx context.Context
 				return
 			}
 
+			// Track watch metrics
+			sw := scope.StartTimer(metrics.ShardDistributorWatchProcessingLatency)
+			scope.AddCounter(metrics.ShardDistributorWatchEventsReceived, int64(len(watchResp.Events)))
+
 			if !s.hasExecutorStatusChanged(watchResp, namespace) {
+				sw.Stop()
 				continue
 			}
 
@@ -298,6 +312,7 @@ func (s *executorStoreImpl) SubscribeToExecutorStatusChanges(ctx context.Context
 			}
 
 			revisionChan <- watchResp.Header.Revision
+			sw.Stop()
 		}
 	}()
 

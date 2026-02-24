@@ -127,7 +127,7 @@ func (e *matchingEngineImpl) getNonOwnedTasklistsLocked() ([]tasklist.Manager, e
 
 	var toShutDown []tasklist.Manager
 
-	taskLists := e.taskListsRegistry.AllManagers()
+	taskLists := e.taskListRegistry.AllManagers()
 
 	self, err := e.membershipResolver.WhoAmI()
 	if err != nil {

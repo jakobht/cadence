@@ -3,7 +3,6 @@ package spectatorclient
 import (
 	"context"
 	"errors"
-	"sync"
 	"testing"
 	"time"
 
@@ -274,33 +273,20 @@ func TestWatchLoopDisabled(t *testing.T) {
 		enabled:          func() bool { return false },
 	}
 
-	spectator.Start(context.Background())
-	defer spectator.Stop()
+	err := spectator.Start(context.Background())
+	assert.NoError(t, err)
 
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		err := stateSignal.Wait(context.Background())
-		assert.Error(t, err)
-
-		// Second wait might return ErrReset (if it observes the second reset)
-		// or nil (if Stop() is called first). Both are acceptable.
-		_ = stateSignal.Wait(context.Background())
-	}()
-
-	// First sleep should reset the signal
+	// Disabled state enters a sleep loop, verify it sleeps periodically
 	timeSource.BlockUntil(1)
 	timeSource.Advance(1200 * time.Millisecond)
 
-	// Second sleep should reset the signal
 	timeSource.BlockUntil(1)
-
-	// Ensure the loop is exited
 	timeSource.Advance(1200 * time.Millisecond)
 
-	// Stop the spectator to unblock any waiting goroutines
+	// Stop exits cleanly and calls Done() on the signal
 	spectator.Stop()
 
-	wg.Wait()
+	// After Stop(), Done() has been called so Wait returns nil
+	err = stateSignal.Wait(context.Background())
+	assert.NoError(t, err)
 }

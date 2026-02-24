@@ -14,14 +14,14 @@ import (
 
 type ShardProcessorParams struct {
 	ShardID           string
-	TaskListsRegistry ManagerRegistry
+	TaskListsRegistry TaskListRegistry
 	ReportTTL         time.Duration
 	TimeSource        clock.TimeSource
 }
 
 type shardProcessorImpl struct {
 	shardID           string
-	taskListsRegistry ManagerRegistry
+	taskListsRegistry TaskListRegistry
 	Status            atomic.Int32
 	reportLock        sync.RWMutex
 	shardReport       executorclient.ShardReport

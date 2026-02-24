@@ -24,14 +24,14 @@ func mustNewIdentifier(domainID, name string, taskType int) *Identifier {
 var testIdentifier = mustNewIdentifier("domain-id", "tl", persistence.TaskListTypeDecision)
 
 type shardProcessorTestData struct {
-	mockRegistry   *MockManagerRegistry
+	mockRegistry   *MockTaskListRegistry
 	shardProcessor ShardProcessor
 }
 
 func newShardProcessorTestData(t *testing.T, taskListID *Identifier) shardProcessorTestData {
 	ctrl := gomock.NewController(t)
 
-	mockRegistry := NewMockManagerRegistry(ctrl)
+	mockRegistry := NewMockTaskListRegistry(ctrl)
 	mockRegistry.EXPECT().ManagersByTaskListName(taskListID.GetName()).Return([]Manager{}).AnyTimes()
 
 	params := ShardProcessorParams{

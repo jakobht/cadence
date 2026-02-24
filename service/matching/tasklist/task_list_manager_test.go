@@ -90,7 +90,7 @@ func setupMocksForTaskListManager(t *testing.T, taskListID *Identifier, taskList
 	deps.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("domainName", nil).Times(1)
 	config := config.NewConfig(dynamicconfig.NewCollection(dynamicClient, logger), "hostname", commonConfig.RPC{}, getIsolationgroupsHelper)
 	mockHistoryService := history.NewMockClient(ctrl)
-	mockRegistry := NewMockManagerRegistry(ctrl)
+	mockRegistry := NewMockTaskListRegistry(ctrl)
 	mockRegistry.EXPECT().Unregister(gomock.Any()).AnyTimes()
 	params := ManagerParams{
 		DomainCache:     deps.mockDomainCache,
@@ -238,7 +238,7 @@ func createTestTaskListManagerWithConfig(t *testing.T, logger log.Logger, contro
 	mockMatchingClient := matching.NewMockClient(controller)
 	mockMatchingClient.EXPECT().RefreshTaskListPartitionConfig(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 	mockHistoryService := history.NewMockClient(controller)
-	mockRegistry := NewMockManagerRegistry(controller)
+	mockRegistry := NewMockTaskListRegistry(controller)
 	mockRegistry.EXPECT().Unregister(gomock.Any()).AnyTimes()
 	tl := "tl"
 	dID := "domain"
@@ -271,7 +271,7 @@ func createTestTaskListManagerWithConfig(t *testing.T, logger log.Logger, contro
 
 func TestTaskListManagerRegistryNotification(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	mockRegistry := NewMockManagerRegistry(ctrl)
+	mockRegistry := NewMockTaskListRegistry(ctrl)
 
 	// Create a minimal task list manager for testing
 	taskListID := NewTestTaskListID(t, uuid.New(), "test-tasklist", 0)
@@ -964,7 +964,7 @@ func TestTaskListManagerGetTaskBatch(t *testing.T) {
 	cfg := defaultTestConfig()
 	cfg.RangeSize = rangeSize
 	cfg.ReadRangeSize = dynamicproperties.GetIntPropertyFn(rangeSize / 2)
-	mockRegistry := NewMockManagerRegistry(controller)
+	mockRegistry := NewMockTaskListRegistry(controller)
 	mockRegistry.EXPECT().Unregister(gomock.Any()).AnyTimes()
 	params := ManagerParams{
 		DomainCache:     mockDomainCache,
@@ -1098,7 +1098,7 @@ func TestTaskListReaderPumpAdvancesAckLevelAfterEmptyReads(t *testing.T) {
 	cfg.RangeSize = rangeSize
 	cfg.ReadRangeSize = dynamicproperties.GetIntPropertyFn(rangeSize / 2)
 
-	mockRegistry := NewMockManagerRegistry(controller)
+	mockRegistry := NewMockTaskListRegistry(controller)
 	mockRegistry.EXPECT().Unregister(gomock.Any()).AnyTimes()
 	params := ManagerParams{
 		DomainCache:     mockDomainCache,
@@ -1248,7 +1248,7 @@ func TestTaskExpiryAndCompletion(t *testing.T) {
 			// set idle timer check to a really small value to assert that we don't accidentally drop tasks while blocking
 			// on enqueuing a task to task buffer
 			cfg.IdleTasklistCheckInterval = dynamicproperties.GetDurationPropertyFnFilteredByTaskListInfo(20 * time.Millisecond)
-			mockRegistry := NewMockManagerRegistry(controller)
+			mockRegistry := NewMockTaskListRegistry(controller)
 			mockRegistry.EXPECT().Unregister(gomock.Any()).AnyTimes()
 			params := ManagerParams{
 				DomainCache:     mockDomainCache,
