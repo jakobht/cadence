@@ -551,7 +551,7 @@ func (s *executorStoreImpl) AssignShard(ctx context.Context, namespace, shardID,
 			return fmt.Errorf("checking shard owner: %w", err)
 		}
 		if err == nil {
-			return &store.ErrShardAlreadyAssigned{ShardID: shardID, AssignedTo: shardOwner.ExecutorID}
+			return &store.ErrShardAlreadyAssigned{ShardID: shardID, AssignedTo: shardOwner.ExecutorID, Metadata: shardOwner.Metadata}
 		}
 
 		// TODO: Extract to higher level so that statistics updates are prepared
