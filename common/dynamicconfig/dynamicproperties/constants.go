@@ -2265,6 +2265,14 @@ const (
 	// Allowed filters: DomainName
 	EnforceDecisionTaskAttempts
 
+	// MatchingExcludeShortLivedTaskListsFromShardManager excludes short-lived task lists (e.g. bits task lists and sticky task lists)
+	// from using the shard manager to handle these shards. These short-lived task lists are assigned using hash_ring.
+	// KeyName: matching.excludeShortLivedTaskListsFromShardManager
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: N/A
+	MatchingExcludeShortLivedTaskListsFromShardManager
+
 	// LastBoolKey must be the last one in this const group
 	LastBoolKey
 )
@@ -4934,6 +4942,11 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		KeyName:      "history.enforceDecisionTaskAttempts",
 		Filters:      []Filter{DomainName},
 		Description:  "EnforceDecisionTaskAttempts is the key for enforcing decision retry attempts limit in case of timeouts",
+		DefaultValue: false,
+	},
+	MatchingExcludeShortLivedTaskListsFromShardManager: {
+		KeyName:      "matching.excludeShortLivedTaskListsFromShardManager",
+		Description:  "MatchingExcludeShortLivedTaskListsFromShardManager excludes short-lived task lists (e.g. bits task lists and sticky task lists) from the shard manager",
 		DefaultValue: false,
 	},
 }
