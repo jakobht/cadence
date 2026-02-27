@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestTaskListOwnedByShardDistributor(t *testing.T) {
+func TestTaskListExcludedFromShardDistributor(t *testing.T) {
 	tests := []struct {
 		name         string
 		taskListName string
@@ -50,7 +50,7 @@ func TestTaskListOwnedByShardDistributor(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := TaskListOwnedByShardDistributor(tt.taskListName)
+			got := TaskListExcludedFromShardDistributor(tt.taskListName)
 			assert.Equal(t, tt.want, got)
 		})
 	}
