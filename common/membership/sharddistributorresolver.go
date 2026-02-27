@@ -49,11 +49,11 @@ const (
 )
 
 type shardDistributorResolver struct {
-	shardDistributionMode        dynamicproperties.StringPropertyFn
-	excludeShortLivedTaskLists   dynamicproperties.BoolPropertyFn
-	spectator                    spectatorclient.Spectator
-	ring                         SingleProvider
-	logger                       log.Logger
+	shardDistributionMode      dynamicproperties.StringPropertyFn
+	excludeShortLivedTaskLists dynamicproperties.BoolPropertyFn
+	spectator                  spectatorclient.Spectator
+	ring                       SingleProvider
+	logger                     log.Logger
 }
 
 func (s shardDistributorResolver) AddressToHost(owner string) (HostInfo, error) {
