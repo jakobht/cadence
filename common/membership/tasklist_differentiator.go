@@ -6,7 +6,7 @@ const uuidRegex = `[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[
 var uuidRegexp = regexp.MustCompile(uuidRegex)
 
 func TaskListOwnedByShardDistributor(taskListName string) bool {
-	// this regex checks if the task list name has a UUID, if it has we
-	// consider it a short lived tasklist, that will not be manage by the shard distributor
-	return uuidRegexp.MatchString(taskListName)
+	// This regex checks if the task list name has a UUID, if it does we
+	// consider it a short lived tasklist that will not be managed by the shard distributor.
+	return !uuidRegexp.MatchString(taskListName)
 }

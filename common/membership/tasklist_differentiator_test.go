@@ -15,37 +15,37 @@ func TestTaskListOwnedByShardDistributor(t *testing.T) {
 		{
 			name:         "task list with UUID",
 			taskListName: "tasklist-550e8400-e29b-41d4-a716-446655440000",
-			want:         true,
+			want:         false,
 		},
 		{
 			name:         "task list with uppercase UUID",
 			taskListName: "tasklist-550E8400-E29B-41D4-A716-446655440000",
-			want:         true,
+			want:         false,
 		},
 		{
 			name:         "task list name is UUID only",
 			taskListName: "550e8400-e29b-41d4-a716-446655440000",
-			want:         true,
+			want:         false,
 		},
 		{
 			name:         "task list without UUID",
 			taskListName: "my-task-list",
-			want:         false,
+			want:         true,
 		},
 		{
 			name:         "empty task list name",
 			taskListName: "",
-			want:         false,
+			want:         true,
 		},
 		{
 			name:         "task list with partial UUID-like string",
 			taskListName: "tasklist-550e8400-e29b",
-			want:         false,
+			want:         true,
 		},
 		{
 			name:         "task list with UUID prefix",
 			taskListName: "550e8400-e29b-41d4-a716-446655440000-suffix",
-			want:         true,
+			want:         false,
 		},
 	}
 	for _, tt := range tests {
