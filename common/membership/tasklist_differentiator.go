@@ -2,6 +2,7 @@ package membership
 
 import (
 	"regexp"
+
 	"github.com/dgryski/go-farm"
 )
 
@@ -21,5 +22,5 @@ func belowpercentage(taskListName string, percentageOnboarded uint64) bool {
 }
 
 func isbelowPercentage(hash uint64, percentageOnboarded uint64) bool {
-	return hash % 100 < percentageOnboarded
+	return hash%100 < percentageOnboarded
 }

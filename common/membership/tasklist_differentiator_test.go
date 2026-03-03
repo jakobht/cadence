@@ -58,41 +58,41 @@ func TestTaskListExcludedFromShardDistributor(t *testing.T) {
 
 func TestIsbelowPercentage(t *testing.T) {
 	tests := []struct {
-		name string
-		hash uint64
+		name       string
+		hash       uint64
 		percentage uint64
-		want bool
+		want       bool
 	}{
 		{
-			name: "hash and percentage are 0",
-			hash: 0,
+			name:       "hash and percentage are 0",
+			hash:       0,
 			percentage: 0,
-			want: false,
+			want:       false,
 		},
 
 		{
-			name: "hash is 0 and percentage is 1",
-			hash: 0,
+			name:       "hash is 0 and percentage is 1",
+			hash:       0,
 			percentage: 1,
-			want: true,
+			want:       true,
 		},
 		{
-			name: "hash is 100 and percentage is 1 (we wrap)",
-			hash: 100,
+			name:       "hash is 100 and percentage is 1 (we wrap)",
+			hash:       100,
 			percentage: 1,
-			want: true,
+			want:       true,
 		},
 		{
-			name: "hash is same as percentage",
-			hash: 33,
+			name:       "hash is same as percentage",
+			hash:       33,
 			percentage: 33,
-			want: false,
+			want:       false,
 		},
 		{
-			name: "hash is big",
-			hash: 10000000000033,
+			name:       "hash is big",
+			hash:       10000000000033,
 			percentage: 34,
-			want: true,
+			want:       true,
 		},
 	}
 	for _, tt := range tests {
