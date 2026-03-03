@@ -1,10 +1,8 @@
 package membership
 
 import (
-	"fmt"
 	"testing"
 
-	"github.com/dgryski/go-farm"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -84,7 +82,6 @@ func TestTaskListExcludedFromShardDistributor(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			fmt.Println(farm.Fingerprint64([]byte(tt.taskListName)) % 100)
 			got := TaskListExcludedFromShardDistributor(tt.taskListName, tt.percentageOnboarded)
 			assert.Equal(t, tt.want, got)
 		})
