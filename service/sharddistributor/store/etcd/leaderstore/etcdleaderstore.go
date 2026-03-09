@@ -12,6 +12,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/service/sharddistributor/config"
 	"github.com/uber/cadence/service/sharddistributor/store"
+	"github.com/uber/cadence/service/sharddistributor/store/etcd/etcdclient"
 )
 
 const (
@@ -21,7 +22,7 @@ const (
 )
 
 type LeaderStore struct {
-	client         *clientv3.Client
+	client         etcdclient.Client
 	electionConfig etcdCfg
 }
 
@@ -36,47 +37,31 @@ type etcdCfg struct {
 type StoreParams struct {
 	fx.In
 
-	Client    *clientv3.Client `optional:"true"`
-	Cfg       config.ShardDistribution
-	Lifecycle fx.Lifecycle
-	Logger    log.Logger
+	Client etcdclient.Client `name:"leaderstore"`
+	Cfg    config.ShardDistribution
+	Logger log.Logger
 }
 
 // NewLeaderStore creates a new leaderstore backed by ETCD.
 func NewLeaderStore(p StoreParams) (store.Elector, error) {
-	var err error
-
 	var out etcdCfg
 	if err := p.Cfg.LeaderStore.StorageParams.Decode(&out); err != nil {
 		return nil, fmt.Errorf("bad config: %w", err)
-	}
-
-	etcdClient := p.Client
-	if etcdClient == nil {
-		etcdClient, err = clientv3.New(clientv3.Config{
-			Endpoints:   out.Endpoints,
-			DialTimeout: out.DialTimeout,
-		})
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	if out.ElectionTTL == 0 {
 		out.ElectionTTL = defaultElectionTTL
 	}
 
-	p.Lifecycle.Append(fx.StopHook(etcdClient.Close))
-
 	return &LeaderStore{
-		client:         etcdClient,
+		client:         p.Client,
 		electionConfig: out,
 	}, nil
 }
 
 func (ls *LeaderStore) CreateElection(ctx context.Context, namespace string) (el store.Election, err error) {
 	// Create a new session for election
-	session, err := concurrency.NewSession(ls.client,
+	session, err := ls.client.NewSession(
 		concurrency.WithTTL(int(ls.electionConfig.ElectionTTL.Seconds())),
 		concurrency.WithContext(ctx))
 	if err != nil {

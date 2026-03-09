@@ -11,11 +11,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 	clientv3 "go.etcd.io/etcd/client/v3"
-	"go.uber.org/fx/fxtest"
 	"gopkg.in/yaml.v2"
 
 	"github.com/uber/cadence/service/sharddistributor/config"
 	"github.com/uber/cadence/service/sharddistributor/store"
+	"github.com/uber/cadence/service/sharddistributor/store/etcd/etcdclient"
 	"github.com/uber/cadence/testflags"
 )
 
@@ -211,7 +211,7 @@ func setupETCDCluster(t *testing.T) *testCluster {
 	testflags.RequireEtcd(t)
 
 	endpoints := strings.Split(os.Getenv("ETCD_ENDPOINTS"), ",")
-	if endpoints == nil || len(endpoints) == 0 || endpoints[0] == "" {
+	if len(endpoints) == 0 || endpoints[0] == "" {
 		// default etcd port
 		endpoints = []string{"localhost:2379"}
 	}
@@ -225,10 +225,18 @@ func setupETCDCluster(t *testing.T) *testCluster {
 		ElectionTTL: 5 * time.Second,
 	}
 
+	// Create etcd client
+	rawClient, err := clientv3.New(clientv3.Config{
+		Endpoints:   endpoints,
+		DialTimeout: 5 * time.Second,
+	})
+	require.NoError(t, err)
+	t.Cleanup(func() { rawClient.Close() })
+
 	// Create store
 	storeParams := StoreParams{
-		Cfg:       config.ShardDistribution{LeaderStore: config.Store{StorageParams: createConfig(t, testConfig)}},
-		Lifecycle: fxtest.NewLifecycle(t),
+		Client: etcdclient.NewClient(rawClient),
+		Cfg:    config.ShardDistribution{LeaderStore: config.Store{StorageParams: createConfig(t, testConfig)}},
 	}
 
 	store, err := NewLeaderStore(storeParams)

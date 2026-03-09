@@ -371,7 +371,7 @@ func TestGuardedOperations(t *testing.T) {
 
 	// 1. Create two potential leaders
 	// FIX: Use the correct constructor for the leader elector.
-	elector, err := leaderstore.NewLeaderStore(leaderstore.StoreParams{Client: tc.Client, Cfg: tc.LeaderCfg, Lifecycle: fxtest.NewLifecycle(t)})
+	elector, err := leaderstore.NewLeaderStore(leaderstore.StoreParams{Client: tc.Client, Cfg: tc.LeaderCfg})
 	require.NoError(t, err)
 	election1, err := elector.CreateElection(ctx, namespace)
 	defer election1.Cleanup(ctx)
