@@ -5,39 +5,10 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	clientv3 "go.etcd.io/etcd/client/v3"
-	"go.uber.org/fx/fxtest"
 	"gopkg.in/yaml.v2"
 
 	"github.com/uber/cadence/service/sharddistributor/config"
 )
-
-func TestNewClient_WithProvidedClient(t *testing.T) {
-	mockClient := &clientv3.Client{}
-	params := ClientParams{
-		Client: mockClient,
-	}
-
-	output, err := NewClient(params)
-
-	require.NoError(t, err)
-	require.Equal(t, mockClient, output.Client)
-}
-
-func TestNewClient_WithInvalidConfig(t *testing.T) {
-	params := ClientParams{
-		Cfg: ETCDConfig{
-			Endpoints:   []string{},
-			DialTimeout: 5 * time.Second,
-		},
-		Lifecycle: fxtest.NewLifecycle(t),
-	}
-
-	output, err := NewClient(params)
-
-	require.Error(t, err)
-	require.Nil(t, output.Client)
-}
 
 func TestNewETCDConfig_WithValidConfig(t *testing.T) {
 	etcdCfg := ETCDConfig{
