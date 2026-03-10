@@ -5,7 +5,6 @@ import (
 
 	"go.uber.org/fx"
 
-	"github.com/uber/cadence/service/sharddistributor/config"
 	"github.com/uber/cadence/service/sharddistributor/store/etcd/etcdclient"
 	"github.com/uber/cadence/service/sharddistributor/store/etcd/executorstore"
 	"github.com/uber/cadence/service/sharddistributor/store/etcd/leaderstore"
@@ -14,6 +13,8 @@ import (
 var Module = fx.Module("etcd",
 	executorstore.Module,
 	fx.Provide(leaderstore.NewLeaderStore),
+	fx.Provide(etcdclient.NewExecutorStoreConfig),
+	fx.Provide(etcdclient.NewLeaderStoreConfig),
 	fx.Provide(NewExecutorStoreClient),
 	fx.Provide(NewLeaderStoreClient),
 )
@@ -26,11 +27,8 @@ type ExecutorStoreClientOutput struct {
 }
 
 // NewExecutorStoreClient creates a new ETCD client for the executor store.
-func NewExecutorStoreClient(cfg executorstore.ETCDConfig, lc fx.Lifecycle) (ExecutorStoreClientOutput, error) {
-	client, err := etcdclient.NewClientFromConfig(etcdclient.ClientConfig{
-		Endpoints:   cfg.Endpoints,
-		DialTimeout: cfg.DialTimeout,
-	}, lc)
+func NewExecutorStoreClient(cfg etcdclient.ExecutorStoreConfig, lc fx.Lifecycle) (ExecutorStoreClientOutput, error) {
+	client, err := etcdclient.NewClientFromConfig(cfg.BaseConfig, lc)
 	if err != nil {
 		return ExecutorStoreClientOutput{}, fmt.Errorf("executor store client: %w", err)
 	}
@@ -45,13 +43,8 @@ type LeaderStoreClientOutput struct {
 }
 
 // NewLeaderStoreClient creates a new ETCD client for the leader store.
-func NewLeaderStoreClient(cfg config.ShardDistribution, lc fx.Lifecycle) (LeaderStoreClientOutput, error) {
-	var clientCfg etcdclient.ClientConfig
-	if err := cfg.LeaderStore.StorageParams.Decode(&clientCfg); err != nil {
-		return LeaderStoreClientOutput{}, fmt.Errorf("bad config for leader store client: %w", err)
-	}
-
-	client, err := etcdclient.NewClientFromConfig(clientCfg, lc)
+func NewLeaderStoreClient(cfg etcdclient.LeaderStoreConfig, lc fx.Lifecycle) (LeaderStoreClientOutput, error) {
+	client, err := etcdclient.NewClientFromConfig(cfg.BaseConfig, lc)
 	if err != nil {
 		return LeaderStoreClientOutput{}, fmt.Errorf("leader store client: %w", err)
 	}
