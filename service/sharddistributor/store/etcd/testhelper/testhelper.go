@@ -21,7 +21,7 @@ import (
 type StoreTestCluster struct {
 	EtcdPrefix  string
 	Namespace   string
-	LeaderCfg   config.ShardDistribution
+	SDConfig    config.ShardDistribution
 	Client      etcdclient.Client
 	Compression string
 }
@@ -54,7 +54,7 @@ func SetupStoreTestCluster(t *testing.T) *StoreTestCluster {
 	err = yaml.Unmarshal(yamlCfg, &yamlNode)
 	require.NoError(t, err)
 
-	leaderCfg := config.ShardDistribution{
+	sdConfig := config.ShardDistribution{
 		Store:       config.Store{StorageParams: yamlNode},
 		LeaderStore: config.Store{StorageParams: yamlNode},
 	}
@@ -69,7 +69,7 @@ func SetupStoreTestCluster(t *testing.T) *StoreTestCluster {
 	return &StoreTestCluster{
 		Namespace:  namespace,
 		EtcdPrefix: etcdPrefix,
-		LeaderCfg:  leaderCfg,
+		SDConfig:   sdConfig,
 		Client:     etcdclient.NewClient(rawClient),
 	}
 }

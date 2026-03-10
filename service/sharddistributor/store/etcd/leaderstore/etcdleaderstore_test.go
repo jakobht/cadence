@@ -11,9 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	clientv3 "go.etcd.io/etcd/client/v3"
-	"gopkg.in/yaml.v2"
 
-	"github.com/uber/cadence/service/sharddistributor/config"
 	"github.com/uber/cadence/service/sharddistributor/store"
 	"github.com/uber/cadence/service/sharddistributor/store/etcd/etcdclient"
 	"github.com/uber/cadence/testflags"
@@ -199,7 +197,7 @@ func TestSessionDone(t *testing.T) {
 // testCluster represents a test etcd cluster with its resources
 type testCluster struct {
 	store       store.Elector
-	storeConfig etcdCfg
+	storeConfig etcdclient.LeaderStoreConfig
 	endpoints   []string
 }
 
@@ -218,10 +216,12 @@ func setupETCDCluster(t *testing.T) *testCluster {
 
 	t.Logf("ETCD endpoints: %v", endpoints)
 
-	testConfig := etcdCfg{
-		Endpoints:   endpoints,
-		DialTimeout: 5 * time.Second,
-		Prefix:      fmt.Sprintf("/election/%s", t.Name()),
+	testConfig := etcdclient.LeaderStoreConfig{
+		BaseConfig: etcdclient.BaseConfig{
+			Endpoints:   endpoints,
+			DialTimeout: 5 * time.Second,
+			Prefix:      fmt.Sprintf("/election/%s", t.Name()),
+		},
 		ElectionTTL: 5 * time.Second,
 	}
 
@@ -236,7 +236,7 @@ func setupETCDCluster(t *testing.T) *testCluster {
 	// Create store
 	storeParams := StoreParams{
 		Client: etcdclient.NewClient(rawClient),
-		Cfg:    config.ShardDistribution{LeaderStore: config.Store{StorageParams: createConfig(t, testConfig)}},
+		Cfg:    testConfig,
 	}
 
 	store, err := NewLeaderStore(storeParams)
@@ -247,18 +247,4 @@ func setupETCDCluster(t *testing.T) *testCluster {
 		storeConfig: testConfig,
 		endpoints:   endpoints,
 	}
-}
-
-func createConfig(t *testing.T, cfg etcdCfg) *config.YamlNode {
-	t.Helper()
-
-	yamlCfg, err := yaml.Marshal(cfg)
-	require.NoError(t, err)
-
-	var res *config.YamlNode
-
-	err = yaml.Unmarshal(yamlCfg, &res)
-	require.NoError(t, err)
-
-	return res
 }
