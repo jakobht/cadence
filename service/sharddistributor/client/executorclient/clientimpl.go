@@ -107,6 +107,7 @@ type executorImpl[SP ShardProcessor] struct {
 	processLoopWG          sync.WaitGroup
 	assignmentMutex        sync.Mutex
 	metrics                tally.Scope
+	hostMetrics            tally.Scope
 	migrationMode          atomic.Int32
 	metadata               syncExecutorMetadata
 	drainObserver          clientcommon.DrainSignalObserver
@@ -147,7 +148,7 @@ func (e *executorImpl[SP]) GetShardProcess(ctx context.Context, shardID string) 
 		if e.getMigrationMode() == types.MigrationModeLOCALPASSTHROUGH {
 			// Fail immediately if we are in LOCAL_PASSTHROUGH mode
 			var zero SP
-			return zero, fmt.Errorf("shard process not found for shard ID: %s", shardID)
+			return zero, fmt.Errorf("%w for shard ID: %s", ErrShardProcessNotFound, shardID)
 		}
 
 		// Do a heartbeat and check again
@@ -161,7 +162,7 @@ func (e *executorImpl[SP]) GetShardProcess(ctx context.Context, shardID string) 
 		shardProcess, ok = e.managedProcessors.Load(shardID)
 		if !ok {
 			var zero SP
-			return zero, fmt.Errorf("shard process not found for shard ID: %s", shardID)
+			return zero, fmt.Errorf("%w for shard ID: %s", ErrShardProcessNotFound, shardID)
 		}
 	}
 
@@ -361,7 +362,7 @@ func (e *executorImpl[SP]) sendHeartbeat(ctx context.Context, status types.Execu
 		return true
 	})
 
-	e.metrics.Gauge(metricsconstants.ShardDistributorExecutorOwnedShards).Update(float64(len(shardStatusReports)))
+	e.hostMetrics.Gauge(metricsconstants.ShardDistributorExecutorOwnedShards).Update(float64(len(shardStatusReports)))
 
 	// Create the request
 	request := &types.ExecutorHeartbeatRequest{
