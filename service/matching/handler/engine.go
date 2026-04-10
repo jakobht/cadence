@@ -1015,7 +1015,7 @@ func (e *matchingEngineImpl) RespondQueryTaskCompleted(hCtx *handlerContext, req
 func (e *matchingEngineImpl) deliverQueryResult(taskID string, queryResult *queryResult) error {
 	queryResultCh, ok := e.lockableQueryTaskMap.get(taskID)
 	if !ok {
-		return &types.InternalServiceError{Message: "query task not found, or already expired"}
+		return &types.EntityNotExistsError{Message: "query task not found, or already expired"}
 	}
 	queryResultCh <- queryResult
 	return nil
