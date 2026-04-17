@@ -94,7 +94,6 @@ func (p *ShardProcessor) process() {
 			p.logger.Debug("Stopping shard processor", zap.String("shardID", p.shardID), zap.Int("steps", p.processSteps), zap.String("status", types.ShardStatus(p.status.Load()).String()))
 			return
 		case <-ticker.Chan():
-		case <-ticker.Chan():
 			p.processSteps++
 			p.metricsScope.Counter(canarymetrics.CanaryShardProcessStep).Inc(1)
 			if rand.Intn(shardProcessorDoneChance) == 0 {
