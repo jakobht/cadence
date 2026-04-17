@@ -19,12 +19,10 @@ import (
 // This is a small shard processor, the only thing it currently does it
 // count the number of steps it has processed and log that information.
 const (
-	processInterval = 10 * time.Second
-
 	// We create a new shard every second. For each of them we have a chance of them to be done of 1/60 every second.
 	// This means the average time to complete a shard is 60 seconds.
 	// It also means we in average have 60 shards per instance running at any given time.
-	stopInterval             = 1 * time.Second
+	processInterval          = 1 * time.Second
 	shardProcessorDoneChance = 60
 )
 
@@ -90,18 +88,14 @@ func (p *ShardProcessor) process() {
 	ticker := p.timeSource.NewTicker(processInterval)
 	defer ticker.Stop()
 
-	stopTicker := p.timeSource.NewTicker(stopInterval)
-	defer stopTicker.Stop()
-
 	for {
 		select {
 		case <-p.stopChan:
 			p.logger.Info("Stopping shard processor", zap.String("shardID", p.shardID), zap.Int("steps", p.processSteps), zap.String("status", types.ShardStatus(p.status.Load()).String()))
 			return
 		case <-ticker.Chan():
-			p.logger.Info("Processing shard", zap.String("shardID", p.shardID), zap.Int("steps", p.processSteps), zap.String("status", types.ShardStatus(p.status.Load()).String()))
-		case <-stopTicker.Chan():
 			p.processSteps++
+			p.metricsScope.Counter(canarymetrics.CanaryShardProcessStep).Inc(1)
 			if rand.Intn(shardProcessorDoneChance) == 0 {
 				p.logger.Info("Setting shard processor to done", zap.String("shardID", p.shardID), zap.Int("steps", p.processSteps), zap.String("status", types.ShardStatus(p.status.Load()).String()))
 				p.metricsScope.Counter(canarymetrics.CanaryShardDone).Inc(1)

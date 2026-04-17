@@ -94,6 +94,7 @@ func (p *ShardProcessor) process() {
 			return
 		case <-ticker.Chan():
 			p.processSteps++
+			p.metricsScope.Counter(canarymetrics.CanaryShardProcessStep).Inc(1)
 			p.logger.Info("Processing shard", zap.String("shardID", p.shardID), zap.Int("steps", p.processSteps))
 		}
 	}

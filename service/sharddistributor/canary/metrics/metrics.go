@@ -14,7 +14,8 @@ const (
 	CanaryShardCreated = "canary_shard_created"
 	CanaryShardStarted = "canary_shard_started"
 	CanaryShardStopped = "canary_shard_stopped"
-	CanaryShardDone    = "canary_shard_done"
+	CanaryShardDone        = "canary_shard_done"
+	CanaryShardProcessStep = "canary_shard_process_step"
 
 	// Histogram metrics
 	CanaryPingLatency = "canary_ping_latency"
