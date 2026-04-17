@@ -67,8 +67,6 @@ func TestWatchLoopBasicFlow(t *testing.T) {
 		return nil, streamCtx.Err()
 	})
 
-	mockStream.EXPECT().CloseSend().Return(nil)
-
 	ctx := context.Background()
 	err := spectator.Start(ctx)
 	require.NoError(t, err)
@@ -136,8 +134,6 @@ func TestGetShardOwner_CacheMiss_FallbackToRPC(t *testing.T) {
 		return nil, streamCtx.Err()
 	})
 
-	mockStream.EXPECT().CloseSend().Return(nil)
-
 	// Expect RPC fallback for unknown shard
 	mockClient.EXPECT().
 		GetShardOwner(gomock.Any(), &types.GetShardOwnerRequest{
@@ -199,7 +195,6 @@ func TestStreamReconnection(t *testing.T) {
 		Return(mockStream1, nil)
 
 	mockStream1.EXPECT().Recv().Return(nil, errors.New("network error"))
-	mockStream1.EXPECT().CloseSend().Return(nil)
 
 	// Second stream succeeds
 	mockClient.EXPECT().
@@ -218,8 +213,6 @@ func TestStreamReconnection(t *testing.T) {
 		return nil, errors.New("shutdown")
 	})
 
-	mockStream2.EXPECT().CloseSend().Return(nil)
-
 	spectator.Start(context.Background())
 	defer func() {
 		cancelStream()
@@ -227,7 +220,9 @@ func TestStreamReconnection(t *testing.T) {
 	}()
 
 	// Wait for the goroutine to be blocked in Sleep, then advance time
-	mockTimeSource.BlockUntil(1) // Wait for 1 goroutine to be blocked in Sleep
+	// BlockUntil(2) because connectState creates an AfterFunc timer (waiter #1)
+	// and the retry SleepWithContext creates another (waiter #2)
+	mockTimeSource.BlockUntil(2)
 	mockTimeSource.Advance(2 * time.Second)
 
 	require.NoError(t, spectator.firstStateSignal.Wait(context.Background()))
