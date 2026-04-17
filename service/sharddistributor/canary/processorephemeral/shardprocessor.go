@@ -62,7 +62,7 @@ func (p *ShardProcessor) GetShardReport() executorclient.ShardReport {
 
 // Start implements executorclient.ShardProcessor.
 func (p *ShardProcessor) Start(_ context.Context) error {
-	p.logger.Info("Starting shard processor", zap.String("shardID", p.shardID))
+	p.logger.Debug("Starting shard processor", zap.String("shardID", p.shardID))
 	p.goRoutineWg.Add(1)
 	go p.process()
 	return nil
@@ -90,14 +90,14 @@ func (p *ShardProcessor) process() {
 	for {
 		select {
 		case <-p.stopChan:
-			p.logger.Info("Stopping shard processor", zap.String("shardID", p.shardID), zap.Int("steps", p.processSteps), zap.String("status", types.ShardStatus(p.status.Load()).String()))
+			p.logger.Debug("Stopping shard processor", zap.String("shardID", p.shardID), zap.Int("steps", p.processSteps), zap.String("status", types.ShardStatus(p.status.Load()).String()))
 			return
 		case <-ticker.Chan():
-			p.logger.Info("Processing shard", zap.String("shardID", p.shardID), zap.Int("steps", p.processSteps), zap.String("status", types.ShardStatus(p.status.Load()).String()))
+			p.logger.Debug("Processing shard", zap.String("shardID", p.shardID), zap.Int("steps", p.processSteps), zap.String("status", types.ShardStatus(p.status.Load()).String()))
 		case <-stopTicker.Chan():
 			p.processSteps++
 			if rand.Intn(shardProcessorDoneChance) == 0 {
-				p.logger.Info("Setting shard processor to done", zap.String("shardID", p.shardID), zap.Int("steps", p.processSteps), zap.String("status", types.ShardStatus(p.status.Load()).String()))
+				p.logger.Debug("Setting shard processor to done", zap.String("shardID", p.shardID), zap.Int("steps", p.processSteps), zap.String("status", types.ShardStatus(p.status.Load()).String()))
 				p.SetShardStatus(types.ShardStatusDONE)
 			}
 		}

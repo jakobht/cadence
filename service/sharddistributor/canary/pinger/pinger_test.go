@@ -38,6 +38,7 @@ func TestPingerPingRandomShard(t *testing.T) {
 		name            string
 		setupClientMock func(*MockShardDistributorExecutorCanaryAPIYARPCClient)
 		expectedLog     string
+		expectedCount   int
 	}{
 		{
 			name: "owns shard",
@@ -48,7 +49,8 @@ func TestPingerPingRandomShard(t *testing.T) {
 						ExecutorId: "127.0.0.1:7953",
 					}, nil)
 			},
-			expectedLog: "Successfully pinged shard owner",
+			expectedLog:   "Successfully pinged shard owner",
+			expectedCount: 0,
 		},
 		{
 			name: "does not own shard",
@@ -60,7 +62,8 @@ func TestPingerPingRandomShard(t *testing.T) {
 						ExecutorId: "127.0.0.1:7953",
 					}, nil)
 			},
-			expectedLog: "Executor does not own shard",
+			expectedLog:   "Executor does not own shard",
+			expectedCount: 1,
 		},
 		{
 			name: "RPC error",
@@ -69,7 +72,8 @@ func TestPingerPingRandomShard(t *testing.T) {
 					Ping(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil, errors.New("network error"))
 			},
-			expectedLog: "Failed to ping shard",
+			expectedLog:   "Failed to ping shard",
+			expectedCount: 1,
 		},
 	}
 
@@ -91,7 +95,7 @@ func TestPingerPingRandomShard(t *testing.T) {
 
 			pinger.pingRandomShard()
 
-			assert.Equal(t, 1, logs.FilterMessage(tt.expectedLog).Len())
+			assert.Equal(t, tt.expectedCount, logs.FilterMessage(tt.expectedLog).Len())
 		})
 	}
 }
