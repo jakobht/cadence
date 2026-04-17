@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/uber-go/tally"
 	"go.uber.org/goleak"
 	"go.uber.org/mock/gomock"
 	"go.uber.org/zap"
@@ -25,6 +26,7 @@ func TestPingerStartStop(t *testing.T) {
 		Logger:       zap.NewNop(),
 		TimeSource:   clock.NewRealTimeSource(),
 		CanaryClient: mockClient,
+		MetricsScope: tally.NoopScope,
 	}, "test-ns", 10)
 
 	pinger.Start(context.Background())
@@ -88,6 +90,7 @@ func TestPingerPingRandomShard(t *testing.T) {
 				Logger:       logger,
 				TimeSource:   clock.NewRealTimeSource(),
 				CanaryClient: mockClient,
+				MetricsScope: tally.NoopScope,
 			}, "test-ns", 10)
 			pinger.ctx = context.Background()
 
