@@ -63,7 +63,7 @@ func (p *ShardProcessor) GetShardReport() executorclient.ShardReport {
 // Start implements executorclient.ShardProcessor.
 func (p *ShardProcessor) Start(_ context.Context) error {
 	p.metricsScope.Counter(canarymetrics.CanaryShardStarted).Inc(1)
-	p.logger.Info("Starting shard processor", zap.String("shardID", p.shardID))
+	p.logger.Debug("Starting shard processor", zap.String("shardID", p.shardID))
 	p.goRoutineWg.Add(1)
 	go p.process()
 	return nil
@@ -72,7 +72,7 @@ func (p *ShardProcessor) Start(_ context.Context) error {
 // Stop implements executorclient.ShardProcessor.
 func (p *ShardProcessor) Stop() {
 	p.metricsScope.Counter(canarymetrics.CanaryShardStopped).Inc(1)
-	p.logger.Info("Stopping shard processor", zap.String("shardID", p.shardID))
+	p.logger.Debug("Stopping shard processor", zap.String("shardID", p.shardID))
 	close(p.stopChan)
 	p.goRoutineWg.Wait()
 }
@@ -90,12 +90,12 @@ func (p *ShardProcessor) process() {
 	for {
 		select {
 		case <-p.stopChan:
-			p.logger.Info("Stopping shard processor", zap.String("shardID", p.shardID), zap.Int("steps", p.processSteps))
+			p.logger.Debug("Stopping shard processor", zap.String("shardID", p.shardID), zap.Int("steps", p.processSteps))
 			return
 		case <-ticker.Chan():
 			p.processSteps++
 			p.metricsScope.Counter(canarymetrics.CanaryShardProcessStep).Inc(1)
-			p.logger.Info("Processing shard", zap.String("shardID", p.shardID), zap.Int("steps", p.processSteps))
+			p.logger.Debug("Processing shard", zap.String("shardID", p.shardID), zap.Int("steps", p.processSteps))
 		}
 	}
 }

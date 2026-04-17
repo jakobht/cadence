@@ -42,7 +42,6 @@ func PingShard(ctx context.Context, canaryClient sharddistributorv1.ShardDistrib
 		logger.Warn("Executor does not own shard", zap.String("namespace", namespace), zap.String("shard_key", shardKey), zap.String("executor_id", response.GetExecutorId()))
 		return
 	}
-
 	metricsScope.Counter(canarymetrics.CanaryPingSuccess).Inc(1)
-	logger.Info("Successfully pinged shard owner", zap.String("namespace", namespace), zap.String("shard_key", shardKey), zap.String("executor_id", response.GetExecutorId()))
+	logger.Debug("Successfully pinged shard owner", zap.String("namespace", namespace), zap.String("shard_key", shardKey), zap.String("executor_id", response.GetExecutorId()))
 }
