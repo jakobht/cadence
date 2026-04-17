@@ -7,10 +7,12 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber-go/tally"
 	"go.uber.org/zap"
 
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/types"
+	canarymetrics "github.com/uber/cadence/service/sharddistributor/canary/metrics"
 	"github.com/uber/cadence/service/sharddistributor/client/executorclient"
 )
 
@@ -27,12 +29,13 @@ const (
 )
 
 // NewShardProcessor creates a new ShardProcessor.
-func NewShardProcessor(shardID string, timeSource clock.TimeSource, logger *zap.Logger) *ShardProcessor {
+func NewShardProcessor(shardID string, timeSource clock.TimeSource, logger *zap.Logger, metricsScope tally.Scope) *ShardProcessor {
 	p := &ShardProcessor{
-		shardID:    shardID,
-		timeSource: timeSource,
-		logger:     logger,
-		stopChan:   make(chan struct{}),
+		shardID:      shardID,
+		timeSource:   timeSource,
+		logger:       logger,
+		metricsScope: metricsScope,
+		stopChan:     make(chan struct{}),
 	}
 	p.SetShardStatus(types.ShardStatusREADY)
 	return p
@@ -43,6 +46,7 @@ type ShardProcessor struct {
 	shardID      string
 	timeSource   clock.TimeSource
 	logger       *zap.Logger
+	metricsScope tally.Scope
 	stopChan     chan struct{}
 	goRoutineWg  sync.WaitGroup
 	processSteps int
@@ -62,6 +66,7 @@ func (p *ShardProcessor) GetShardReport() executorclient.ShardReport {
 
 // Start implements executorclient.ShardProcessor.
 func (p *ShardProcessor) Start(_ context.Context) error {
+	p.metricsScope.Counter(canarymetrics.CanaryShardStarted).Inc(1)
 	p.logger.Info("Starting shard processor", zap.String("shardID", p.shardID))
 	p.goRoutineWg.Add(1)
 	go p.process()
@@ -70,6 +75,7 @@ func (p *ShardProcessor) Start(_ context.Context) error {
 
 // Stop implements executorclient.ShardProcessor.
 func (p *ShardProcessor) Stop() {
+	p.metricsScope.Counter(canarymetrics.CanaryShardStopped).Inc(1)
 	close(p.stopChan)
 	p.goRoutineWg.Wait()
 }
