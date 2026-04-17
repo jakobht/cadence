@@ -104,6 +104,7 @@ func (p *ShardProcessor) process() {
 			p.processSteps++
 			if rand.Intn(shardProcessorDoneChance) == 0 {
 				p.logger.Info("Setting shard processor to done", zap.String("shardID", p.shardID), zap.Int("steps", p.processSteps), zap.String("status", types.ShardStatus(p.status.Load()).String()))
+				p.metricsScope.Counter(canarymetrics.CanaryShardDone).Inc(1)
 				p.SetShardStatus(types.ShardStatusDONE)
 			}
 		}

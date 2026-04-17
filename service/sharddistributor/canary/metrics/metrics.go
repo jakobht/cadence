@@ -11,10 +11,10 @@ const (
 	CanaryPingSuccess           = "canary_ping_success"
 	CanaryPingFailure           = "canary_ping_failure"
 	CanaryPingOwnershipMismatch = "canary_ping_ownership_mismatch"
-	CanaryShardCreated          = "canary_shard_created"
-	CanaryShardCreateFailure    = "canary_shard_create_failure"
-	CanaryShardStarted          = "canary_shard_started"
-	CanaryShardStopped          = "canary_shard_stopped"
+	CanaryShardCreated = "canary_shard_created"
+	CanaryShardStarted = "canary_shard_started"
+	CanaryShardStopped = "canary_shard_stopped"
+	CanaryShardDone    = "canary_shard_done"
 
 	// Histogram metrics
 	CanaryPingLatency = "canary_ping_latency"
