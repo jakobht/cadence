@@ -48,17 +48,17 @@ func TestKind_Delays(t *testing.T) {
 	}
 }
 
-func TestFor_Deterministic(t *testing.T) {
+func TestShardIDToKind_Deterministic(t *testing.T) {
 	for _, id := range []string{"0", "1", "shard-foo", uuid.New().String()} {
-		assert.Equal(t, For(id), For(id), "shardID %q must map to the same kind on every call", id)
+		assert.Equal(t, ShardIDToKind(id), ShardIDToKind(id), "shardID %q must map to the same kind on every call", id)
 	}
 }
 
-func TestFor_Distribution(t *testing.T) {
+func TestShardIDToKind_Distribution(t *testing.T) {
 	const n = 50_000
 	counts := make(map[Kind]int, 5)
 	for i := 0; i < n; i++ {
-		counts[For(uuid.New().String())]++
+		counts[ShardIDToKind(uuid.New().String())]++
 	}
 
 	// Allow 30% relative tolerance — we want to catch big skews but not be
@@ -82,13 +82,13 @@ func TestFor_Distribution(t *testing.T) {
 	}
 }
 
-func TestFor_FixedNamespaceCoverage(t *testing.T) {
+func TestShardIDToKind_FixedNamespaceCoverage(t *testing.T) {
 	// The fixed namespace currently uses 32 numbered shards. Make sure the
 	// hash maps at least one of them to a non-normal kind so the canary
 	// always exercises slow paths even without UUID churn.
 	saw := make(map[Kind]bool)
 	for i := 0; i < 32; i++ {
-		saw[For(strconv.Itoa(i))] = true
+		saw[ShardIDToKind(strconv.Itoa(i))] = true
 	}
 	assert.Truef(t, len(saw) > 1, "expected at least one non-normal kind across 32 fixed shards, got only %v", saw)
 }

@@ -42,7 +42,7 @@ func AssertInjectsLifecycleDelay(t *testing.T, factory LifecyclerFactory) {
 		stopSleepers  int
 	}{
 		// shardID fixtures rely on the farm.Fingerprint32 hash in
-		// latencykind.For — the require.Equal check below makes the
+		// latencykind.ShardIDToKind — the require.Equal check below makes the
 		// dependency loud if the distribution ever changes.
 		{name: "slow_start", shardID: "25", kind: latencykind.SlowStart, wantStartTag: true, startSleepers: 1, stopSleepers: 1},
 		{name: "slow_stop", shardID: "11", kind: latencykind.SlowStop, wantStopTag: true, startSleepers: 1, stopSleepers: 2},
@@ -52,7 +52,7 @@ func AssertInjectsLifecycleDelay(t *testing.T, factory LifecyclerFactory) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.kind, latencykind.For(tt.shardID), "fixture out of sync with latencykind distribution")
+			require.Equal(t, tt.kind, latencykind.ShardIDToKind(tt.shardID), "fixture out of sync with latencykind distribution")
 
 			scope := tally.NewTestScope("", nil)
 			tc := clock.NewMockedTimeSource()

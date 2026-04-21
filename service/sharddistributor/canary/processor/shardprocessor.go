@@ -25,7 +25,7 @@ const (
 
 // NewShardProcessor creates a new ShardProcessor.
 func NewShardProcessor(shardID string, timeSource clock.TimeSource, logger *zap.Logger, metricsScope tally.Scope) *ShardProcessor {
-	kind := latencykind.For(shardID)
+	kind := latencykind.ShardIDToKind(shardID)
 	scope := metricsScope.Tagged(map[string]string{"latency_kind": kind.String()})
 	p := &ShardProcessor{
 		shardID:      shardID,

@@ -91,8 +91,8 @@ func (k Kind) StopDelay() time.Duration {
 	}
 }
 
-// For deterministically maps a shard ID to a Kind.
-func For(shardID string) Kind {
+// ShardIDToKind deterministically maps a shard ID to a Kind.
+func ShardIDToKind(shardID string) Kind {
 	n := farm.Fingerprint32([]byte(shardID)) % distributionMod
 
 	switch {

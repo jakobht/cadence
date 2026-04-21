@@ -22,7 +22,7 @@ func PingShard(ctx context.Context, canaryClient sharddistributorv1.ShardDistrib
 	// Tag by latency_kind so ping failures on intentionally-slow shards do
 	// not blend into the alertable normal-kind signal.
 	metricsScope = metricsScope.Tagged(map[string]string{
-		"latency_kind": latencykind.For(shardKey).String(),
+		"latency_kind": latencykind.ShardIDToKind(shardKey).String(),
 	})
 
 	request := &sharddistributorv1.PingRequest{
