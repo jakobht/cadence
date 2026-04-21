@@ -175,6 +175,7 @@ func TestStreamReconnection(t *testing.T) {
 	mockStream1 := sharddistributor.NewMockWatchNamespaceStateClient(ctrl)
 	mockStream2 := sharddistributor.NewMockWatchNamespaceStateClient(ctrl)
 	mockTimeSource := clock.NewMockedTimeSource()
+	testScope := tally.NewTestScope("", nil)
 
 	// Create a context to control when the mock stream should unblock
 	streamCtx, cancelStream := context.WithCancel(context.Background())
@@ -183,7 +184,7 @@ func TestStreamReconnection(t *testing.T) {
 		namespace:        "test-ns",
 		client:           mockClient,
 		logger:           log.NewNoop(),
-		scope:            tally.NoopScope,
+		scope:            testScope,
 		timeSource:       mockTimeSource,
 		firstStateSignal: csync.NewResettableSignal(),
 		enabled:          func() bool { return true },
@@ -226,6 +227,10 @@ func TestStreamReconnection(t *testing.T) {
 	mockTimeSource.Advance(2 * time.Second)
 
 	require.NoError(t, spectator.firstStateSignal.Wait(context.Background()))
+
+	errorReconnects := testScope.Snapshot().Counters()["shard_distributor_spectator_stream_reconnects+reason=error"]
+	require.NotNil(t, errorReconnects)
+	assert.Equal(t, int64(1), errorReconnects.Value())
 }
 
 func TestGetShardOwner_TimeoutBeforeFirstState(t *testing.T) {

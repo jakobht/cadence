@@ -15,6 +15,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/sharddistributor/client/clientcommon"
+	"github.com/uber/cadence/service/sharddistributor/client/spectatorclient/metricsconstants"
 	csync "github.com/uber/cadence/service/sharddistributor/client/spectatorclient/sync"
 )
 
@@ -141,9 +142,10 @@ func (s *spectatorImpl) enabledState(ctx context.Context) stateFn {
 			}
 
 			if s.stream.ctx.Err() != nil {
-				s.logger.Info("Stream timeout, will reconnect", tag.ShardNamespace(s.namespace))
+				s.streamReconnectCounter(metricsconstants.StreamReconnectReasonTimeout).Inc(1)
 			} else {
-				s.logger.Warn("Stream error (server issue), will reconnect", tag.Error(err), tag.ShardNamespace(s.namespace))
+				s.streamReconnectCounter(metricsconstants.StreamReconnectReasonError).Inc(1)
+				s.logger.Warn("Stream recv error, will reconnect", tag.Error(err), tag.ShardNamespace(s.namespace))
 			}
 
 			if err := s.timeSource.SleepWithContext(ctx, backoff.JitDuration(streamRetryInterval, streamRetryJitterCoeff)); err != nil {
@@ -237,4 +239,10 @@ func (s *spectatorImpl) GetShardOwner(ctx context.Context, shardKey string) (*Sh
 		ExecutorID: response.Owner,
 		Metadata:   response.Metadata,
 	}, nil
+}
+
+func (s *spectatorImpl) streamReconnectCounter(reason string) tally.Counter {
+	return s.scope.Tagged(map[string]string{
+		metricsconstants.StreamReconnectReasonTagName: reason,
+	}).Counter(metricsconstants.ShardDistributorSpectatorStreamReconnects)
 }
