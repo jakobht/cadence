@@ -46,6 +46,8 @@ func AssertInjectsLifecycleDelay(t *testing.T, factory LifecyclerFactory) {
 		// dependency loud if the distribution ever changes.
 		{name: "slow_start", shardID: "25", kind: latencykind.SlowStart, wantStartTag: true, startSleepers: 1, stopSleepers: 1},
 		{name: "slow_stop", shardID: "11", kind: latencykind.SlowStop, wantStopTag: true, startSleepers: 1, stopSleepers: 2},
+		{name: "stuck_start", shardID: "68", kind: latencykind.StuckStart, wantStartTag: true, startSleepers: 1, stopSleepers: 1},
+		{name: "stuck_stop", shardID: "6", kind: latencykind.StuckStop, wantStopTag: true, startSleepers: 1, stopSleepers: 2},
 	}
 
 	for _, tt := range tests {
