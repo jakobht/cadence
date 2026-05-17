@@ -112,3 +112,44 @@ func TestCorrectValidation(t *testing.T) {
 	err := cfg.Validate()
 	assert.NoError(t, err)
 }
+
+func TestOIDCValidation(t *testing.T) {
+	validBase := OIDCAuthorizer{
+		Enable:              true,
+		IssuerURL:           "https://kc.example.com/realms/cadence",
+		ClientID:            "cadence-server",
+		MaxJwtTTL:           3600,
+		GroupsAttributePath: "realm_access.roles | join(' ', @)",
+		AdminAttributePath:  "cadence_admin",
+	}
+
+	tests := []struct {
+		name    string
+		mutate  func(*OIDCAuthorizer)
+		wantErr string // "" = expect success
+	}{
+		{name: "valid", mutate: func(*OIDCAuthorizer) {}, wantErr: ""},
+		{name: "missing issuerURL", mutate: func(c *OIDCAuthorizer) { c.IssuerURL = "" }, wantErr: "issuerURL is required"},
+		{name: "issuerURL without scheme", mutate: func(c *OIDCAuthorizer) { c.IssuerURL = "kc.example.com/realms/cadence" }, wantErr: "must be an http(s) URL"},
+		{name: "issuerURL with wrong scheme", mutate: func(c *OIDCAuthorizer) { c.IssuerURL = "ftp://kc.example.com" }, wantErr: "must be an http(s) URL"},
+		{name: "missing clientID", mutate: func(c *OIDCAuthorizer) { c.ClientID = "" }, wantErr: "clientID is required"},
+		{name: "zero MaxJwtTTL", mutate: func(c *OIDCAuthorizer) { c.MaxJwtTTL = 0 }, wantErr: "maxJwtTTL must be greater than 0"},
+		{name: "empty groups path allowed", mutate: func(c *OIDCAuthorizer) { c.GroupsAttributePath = "" }, wantErr: ""},
+		{name: "invalid groups JMESPath", mutate: func(c *OIDCAuthorizer) { c.GroupsAttributePath = "realm_access.[bad" }, wantErr: "groupsAttributePath is not a valid JMESPath"},
+		{name: "empty admin path allowed", mutate: func(c *OIDCAuthorizer) { c.AdminAttributePath = "" }, wantErr: ""},
+		{name: "invalid admin JMESPath", mutate: func(c *OIDCAuthorizer) { c.AdminAttributePath = "[" }, wantErr: "adminAttributePath is not a valid JMESPath"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := validBase
+			tc.mutate(&cfg)
+			err := (&Authorization{OIDCAuthorizer: cfg}).Validate()
+			if tc.wantErr == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.ErrorContains(t, err, tc.wantErr)
+			}
+		})
+	}
+}

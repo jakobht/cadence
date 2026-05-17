@@ -23,11 +23,23 @@ package authorization
 import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/dynamicconfig/dynamicproperties"
 	"github.com/uber/cadence/common/log"
 )
 
-func NewAuthorizer(authorization config.Authorization, logger log.Logger, domainCache cache.DomainCache) (Authorizer, error) {
-	switch true {
+// NewAuthorizer constructs the configured Authorizer. The oidcDomainAuthMode /
+// oidcAdminAuthMode arguments are only consulted when OIDC is enabled; pass nil
+// for them when wiring Noop or OAuth.
+func NewAuthorizer(
+	authorization config.Authorization,
+	logger log.Logger,
+	domainCache cache.DomainCache,
+	oidcDomainAuthMode dynamicproperties.StringPropertyFnWithDomainFilter,
+	oidcAdminAuthMode dynamicproperties.StringPropertyFn,
+) (Authorizer, error) {
+	switch {
+	case authorization.OIDCAuthorizer.Enable:
+		return NewOIDCAuthorizer(authorization.OIDCAuthorizer, logger, domainCache, oidcDomainAuthMode, oidcAdminAuthMode)
 	case authorization.OAuthAuthorizer.Enable:
 		return NewOAuthAuthorizer(authorization.OAuthAuthorizer, logger, domainCache)
 	default:

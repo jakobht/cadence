@@ -238,7 +238,13 @@ func New(
 	)
 
 	if params.Authorizer == nil {
-		params.Authorizer, err = authorization.NewAuthorizer(params.AuthorizationConfig, logger, domainCache)
+		params.Authorizer, err = authorization.NewAuthorizer(
+			params.AuthorizationConfig,
+			logger,
+			domainCache,
+			dynamicCollection.GetStringPropertyFilteredByDomain(dynamicproperties.EnableAuthorizationV2),
+			dynamicCollection.GetStringProperty(dynamicproperties.EnableAdminAuthorization),
+		)
 		if err != nil {
 			return nil, err
 		}

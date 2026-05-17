@@ -91,7 +91,7 @@ func (s *factorySuite) TestFactoryNoopAuthorizer() {
 	}
 
 	for _, test := range tests {
-		authorizer, err := NewAuthorizer(test.cfg, s.logger, nil)
+		authorizer, err := NewAuthorizer(test.cfg, s.logger, nil, nil, nil)
 		s.Equal(authorizer, test.expected)
 		s.Equal(err, test.err)
 	}

@@ -5442,8 +5442,9 @@ var StringKeys = map[StringKey]DynamicString{
 	},
 	EnableAuthorizationV2: {
 		KeyName:      "system.enableAuthorizationV2",
-		Description:  "EnableAuthorizationV2 is the key to enable authorization v2 for a domain, only for extension binary:",
+		Description:  "EnableAuthorizationV2 selects per-domain authorization mode for the OIDC authorizer. Values: \"disabled\", \"shadow\", \"enabled\"",
 		DefaultValue: "disabled", // available options: "disabled","shadow","enabled"
+		Filters:      []Filter{DomainName},
 	},
 	TasklistLoadBalancerStrategy: {
 		KeyName:      "system.tasklistLoadBalancerStrategy",

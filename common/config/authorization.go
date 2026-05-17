@@ -23,13 +23,16 @@ package config
 import (
 	"errors"
 	"fmt"
+	"net/url"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/jmespath/go-jmespath"
 )
 
 type (
 	Authorization struct {
 		OAuthAuthorizer OAuthAuthorizer `yaml:"oauthAuthorizer"`
+		OIDCAuthorizer  OIDCAuthorizer  `yaml:"oidcAuthorizer"`
 		NoopAuthorizer  NoopAuthorizer  `yaml:"noopAuthorizer"`
 	}
 
@@ -60,11 +63,51 @@ type (
 		GroupsAttributePath string `yaml:"groupsAttributePath"`
 		AdminAttributePath  string `yaml:"adminAttributePath"`
 	}
+
+	// OIDCAuthorizer validates ID tokens from a standards-compliant OpenID Connect provider
+	// (e.g. Keycloak, Auth0, Okta). It performs full RFC-compliant verification: signature
+	// against the JWKS published in the provider's discovery document, audience match against
+	// ClientID, issuer match against IssuerURL, and expiry check.
+	//
+	// Per-domain authorization (group/admin claim mapping) is then applied in the same way as
+	// the OAuthAuthorizer.
+	OIDCAuthorizer struct {
+		Enable bool `yaml:"enable"`
+		// IssuerURL is the OIDC provider's issuer URL. Used for OIDC discovery
+		// (the provider must serve <IssuerURL>/.well-known/openid-configuration).
+		// Required.
+		IssuerURL string `yaml:"issuerURL"`
+		// ClientID is the expected audience (`aud` claim) for tokens. Required.
+		ClientID string `yaml:"clientID"`
+		// GroupsAttributePath is the JMESPath expression that extracts the user's groups
+		// from the verified token claims as a space-separated string. Example for Keycloak:
+		// `realm_access.roles | join(' ', @)`.
+		GroupsAttributePath string `yaml:"groupsAttributePath"`
+		// AdminAttributePath is the JMESPath expression that extracts a boolean admin
+		// claim. If true, the token is granted full access without per-domain checks.
+		AdminAttributePath string `yaml:"adminAttributePath"`
+		// MaxJwtTTL is the maximum lifetime (in seconds) accepted for an inbound token.
+		// Tokens whose `exp - now` exceeds this are rejected. Required, > 0.
+		MaxJwtTTL int64 `yaml:"maxJwtTTL"`
+		// DiscoveryTimeoutSeconds is the timeout for the initial OIDC discovery request
+		// at server startup. Defaults to 10 if unset.
+		DiscoveryTimeoutSeconds int `yaml:"discoveryTimeoutSeconds"`
+	}
 )
 
 // Validate validates the persistence config
 func (a *Authorization) Validate() error {
-	if a.OAuthAuthorizer.Enable && a.NoopAuthorizer.Enable {
+	enabled := 0
+	if a.OAuthAuthorizer.Enable {
+		enabled++
+	}
+	if a.OIDCAuthorizer.Enable {
+		enabled++
+	}
+	if a.NoopAuthorizer.Enable {
+		enabled++
+	}
+	if enabled > 1 {
 		return fmt.Errorf("[AuthorizationConfig] More than one authorizer is enabled")
 	}
 
@@ -74,6 +117,40 @@ func (a *Authorization) Validate() error {
 		}
 	}
 
+	if a.OIDCAuthorizer.Enable {
+		if err := a.validateOIDC(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (a *Authorization) validateOIDC() error {
+	c := a.OIDCAuthorizer
+	if c.IssuerURL == "" {
+		return errors.New("[OIDCConfig] issuerURL is required")
+	}
+	u, err := url.Parse(c.IssuerURL)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		return fmt.Errorf("[OIDCConfig] issuerURL must be an http(s) URL, got %q", c.IssuerURL)
+	}
+	if c.ClientID == "" {
+		return errors.New("[OIDCConfig] clientID is required")
+	}
+	if c.MaxJwtTTL <= 0 {
+		return errors.New("[OIDCConfig] maxJwtTTL must be greater than 0")
+	}
+	if c.GroupsAttributePath != "" {
+		if _, err := jmespath.Compile(c.GroupsAttributePath); err != nil {
+			return fmt.Errorf("[OIDCConfig] groupsAttributePath is not a valid JMESPath expression: %w", err)
+		}
+	}
+	if c.AdminAttributePath != "" {
+		if _, err := jmespath.Compile(c.AdminAttributePath); err != nil {
+			return fmt.Errorf("[OIDCConfig] adminAttributePath is not a valid JMESPath expression: %w", err)
+		}
+	}
 	return nil
 }
 
