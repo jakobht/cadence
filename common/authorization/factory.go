@@ -39,7 +39,7 @@ func NewAuthorizer(
 ) (Authorizer, error) {
 	switch {
 	case authorization.OIDCAuthorizer.Enable:
-		return NewOIDCAuthorizer(authorization.OIDCAuthorizer, logger, domainCache, oidcDomainAuthMode, oidcAdminAuthMode)
+		return NewOIDCAuthorizer(authorization.OIDCAuthorizer, logger, oidcDomainAuthMode, oidcAdminAuthMode)
 	case authorization.OAuthAuthorizer.Enable:
 		return NewOAuthAuthorizer(authorization.OAuthAuthorizer, logger, domainCache)
 	default:

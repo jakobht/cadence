@@ -5,11 +5,19 @@ This guide walks through configuring Cadence's OIDC authorizer against a Keycloa
 ## What this gives you
 
 - **Standards-compliant token verification.** Signature, audience (`aud`), issuer (`iss`), and expiry (`exp`) are all validated against the provider's published JWKS. JWKS rotation is handled automatically.
-- **Per-domain authorization.** Cadence groups (read / write / process) are mapped from a token claim and matched against the per-domain ACL stored in domain data.
+- **Role-driven authorization, source of truth in Keycloak.** A user is allowed an operation when their token contains a role of the form `cadence/{read|write|process|admin}[/{domain}]` granting the requested permission. No Cadence-side ACL setup; all permissions live in Keycloak.
+- **Per-domain restriction via role naming.** `cadence/write` grants write on every domain; `cadence/write/alice-domain` grants write only on `alice-domain`.
+- **Admin bypass.** The role `cadence/admin` (or a token claim resolving to `true` via `adminAttributePath`) bypasses all per-permission checks.
 - **Three rollout modes per domain.** `enabled` enforces auth, `shadow` logs would-have-denied requests but lets them through, `disabled` is a no-op. Switchable at runtime via dynamic config — no restart.
 - **Separate admin auth path.** Admin-permission requests are gated by a separate dynamic config key.
 
 ## Try it out with Docker (5 minutes)
+
+**One-time host setup:** add `127.0.0.1 keycloak` to your `/etc/hosts` so your browser can resolve the same hostname that's in the tokens' `iss` claim. Without this, the curl / CLI flow works (Keycloak accepts requests on any hostname) but the admin UI breaks, because the admin SPA redirects to `http://keycloak:8080/realms/master/...` for login and your browser won't know that name.
+
+```bash
+echo '127.0.0.1 keycloak' | sudo tee -a /etc/hosts
+```
 
 Two compose files are provided:
 
@@ -26,61 +34,63 @@ Both bring up Cassandra, Cadence (with OIDC enabled and pointed at the bundled K
 
 The realm import (at `docker/keycloak/cadence-realm.json`) creates:
 - Client `cadence-server` with an audience mapper so `aud` matches what Cadence verifies
-- Realm roles `cadence-read`, `cadence-write`, `cadence-process`, `cadence-admin`
+- Realm roles:
+  - global: `cadence/read`, `cadence/write`, `cadence/process`, `cadence/admin`
+  - domain-scoped: `cadence/read/alice-domain`, `cadence/write/alice-domain`, `cadence/read/bob-domain`, `cadence/write/bob-domain`, `cadence/process/bob-domain`
 - Three test users, all with password `password`:
-  - `alice` — has `cadence-read` + `cadence-write`
-  - `bob-worker` — has `cadence-process`
-  - `admin-user` — has the `cadence_admin` claim true (bypasses per-domain checks)
+  - `alice` → roles `cadence/{read,write}/alice-domain` (read+write alice-domain only)
+  - `bob-worker` → roles `cadence/{read,write,process}/bob-domain` (read+write+poll bob-domain only)
+  - `admin-user` → role `cadence/admin` + `cadence_admin: true` claim (bypass)
 
-Once the stack is up:
-
-```bash
-Once the stack is up, the snippet below registers two domains with **different** group ACLs, then shows the same token succeeding on one and being denied on the other. This is the per-domain authorization story end to end.
+### Walkthrough — same token allowed on one domain, denied on another, then a live role change
 
 ```bash
-# 1. Register two domains with different group ACLs.
-#    alice-domain grants read/write to anyone with cadence-read or cadence-write roles.
-#    bob-domain grants read only to anyone with the cadence-process role.
-docker compose -f docker/docker-compose-oidc.yml exec cadence sh -c '
-  cadence --do alice-domain domain register --gd false &&
-  cadence --do alice-domain domain update \
-    --domain_data READ_GROUPS=cadence-read,WRITE_GROUPS=cadence-write &&
-  cadence --do bob-domain domain register --gd false &&
-  cadence --do bob-domain domain update \
-    --domain_data READ_GROUPS=cadence-process'
+# 1. Register two demo domains (no ACL setup needed — auth lives in Keycloak roles).
+./cadence --do alice-domain domain register --gd false
+./cadence --do bob-domain   domain register --gd false
 
-# 2. Turn enforcement on for both domains via dynamic config.
-docker compose -f docker/docker-compose-oidc.yml exec cadence sh -c \
+# 2. Turn enforcement on for both via dynamic config.
+docker compose -f docker/docker-compose-oidc-dev.yml exec cadence sh -c \
   'printf "\nsystem.enableAuthorizationV2:\n  - value: \"enabled\"\n    constraints:\n      domainName: \"alice-domain\"\n  - value: \"enabled\"\n    constraints:\n      domainName: \"bob-domain\"\n" >> /etc/cadence/config/dynamicconfig/development.yaml'
-docker compose -f docker/docker-compose-oidc.yml restart cadence
+docker compose -f docker/docker-compose-oidc-dev.yml restart cadence
 # wait ~30s for the frontend to come back
 
-# 3. Grab tokens for two users. The realm preload gives alice cadence-read+write,
-#    and bob-worker cadence-process — so each user has access to exactly one domain.
-ALICE_TOKEN=$(curl -s -X POST http://localhost:8080/realms/cadence/protocol/openid-connect/token \
+# 3. Get alice's token.
+TOKEN=$(curl -s -X POST http://localhost:8080/realms/cadence/protocol/openid-connect/token \
   -d grant_type=password -d client_id=cadence-server \
   -d username=alice -d password=password | jq -r .access_token)
 
-BOB_TOKEN=$(curl -s -X POST http://localhost:8080/realms/cadence/protocol/openid-connect/token \
+# 4. alice → alice-domain ✓  (token has cadence/{read,write}/alice-domain)
+./cadence --do alice-domain --jwt "$TOKEN" workflow list
+
+# 5. alice → bob-domain ✗  (no role for bob-domain in her token)
+./cadence --do bob-domain   --jwt "$TOKEN" workflow list
+
+# 6. 🪄 Grant alice cadence/write/bob-domain in Keycloak.
+#    UI: http://keycloak:8080/admin/  (admin / admin) → realm "cadence" → Users →
+#        alice → Role mapping → Assign role → cadence/write/bob-domain
+#    REST equivalent:
+ADMIN=$(curl -s -X POST http://localhost:8080/realms/master/protocol/openid-connect/token \
+  -d grant_type=password -d client_id=admin-cli \
+  -d username=admin -d password=admin | jq -r .access_token)
+ALICE_ID=$(curl -s -H "Authorization: Bearer $ADMIN" \
+  "http://localhost:8080/admin/realms/cadence/users?username=alice" | jq -r '.[0].id')
+ROLE=$(curl -s -H "Authorization: Bearer $ADMIN" \
+  "http://localhost:8080/admin/realms/cadence/roles/cadence%2Fwrite%2Fbob-domain")
+curl -s -X POST -H "Authorization: Bearer $ADMIN" \
+  -H "Content-Type: application/json" -d "[$ROLE]" \
+  "http://localhost:8080/admin/realms/cadence/users/$ALICE_ID/role-mappings/realm"
+
+# 7. Old token still fails — JWTs are signed snapshots, Keycloak changes don't
+#    retroactively rewrite tokens already in clients' hands.
+./cadence --do bob-domain --jwt "$TOKEN" workflow list      # ✗
+
+# 8. New token works — re-auth picks up the new role.
+NEW_TOKEN=$(curl -s -X POST http://localhost:8080/realms/cadence/protocol/openid-connect/token \
   -d grant_type=password -d client_id=cadence-server \
-  -d username=bob-worker -d password=password | jq -r .access_token)
-
-# 4. alice succeeds on alice-domain, fails on bob-domain.
-docker compose -f docker/docker-compose-oidc.yml exec cadence \
-  cadence --do alice-domain --jwt "$ALICE_TOKEN" workflow list   # → empty list, no error
-docker compose -f docker/docker-compose-oidc.yml exec cadence \
-  cadence --do bob-domain --jwt "$ALICE_TOKEN" workflow list     # → Request unauthorized
-
-# 5. bob has the inverse pattern — succeeds on bob-domain, fails on alice-domain.
-docker compose -f docker/docker-compose-oidc.yml exec cadence \
-  cadence --do bob-domain --jwt "$BOB_TOKEN" workflow list       # → empty list, no error
-docker compose -f docker/docker-compose-oidc.yml exec cadence \
-  cadence --do alice-domain --jwt "$BOB_TOKEN" workflow list     # → Request unauthorized
+  -d username=alice -d password=password | jq -r .access_token)
+./cadence --do bob-domain --jwt "$NEW_TOKEN" workflow list  # ✓
 ```
-
-Both tokens verify equally well (same signature, same issuer, same audience). The difference is the per-domain group check inside `validatePermission` — alice's `cadence-read` role isn't in `bob-domain`'s `READ_GROUPS`, so the call is denied even though authentication passed. This is the authn-vs-authz distinction Cadence's authorizer interface bundles into a single decision.
-
-> **Note on the `iss` claim.** The compose file sets Keycloak's `--hostname=http://keycloak:8080` so tokens are minted with `iss=http://keycloak:8080/realms/cadence`. This matches Cadence's `OIDC_ISSUER_URL` (it talks to Keycloak via the docker DNS name `keycloak`). You curl Keycloak via the forwarded port `localhost:8080` from the host — that still works because `--hostname-strict=false` is set, but the `iss` claim in the resulting token is the docker-network value, not `localhost`.
 
 ### Using the cadence-web UI
 
@@ -88,14 +98,14 @@ The bundled cadence-web container is started with `CADENCE_WEB_AUTH_STRATEGY=jwt
 
 1. Open <http://localhost:8088>.
 2. Click the user icon in the nav bar → **Login with JWT**.
-3. Paste the `$TOKEN` from step 3 above.
+3. Paste a token (e.g. `$TOKEN` from step 3 above).
 4. The UI now sends that token as `cadence-authorization` gRPC metadata on every request to the backend.
 
 The token is stored as an HttpOnly cookie called `cadence-authorization` and is forwarded server-side by cadence-web — it is never visible to client-side JavaScript. Logging out clears the cookie. When the token expires, the UI starts seeing authorization errors and you re-paste a fresh one.
 
 This is a manual paste flow because cadence-web does not yet implement an OIDC redirect. Adding a "Login with Keycloak" button that does PKCE end-to-end is tracked as a follow-up in the cadence-web repo; it would set the same cookie via the same `POST /api/auth/token` endpoint, so no backend changes are required when it lands.
 
-The Keycloak admin console is at <http://localhost:8080> (admin / admin) — useful for inspecting the realm, adjusting user roles, or copy-pasting into the manual setup below.
+The Keycloak admin console is at <http://keycloak:8080/admin/> (admin / admin) — useful for inspecting the realm, adjusting user roles, or copy-pasting into the manual setup below.
 
 ## Quick-start with Keycloak (manual)
 
@@ -131,19 +141,23 @@ Clients → cadence-server → Client scopes → cadence-server-dedicated → Ad
 
 ### 4. Define realm roles
 
+Create one role per permission/domain combination you want to grant. Convention: `cadence/{read|write|process|admin}[/{domain-name}]`. Examples:
+
 ```
 Realm roles → Create role:
-  - cadence-read
-  - cadence-write
-  - cadence-process
-  - cadence-admin   (optional — used for the admin claim)
+  - cadence/read                       # read any domain
+  - cadence/write                      # write any domain
+  - cadence/process                    # poll any domain (workers)
+  - cadence/admin                      # admin bypass
+  - cadence/write/prod-payments        # write only the "prod-payments" domain
+  - cadence/read/prod-payments         # read only the "prod-payments" domain
 ```
 
 Assign roles to users via **Users → <user> → Role mapping → Assign role**.
 
 ### 5. (Optional) Add an admin claim
 
-If you want certain users to bypass per-domain checks entirely, add a claim that resolves to a boolean. The simplest path is a hardcoded mapper that's only added to a specific role:
+If you want certain users to bypass everything via a boolean claim rather than the `cadence/admin` role, add a mapper:
 
 ```
 Clients → cadence-server → Client scopes → cadence-server-dedicated → Add mapper → By configuration → User Attribute
@@ -155,8 +169,6 @@ Clients → cadence-server → Client scopes → cadence-server-dedicated → Ad
 
 Then set `cadence_admin = true` on individual user attributes.
 
-Alternatively, use a **Hardcoded claim** mapper conditioned on role membership.
-
 ### 6. Configure Cadence
 
 Add the following block to your server YAML config:
@@ -167,33 +179,20 @@ authorization:
     enable: true
     issuerURL: "https://keycloak.example.com/realms/cadence"
     clientID:  "cadence-server"
-    # JMESPath: flatten the realm_access.roles array into a space-separated string
-    # so it lines up with how Cadence groups are matched.
+    # JMESPath: flatten realm_access.roles into a space-separated string for parsing
     groupsAttributePath: "realm_access.roles | join(' ', @)"
     adminAttributePath:  "cadence_admin"
     maxJwtTTL: 3600   # reject tokens whose remaining lifetime exceeds 1h
 ```
 
-### 7. Map Keycloak roles to Cadence domain ACLs
+### 7. Send tokens
 
-For each domain you want to gate, set the group ACLs in the domain's data:
-
-```bash
-cadence --do my-domain domain update \
-  --domain_data READ_GROUPS=cadence-read,WRITE_GROUPS=cadence-write,PROCESS_GROUPS=cadence-process
-```
-
-A user whose token contains any of those group names in `realm_access.roles` will be granted the matching permission level. The admin claim, if true, bypasses these checks entirely.
-
-### 8. Send tokens
-
-Cadence reads the bearer token from the gRPC metadata header `cadence-authorization`. Most clients have a flag for this:
+Cadence reads the bearer token from the gRPC metadata header `cadence-authorization`. The OSS CLI sends it via the `--jwt` flag:
 
 ```bash
 TOKEN=$(curl -s -X POST \
   -d 'grant_type=password' \
   -d 'client_id=cadence-server' \
-  -d 'client_secret=<secret>' \
   -d 'username=alice' \
   -d 'password=<password>' \
   https://keycloak.example.com/realms/cadence/protocol/openid-connect/token | jq -r .access_token)
@@ -239,7 +238,9 @@ If you ever need to disable enforcement quickly without rolling code, set the re
 - **Discovery happens at startup.** The server contacts `<issuerURL>/.well-known/openid-configuration` and caches the JWKS endpoint. If discovery fails, the server fails to boot — make sure the OIDC provider is reachable before starting Cadence (in compose setups, gate `cadence` on a readiness check of the provider).
 - **JWKS rotation is automatic.** The `go-oidc` `RemoteKeySet` refreshes keys in the background when verification encounters an unknown `kid`.
 - **`maxJwtTTL` protects against long-lived tokens.** Even if the OIDC provider issues a token with `exp` 30 days out, Cadence rejects it if `(exp - now)` exceeds this ceiling.
-- **Errors are mapped to deny, not surfaced.** Per the existing convention, signature/audience/issuer/expiry/group failures all become `DecisionDeny` with no error returned to the caller. Inspect server debug logs for the underlying reason. Domain cache failures are surfaced as gRPC errors.
+- **Role changes are not retroactive.** Tokens are signed snapshots; revoking a role in Keycloak only affects tokens issued after the change. Effective revocation latency = token lifetime. Tune `accessTokenLifespan` accordingly.
+- **Errors are mapped to deny.** Per the existing convention, signature/audience/issuer/expiry/role-mismatch failures all become `DecisionDeny` with no error returned to the caller. Inspect server logs for the underlying reason.
+- **Sticky / ephemeral task-list polls bypass auth.** `PollForActivityTask` and `PollForDecisionTask` calls with `kind != Normal` are allowed without a token check. This exists so workers built against current SDK clients (which don't attach tokens to poll calls) keep working when OIDC is turned on. Sticky list names are server-generated and randomized, but a caller able to reach the frontend and guess a name could intercept tasks — guard the frontend at the network layer if your threat model includes that. The proper fix requires SDK changes to attach tokens on every poll.
 
 ## Sample decoded Keycloak ID token
 
@@ -253,30 +254,26 @@ If you ever need to disable enforcement quickly without rolling code, set the re
   "typ": "Bearer",
   "preferred_username": "alice",
   "realm_access": {
-    "roles": ["cadence-read", "cadence-write"]
+    "roles": ["cadence/read/prod-payments", "cadence/write/prod-payments"]
   },
   "cadence_admin": false
 }
 ```
 
-With the YAML config from step 6, this token would be:
-
-- Verified against the realm's JWKS published at `<iss>/protocol/openid-connect/certs`
-- Accepted because `aud` matches `cadence-server` and `exp - now < 3600`
-- Granted whichever of read/write/process matches the requested permission for the target domain (assuming the domain's `READ_GROUPS` / `WRITE_GROUPS` / `PROCESS_GROUPS` include either `cadence-read` or `cadence-write`)
+With the YAML config above, this token grants `alice` read+write on `prod-payments` only. Any call to a different domain returns `DecisionDeny`.
 
 ## Troubleshooting
 
 | Symptom | Likely cause |
 |---|---|
 | Server fails to boot with `OIDC discovery: ...` | `issuerURL` wrong, Keycloak unreachable, or TLS misconfigured |
-| All requests get `DecisionDeny` even with a valid-looking token | Check `aud` claim — Keycloak omits the client ID by default; add the audience mapper from step 3 |
+| All requests get `DecisionDeny` even with a valid-looking token | Check `aud` claim — Keycloak omits the client ID by default; add the audience mapper from step 3. Then check `realm_access.roles` actually contains the expected `cadence-*` role |
 | `extracting groups claim: ... resolved to []interface {}, expected string` | `groupsAttributePath` must produce a string. Use `join(' ', @)` to flatten arrays. |
 | Token rejected with `token TTL ... exceeds configured maximum` | Either lower the token lifetime in Keycloak, or raise `maxJwtTTL` in the Cadence config |
-| Per-domain mode key has no effect | Confirm `Filters: [DomainName]` is set on `EnableAuthorizationV2` (it is by default in this build) and that the dynamic config source is actually being read |
+| `token has no role granting ... on domain X` | The user's token has no `cadence-{permission}` or `cadence-{permission}-{X}` role. Assign one in Keycloak and re-auth. |
 
 ## Choosing between `oauthAuthorizer` and `oidcAuthorizer`
 
-Both can verify JWTs. Use `oidcAuthorizer` if your provider supports OIDC discovery (most do — Keycloak, Auth0, Okta, Dex, Google, etc.) — it gives you audience/issuer validation, automatic JWKS rotation, and the rollout modes documented above. Stick with `oauthAuthorizer` only if you have an existing static-JWKS or static-RSA-public-key deployment that you don't want to change.
+Both can verify JWTs. Use `oidcAuthorizer` if your provider supports OIDC discovery (most do — Keycloak, Auth0, Okta, Dex, Google, etc.) — it gives you audience/issuer validation, automatic JWKS rotation, role-driven authorization, and the rollout modes documented above. Stick with `oauthAuthorizer` only if you have an existing static-JWKS / per-domain-ACL deployment that you don't want to change.
 
 The two are mutually exclusive — enable at most one in the YAML.

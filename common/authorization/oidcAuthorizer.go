@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
@@ -11,7 +12,6 @@ import (
 	"go.uber.org/yarpc"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig/dynamicproperties"
 	"github.com/uber/cadence/common/log"
@@ -34,6 +34,15 @@ const (
 	oidcModeDisabledStr = "disabled"
 
 	defaultOIDCDiscoveryTimeoutSec = 10
+
+	// oidcRolePrefix is the prefix on Keycloak (or any OIDC provider) realm-role names
+	// that the OIDC authorizer interprets. A role matching `{prefix}{permission}` grants
+	// that permission on any domain; `{prefix}{permission}/{domain}` scopes it to one
+	// domain. Using '/' as the segment separator avoids ambiguity with domain names
+	// containing dashes.
+	oidcRolePrefix = "cadence/"
+	// oidcRoleSeparator splits the permission segment from the optional domain segment.
+	oidcRoleSeparator = "/"
 )
 
 func parseOIDCMode(s string) oidcMode {
@@ -48,10 +57,68 @@ func parseOIDCMode(s string) oidcMode {
 	}
 }
 
+// rolePermissions is the structured view of a token's `cadence-*` roles, used to answer
+// `allows(permission, domain)` without iterating roles per request.
+type rolePermissions struct {
+	// isAdmin is true when the token has the literal role `cadence-admin`. Admin grants
+	// every permission on every domain — domain-scoped admin (`cadence-admin-<domain>`)
+	// is meaningless and treated as global admin too.
+	isAdmin bool
+	// scoped[perm] is the set of domain names for which this token has the permission.
+	// An empty string in the set means "wildcard — any domain" (from a bare
+	// `cadence-{perm}` role with no domain suffix).
+	scoped map[Permission]map[string]struct{}
+}
+
+// parseRolePermissions turns a list of token roles into a permission lookup. Roles
+// that don't begin with the OIDC role prefix are ignored. Roles with an unrecognized
+// permission name (`cadence-foo`) are ignored.
+func parseRolePermissions(roles []string) *rolePermissions {
+	rp := &rolePermissions{scoped: map[Permission]map[string]struct{}{}}
+	for _, role := range roles {
+		rest, ok := strings.CutPrefix(role, oidcRolePrefix)
+		if !ok || rest == "" {
+			continue
+		}
+		permStr, domain, _ := strings.Cut(rest, oidcRoleSeparator)
+		perm := NewPermission(permStr)
+		if perm < 0 {
+			continue
+		}
+		if perm == PermissionAdmin {
+			rp.isAdmin = true
+			continue
+		}
+		set, ok := rp.scoped[perm]
+		if !ok {
+			set = map[string]struct{}{}
+			rp.scoped[perm] = set
+		}
+		set[domain] = struct{}{}
+	}
+	return rp
+}
+
+// allows reports whether the token may perform `permission` on `domain`.
+// An empty domain (e.g. for non-domain APIs) matches a wildcard role only.
+func (rp *rolePermissions) allows(permission Permission, domain string) bool {
+	if rp.isAdmin {
+		return true
+	}
+	set, ok := rp.scoped[permission]
+	if !ok {
+		return false
+	}
+	if _, wildcard := set[""]; wildcard {
+		return true
+	}
+	_, ok = set[domain]
+	return ok
+}
+
 type oidcAuthority struct {
-	cfg         config.OIDCAuthorizer
-	domainCache cache.DomainCache
-	logger      log.Logger
+	cfg    config.OIDCAuthorizer
+	logger log.Logger
 
 	// verifier is built once at construction and is safe for concurrent use.
 	verifier *oidc.IDTokenVerifier
@@ -67,6 +134,11 @@ type oidcAuthority struct {
 // an error and the server fails to boot — fix the issuer URL or wait for the provider to
 // come up before restarting Cadence.
 //
+// Authorization is role-name-driven: roles in the token of the form
+// `cadence/{read|write|process|admin}[/{domain}]` grant the named permission on the named
+// domain (or all domains, if no domain suffix is present). The admin claim, if present
+// and true, grants all permissions on all domains.
+//
 // domainAuthMode / adminAuthMode return the current per-domain ("disabled"/"shadow"/"enabled")
 // mode for a non-admin call and the global mode for admin calls, respectively. Callers wire
 // these from a dynamicconfig.Collection — typically dc.GetStringPropertyFilteredByDomain
@@ -74,7 +146,6 @@ type oidcAuthority struct {
 func NewOIDCAuthorizer(
 	cfg config.OIDCAuthorizer,
 	logger log.Logger,
-	domainCache cache.DomainCache,
 	domainAuthMode dynamicproperties.StringPropertyFnWithDomainFilter,
 	adminAuthMode dynamicproperties.StringPropertyFn,
 ) (Authorizer, error) {
@@ -100,7 +171,6 @@ func NewOIDCAuthorizer(
 
 	return &oidcAuthority{
 		cfg:          cfg,
-		domainCache:  domainCache,
 		logger:       logger,
 		verifier:     verifier,
 		domainModeFn: domainAuthMode,
@@ -109,19 +179,26 @@ func NewOIDCAuthorizer(
 }
 
 // Authorize implements the Authorizer interface. It verifies the inbound token, applies
-// the configured per-domain rollout mode (disabled / shadow / enabled), and delegates
-// permission checks to the shared validatePermission helper.
+// the configured per-domain rollout mode (disabled / shadow / enabled), and authorizes
+// based on the token's `cadence-*` roles.
 func (a *oidcAuthority) Authorize(ctx context.Context, attrs *Attributes) (Result, error) {
 	mode := a.modeFor(attrs.Permission, attrs.DomainName)
 	if mode == modeDisabled {
 		return Result{Decision: DecisionAllow}, nil
 	}
 
-	// Worker stickiness: cadence workers poll task lists with dynamically-generated
-	// names (sticky/ephemeral kinds) for which there is no domain-level ACL to check
-	// against, and in the common deployment shape workers don't carry user tokens at
-	// all. Bypassing auth for these polls is what makes worker stickiness compatible
-	// with per-domain auth being enabled on the rest of the API surface.
+	// Worker-stickiness shortcut. PollForActivityTask / PollForDecisionTask are the only
+	// APIs whose wrapper populates attrs.TaskList, and we let the call through when the
+	// task list is non-normal (sticky / ephemeral). The reason is purely operational:
+	// current SDK clients do not attach tokens to poll calls, so without this shortcut
+	// every existing worker breaks the moment OIDC is enabled for its domain.
+	//
+	// SECURITY TRADE-OFF: a caller able to reach the frontend can issue an unauthenticated
+	// poll with kind=Sticky and (if they know or can guess the sticky list name, which is
+	// server-generated and randomized) receive tasks from it. Closing this requires the
+	// SDKs to attach tokens on every poll — a client-side change that's incompatible with
+	// every existing worker binary. Until that lands, harden the frontend at the network
+	// layer if this matters for your threat model.
 	if attrs.TaskList != nil && attrs.TaskList.GetKind() != types.TaskListKindNormal {
 		return Result{Decision: DecisionAllow}, nil
 	}
@@ -131,14 +208,10 @@ func (a *oidcAuthority) Authorize(ctx context.Context, attrs *Attributes) (Resul
 		return Result{Decision: DecisionAllow}, nil
 	}
 	if authErr == nil {
-		// Permission check needs domain ACL data. Domain cache failures are infra
-		// errors and propagate as-is (never shadow-allowed).
-		domain, err := a.domainCache.GetDomain(attrs.DomainName)
-		if err != nil {
-			a.logger.Info("OIDC authorize infra error", tag.Error(err))
-			return Result{Decision: DecisionDeny}, err
+		rp := parseRolePermissions(claims.GetGroups())
+		if !rp.allows(attrs.Permission, attrs.DomainName) {
+			authErr = fmt.Errorf("token has no role granting %v on domain %q (roles=%v)", attrs.Permission, attrs.DomainName, claims.GetGroups())
 		}
-		authErr = validatePermission(claims, attrs, domain.GetInfo().Data)
 	}
 	if authErr == nil {
 		return Result{Decision: DecisionAllow}, nil
@@ -195,7 +268,7 @@ func (a *oidcAuthority) validateExtraTTL(idToken *oidc.IDToken) error {
 }
 
 // extractClaims pulls the configured groups + admin claims out of the verified token
-// via JMESPath and populates a JWTClaims value that validatePermission can consume.
+// via JMESPath and populates a JWTClaims value.
 func (a *oidcAuthority) extractClaims(idToken *oidc.IDToken) (*JWTClaims, error) {
 	raw := map[string]interface{}{}
 	if err := idToken.Claims(&raw); err != nil {

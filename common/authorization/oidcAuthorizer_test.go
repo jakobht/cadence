@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -15,33 +14,131 @@ import (
 	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/mock/gomock"
 	"go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/config"
-	"github.com/uber/cadence/common/constants"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/dynamicconfig/dynamicproperties"
 	"github.com/uber/cadence/common/log/testlogger"
-	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
 
 const (
 	testIssuerClientID = "cadence-server"
 	testDomainName     = "test-domain"
-	testGroupName      = "cadence-read"
 )
 
-// oidcTestEnv bundles a fake OIDC provider, signing key, and dynamic config so each test
-// can stand on its own without leaking state between cases.
+func TestParseRolePermissions(t *testing.T) {
+	tests := []struct {
+		name        string
+		roles       []string
+		wantAdmin   bool
+		allowChecks []struct {
+			perm   Permission
+			domain string
+			want   bool
+		}
+	}{
+		{
+			name:      "no cadence roles",
+			roles:     []string{"unrelated", "another"},
+			wantAdmin: false,
+			allowChecks: []struct {
+				perm   Permission
+				domain string
+				want   bool
+			}{
+				{PermissionRead, "any", false},
+			},
+		},
+		{
+			name:      "wildcard read",
+			roles:     []string{"cadence/read"},
+			wantAdmin: false,
+			allowChecks: []struct {
+				perm   Permission
+				domain string
+				want   bool
+			}{
+				{PermissionRead, "anything", true},
+				{PermissionWrite, "anything", false},
+			},
+		},
+		{
+			name:      "scoped write on domain with dashes",
+			roles:     []string{"cadence/write/alice-domain"},
+			wantAdmin: false,
+			allowChecks: []struct {
+				perm   Permission
+				domain string
+				want   bool
+			}{
+				{PermissionWrite, "alice-domain", true},
+				{PermissionWrite, "bob-domain", false},
+				{PermissionRead, "alice-domain", false},
+			},
+		},
+		{
+			name:      "admin role grants everything",
+			roles:     []string{"cadence/admin"},
+			wantAdmin: true,
+			allowChecks: []struct {
+				perm   Permission
+				domain string
+				want   bool
+			}{
+				{PermissionRead, "x", true},
+				{PermissionWrite, "y", true},
+				{PermissionAdmin, "", true},
+			},
+		},
+		{
+			name:      "wildcard + scoped combine",
+			roles:     []string{"cadence/read", "cadence/write/alice-domain"},
+			wantAdmin: false,
+			allowChecks: []struct {
+				perm   Permission
+				domain string
+				want   bool
+			}{
+				{PermissionRead, "bob-domain", true},
+				{PermissionWrite, "alice-domain", true},
+				{PermissionWrite, "bob-domain", false},
+			},
+		},
+		{
+			name:      "unknown permission name ignored",
+			roles:     []string{"cadence/frobnicate"},
+			wantAdmin: false,
+			allowChecks: []struct {
+				perm   Permission
+				domain string
+				want   bool
+			}{
+				{PermissionRead, "any", false},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			rp := parseRolePermissions(tc.roles)
+			assert.Equal(t, tc.wantAdmin, rp.isAdmin)
+			for _, c := range tc.allowChecks {
+				assert.Equalf(t, c.want, rp.allows(c.perm, c.domain),
+					"allows(%v, %q)", c.perm, c.domain)
+			}
+		})
+	}
+}
+
+// oidcTestEnv bundles a fake OIDC provider + signing key + in-memory dynamic config so
+// each test stands on its own.
 type oidcTestEnv struct {
 	server  *httptest.Server
 	signer  jose.Signer
-	keyID   string
 	dcStore dynamicconfig.Client
 }
 
@@ -49,19 +146,15 @@ func newOIDCTestEnv(t *testing.T) *oidcTestEnv {
 	t.Helper()
 	priv, err := rsa.GenerateKey(rand.Reader, 2048)
 	require.NoError(t, err)
-
-	keyID := "test-kid"
 	signingKey := jose.SigningKey{Algorithm: jose.RS256, Key: priv}
-	signer, err := jose.NewSigner(signingKey, (&jose.SignerOptions{}).WithType("JWT").WithHeader("kid", keyID))
+	signer, err := jose.NewSigner(signingKey, (&jose.SignerOptions{}).WithType("JWT").WithHeader("kid", "test-kid"))
 	require.NoError(t, err)
-
 	jwks := jose.JSONWebKeySet{Keys: []jose.JSONWebKey{{
 		Key:       priv.Public(),
-		KeyID:     keyID,
+		KeyID:     "test-kid",
 		Algorithm: string(jose.RS256),
 		Use:       "sig",
 	}}}
-
 	mux := http.NewServeMux()
 	var serverURL string
 	mux.HandleFunc("/.well-known/openid-configuration", func(w http.ResponseWriter, r *http.Request) {
@@ -81,26 +174,23 @@ func newOIDCTestEnv(t *testing.T) *oidcTestEnv {
 	srv := httptest.NewServer(mux)
 	serverURL = srv.URL
 	t.Cleanup(srv.Close)
-
-	dc := dynamicconfig.NewInMemoryClient()
-	return &oidcTestEnv{server: srv, signer: signer, keyID: keyID, dcStore: dc}
+	return &oidcTestEnv{server: srv, signer: signer, dcStore: dynamicconfig.NewInMemoryClient()}
 }
 
 func (e *oidcTestEnv) issuerURL() string { return e.server.URL }
 
-// signToken builds a signed JWT with the given claims overlaid on a sane default.
-func (e *oidcTestEnv) signToken(t *testing.T, mutate func(c map[string]interface{})) string {
+// signToken builds a signed JWT with sane defaults; pass roles to populate
+// realm_access.roles; pass mutate to tweak any other claim.
+func (e *oidcTestEnv) signToken(t *testing.T, roles []string, mutate func(map[string]interface{})) string {
 	t.Helper()
 	now := time.Now()
 	claims := map[string]interface{}{
-		"iss": e.issuerURL(),
-		"aud": testIssuerClientID,
-		"sub": "alice",
-		"iat": now.Unix(),
-		"exp": now.Add(5 * time.Minute).Unix(),
-		"realm_access": map[string]interface{}{
-			"roles": []string{testGroupName},
-		},
+		"iss":          e.issuerURL(),
+		"aud":          testIssuerClientID,
+		"sub":          "alice",
+		"iat":          now.Unix(),
+		"exp":          now.Add(5 * time.Minute).Unix(),
+		"realm_access": map[string]interface{}{"roles": roles},
 	}
 	if mutate != nil {
 		mutate(claims)
@@ -127,7 +217,6 @@ func (e *oidcTestEnv) defaultConfig() config.OIDCAuthorizer {
 	}
 }
 
-// ctxWithToken attaches a yarpc inbound call carrying the cadence-authorization header.
 func ctxWithToken(t *testing.T, token string) context.Context {
 	t.Helper()
 	ctx := context.Background()
@@ -141,28 +230,10 @@ func ctxWithToken(t *testing.T, token string) context.Context {
 	return ctx
 }
 
-// domainCacheWithGroups returns a cache mock that resolves testDomainName to a domain
-// whose data grants read+write access to the supplied groups.
-func domainCacheWithGroups(t *testing.T, ctrl *gomock.Controller, readGroup, writeGroup string) *cache.MockDomainCache {
-	t.Helper()
-	dc := cache.NewMockDomainCache(ctrl)
-	entry := cache.NewLocalDomainCacheEntryForTest(
-		&persistence.DomainInfo{
-			Name: testDomainName,
-			Data: map[string]string{
-				constants.DomainDataKeyForReadGroups:  readGroup,
-				constants.DomainDataKeyForWriteGroups: writeGroup,
-			},
-		},
-		nil, "")
-	dc.EXPECT().GetDomain(testDomainName).Return(entry, nil).AnyTimes()
-	return dc
-}
-
 func TestOIDCAuthorizer_NewSucceedsWithDiscovery(t *testing.T) {
 	env := newOIDCTestEnv(t)
 	domainFn, adminFn := env.modeFns(t)
-	a, err := NewOIDCAuthorizer(env.defaultConfig(), testlogger.New(t), nil, domainFn, adminFn)
+	a, err := NewOIDCAuthorizer(env.defaultConfig(), testlogger.New(t), domainFn, adminFn)
 	require.NoError(t, err)
 	require.NotNil(t, a)
 }
@@ -170,143 +241,148 @@ func TestOIDCAuthorizer_NewSucceedsWithDiscovery(t *testing.T) {
 func TestOIDCAuthorizer_NewFailsWithoutModeFns(t *testing.T) {
 	env := newOIDCTestEnv(t)
 	domainFn, adminFn := env.modeFns(t)
-	_, err := NewOIDCAuthorizer(env.defaultConfig(), testlogger.New(t), nil, nil, adminFn)
+	_, err := NewOIDCAuthorizer(env.defaultConfig(), testlogger.New(t), nil, adminFn)
 	assert.ErrorContains(t, err, "non-nil domainAuthMode")
-	_, err = NewOIDCAuthorizer(env.defaultConfig(), testlogger.New(t), nil, domainFn, nil)
+	_, err = NewOIDCAuthorizer(env.defaultConfig(), testlogger.New(t), domainFn, nil)
 	assert.ErrorContains(t, err, "non-nil domainAuthMode")
 }
 
 func TestOIDCAuthorizer_NewFailsOnDiscoveryError(t *testing.T) {
 	env := newOIDCTestEnv(t)
 	cfg := env.defaultConfig()
-	cfg.IssuerURL = "http://127.0.0.1:1" // unreachable port
+	cfg.IssuerURL = "http://127.0.0.1:1"
 	cfg.DiscoveryTimeoutSeconds = 1
 	domainFn, adminFn := env.modeFns(t)
-	_, err := NewOIDCAuthorizer(cfg, testlogger.New(t), nil, domainFn, adminFn)
+	_, err := NewOIDCAuthorizer(cfg, testlogger.New(t), domainFn, adminFn)
 	assert.Error(t, err)
 }
 
 func TestOIDCAuthorizer_Authorize(t *testing.T) {
 	tests := []struct {
-		name       string
-		setup      func(t *testing.T, env *oidcTestEnv) (token string, attrs *Attributes, dc cache.DomainCache, modes map[dynamicproperties.StringKey]string)
-		decision   Decision
-		expectErr  bool
-		modeAdmin  string
-		modeDomain string
+		name     string
+		setup    func(t *testing.T, env *oidcTestEnv) (token string, attrs *Attributes, modes map[dynamicproperties.StringKey]string)
+		decision Decision
 	}{
 		{
-			name: "valid token with matching group is allowed",
-			setup: func(t *testing.T, env *oidcTestEnv) (string, *Attributes, cache.DomainCache, map[dynamicproperties.StringKey]string) {
-				ctrl := gomock.NewController(t)
-				dc := domainCacheWithGroups(t, ctrl, testGroupName, "")
-				return env.signToken(t, nil),
+			name: "wildcard role grants read on any domain",
+			setup: func(t *testing.T, env *oidcTestEnv) (string, *Attributes, map[dynamicproperties.StringKey]string) {
+				return env.signToken(t, []string{"cadence/read"}, nil),
 					&Attributes{DomainName: testDomainName, Permission: PermissionRead},
-					dc, modes(oidcModeEnabledStr, oidcModeEnabledStr)
+					modes(oidcModeEnabledStr, oidcModeEnabledStr)
 			},
 			decision: DecisionAllow,
 		},
 		{
-			name: "admin claim short-circuits permission check",
-			setup: func(t *testing.T, env *oidcTestEnv) (string, *Attributes, cache.DomainCache, map[dynamicproperties.StringKey]string) {
-				token := env.signToken(t, func(c map[string]interface{}) {
-					c["cadence_admin"] = true
-				})
-				return token,
+			name: "domain-scoped role allows that domain",
+			setup: func(t *testing.T, env *oidcTestEnv) (string, *Attributes, map[dynamicproperties.StringKey]string) {
+				return env.signToken(t, []string{"cadence/write/test-domain"}, nil),
 					&Attributes{DomainName: testDomainName, Permission: PermissionWrite},
-					nil, modes(oidcModeEnabledStr, oidcModeEnabledStr)
+					modes(oidcModeEnabledStr, oidcModeEnabledStr)
 			},
 			decision: DecisionAllow,
 		},
 		{
-			name: "wrong audience denies",
-			setup: func(t *testing.T, env *oidcTestEnv) (string, *Attributes, cache.DomainCache, map[dynamicproperties.StringKey]string) {
-				token := env.signToken(t, func(c map[string]interface{}) {
-					c["aud"] = "someone-else"
-				})
-				return token,
-					&Attributes{DomainName: testDomainName, Permission: PermissionRead},
-					nil, modes(oidcModeEnabledStr, oidcModeEnabledStr)
-			},
-			decision: DecisionDeny,
-		},
-		{
-			name: "expired token denies",
-			setup: func(t *testing.T, env *oidcTestEnv) (string, *Attributes, cache.DomainCache, map[dynamicproperties.StringKey]string) {
-				token := env.signToken(t, func(c map[string]interface{}) {
-					c["exp"] = time.Now().Add(-time.Minute).Unix()
-				})
-				return token,
-					&Attributes{DomainName: testDomainName, Permission: PermissionRead},
-					nil, modes(oidcModeEnabledStr, oidcModeEnabledStr)
-			},
-			decision: DecisionDeny,
-		},
-		{
-			name: "TTL exceeds maximum denies",
-			setup: func(t *testing.T, env *oidcTestEnv) (string, *Attributes, cache.DomainCache, map[dynamicproperties.StringKey]string) {
-				token := env.signToken(t, func(c map[string]interface{}) {
-					c["exp"] = time.Now().Add(2 * time.Hour).Unix()
-				})
-				return token,
-					&Attributes{DomainName: testDomainName, Permission: PermissionRead},
-					nil, modes(oidcModeEnabledStr, oidcModeEnabledStr)
-			},
-			decision: DecisionDeny,
-		},
-		{
-			name: "wrong group denies",
-			setup: func(t *testing.T, env *oidcTestEnv) (string, *Attributes, cache.DomainCache, map[dynamicproperties.StringKey]string) {
-				ctrl := gomock.NewController(t)
-				dc := domainCacheWithGroups(t, ctrl, "other-group", "")
-				return env.signToken(t, nil),
-					&Attributes{DomainName: testDomainName, Permission: PermissionRead},
-					dc, modes(oidcModeEnabledStr, oidcModeEnabledStr)
-			},
-			decision: DecisionDeny,
-		},
-		{
-			name: "shadow mode allows even with bad token",
-			setup: func(t *testing.T, env *oidcTestEnv) (string, *Attributes, cache.DomainCache, map[dynamicproperties.StringKey]string) {
-				return "not-a-real-token",
-					&Attributes{DomainName: testDomainName, Permission: PermissionRead},
-					nil, modes(oidcModeEnabledStr, oidcModeShadowStr)
-			},
-			decision: DecisionAllow,
-		},
-		{
-			name: "disabled mode allows without verifying",
-			setup: func(t *testing.T, env *oidcTestEnv) (string, *Attributes, cache.DomainCache, map[dynamicproperties.StringKey]string) {
-				return "", &Attributes{DomainName: testDomainName, Permission: PermissionRead},
-					nil, modes(oidcModeEnabledStr, oidcModeDisabledStr)
-			},
-			decision: DecisionAllow,
-		},
-		{
-			name: "empty domain with no token denies",
-			setup: func(t *testing.T, env *oidcTestEnv) (string, *Attributes, cache.DomainCache, map[dynamicproperties.StringKey]string) {
-				return "", &Attributes{Permission: PermissionRead}, nil,
+			name: "domain-scoped role denies other domains",
+			setup: func(t *testing.T, env *oidcTestEnv) (string, *Attributes, map[dynamicproperties.StringKey]string) {
+				return env.signToken(t, []string{"cadence/write/other-domain"}, nil),
+					&Attributes{DomainName: testDomainName, Permission: PermissionWrite},
 					modes(oidcModeEnabledStr, oidcModeEnabledStr)
 			},
 			decision: DecisionDeny,
 		},
 		{
+			name: "admin role bypasses permission check",
+			setup: func(t *testing.T, env *oidcTestEnv) (string, *Attributes, map[dynamicproperties.StringKey]string) {
+				return env.signToken(t, []string{"cadence/admin"}, nil),
+					&Attributes{DomainName: testDomainName, Permission: PermissionWrite},
+					modes(oidcModeEnabledStr, oidcModeEnabledStr)
+			},
+			decision: DecisionAllow,
+		},
+		{
+			name: "admin claim bypasses permission check",
+			setup: func(t *testing.T, env *oidcTestEnv) (string, *Attributes, map[dynamicproperties.StringKey]string) {
+				return env.signToken(t, []string{}, func(c map[string]interface{}) { c["cadence_admin"] = true }),
+					&Attributes{DomainName: testDomainName, Permission: PermissionWrite},
+					modes(oidcModeEnabledStr, oidcModeEnabledStr)
+			},
+			decision: DecisionAllow,
+		},
+		{
+			name: "no matching role denies",
+			setup: func(t *testing.T, env *oidcTestEnv) (string, *Attributes, map[dynamicproperties.StringKey]string) {
+				return env.signToken(t, []string{"cadence/read"}, nil),
+					&Attributes{DomainName: testDomainName, Permission: PermissionWrite},
+					modes(oidcModeEnabledStr, oidcModeEnabledStr)
+			},
+			decision: DecisionDeny,
+		},
+		{
+			name: "wrong audience denies",
+			setup: func(t *testing.T, env *oidcTestEnv) (string, *Attributes, map[dynamicproperties.StringKey]string) {
+				return env.signToken(t, []string{"cadence/read"}, func(c map[string]interface{}) { c["aud"] = "someone-else" }),
+					&Attributes{DomainName: testDomainName, Permission: PermissionRead},
+					modes(oidcModeEnabledStr, oidcModeEnabledStr)
+			},
+			decision: DecisionDeny,
+		},
+		{
+			name: "expired token denies",
+			setup: func(t *testing.T, env *oidcTestEnv) (string, *Attributes, map[dynamicproperties.StringKey]string) {
+				return env.signToken(t, []string{"cadence/read"}, func(c map[string]interface{}) {
+						c["exp"] = time.Now().Add(-time.Minute).Unix()
+					}),
+					&Attributes{DomainName: testDomainName, Permission: PermissionRead},
+					modes(oidcModeEnabledStr, oidcModeEnabledStr)
+			},
+			decision: DecisionDeny,
+		},
+		{
+			name: "TTL exceeds maximum denies",
+			setup: func(t *testing.T, env *oidcTestEnv) (string, *Attributes, map[dynamicproperties.StringKey]string) {
+				return env.signToken(t, []string{"cadence/read"}, func(c map[string]interface{}) {
+						c["exp"] = time.Now().Add(2 * time.Hour).Unix()
+					}),
+					&Attributes{DomainName: testDomainName, Permission: PermissionRead},
+					modes(oidcModeEnabledStr, oidcModeEnabledStr)
+			},
+			decision: DecisionDeny,
+		},
+		{
+			name: "shadow mode allows even with bad token",
+			setup: func(t *testing.T, env *oidcTestEnv) (string, *Attributes, map[dynamicproperties.StringKey]string) {
+				return "not-a-real-token",
+					&Attributes{DomainName: testDomainName, Permission: PermissionRead},
+					modes(oidcModeEnabledStr, oidcModeShadowStr)
+			},
+			decision: DecisionAllow,
+		},
+		{
+			name: "disabled mode allows without verifying",
+			setup: func(t *testing.T, env *oidcTestEnv) (string, *Attributes, map[dynamicproperties.StringKey]string) {
+				return "", &Attributes{DomainName: testDomainName, Permission: PermissionRead},
+					modes(oidcModeEnabledStr, oidcModeDisabledStr)
+			},
+			decision: DecisionAllow,
+		},
+		{
 			name: "non-normal task list bypasses verification",
-			setup: func(t *testing.T, env *oidcTestEnv) (string, *Attributes, cache.DomainCache, map[dynamicproperties.StringKey]string) {
+			setup: func(t *testing.T, env *oidcTestEnv) (string, *Attributes, map[dynamicproperties.StringKey]string) {
 				kind := types.TaskListKindSticky
 				return "", &Attributes{
-					DomainName: testDomainName,
-					Permission: PermissionProcess,
-					TaskList:   &types.TaskList{Name: "tl", Kind: &kind},
-				}, nil, modes(oidcModeEnabledStr, oidcModeEnabledStr)
+						DomainName: testDomainName,
+						Permission: PermissionProcess,
+						TaskList:   &types.TaskList{Name: "tl", Kind: &kind},
+					},
+					modes(oidcModeEnabledStr, oidcModeEnabledStr)
 			},
 			decision: DecisionAllow,
 		},
 		{
 			name: "empty header denies",
-			setup: func(t *testing.T, env *oidcTestEnv) (string, *Attributes, cache.DomainCache, map[dynamicproperties.StringKey]string) {
+			setup: func(t *testing.T, env *oidcTestEnv) (string, *Attributes, map[dynamicproperties.StringKey]string) {
 				return "", &Attributes{DomainName: testDomainName, Permission: PermissionRead},
-					nil, modes(oidcModeEnabledStr, oidcModeEnabledStr)
+					modes(oidcModeEnabledStr, oidcModeEnabledStr)
 			},
 			decision: DecisionDeny,
 		},
@@ -315,43 +391,18 @@ func TestOIDCAuthorizer_Authorize(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			env := newOIDCTestEnv(t)
-			token, attrs, dc, modeMap := tc.setup(t, env)
+			token, attrs, modeMap := tc.setup(t, env)
 			for k, v := range modeMap {
 				require.NoError(t, env.dcStore.UpdateValue(k, v))
 			}
 			domainFn, adminFn := env.modeFns(t)
-			a, err := NewOIDCAuthorizer(env.defaultConfig(), testlogger.New(t), dc, domainFn, adminFn)
+			a, err := NewOIDCAuthorizer(env.defaultConfig(), testlogger.New(t), domainFn, adminFn)
 			require.NoError(t, err)
-
 			res, err := a.Authorize(ctxWithToken(t, token), attrs)
-			if tc.expectErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-			}
+			assert.NoError(t, err)
 			assert.Equal(t, tc.decision, res.Decision)
 		})
 	}
-}
-
-func TestOIDCAuthorizer_DomainCacheErrorPropagates(t *testing.T) {
-	env := newOIDCTestEnv(t)
-	require.NoError(t, env.dcStore.UpdateValue(dynamicproperties.EnableAuthorizationV2, oidcModeEnabledStr))
-
-	ctrl := gomock.NewController(t)
-	dc := cache.NewMockDomainCache(ctrl)
-	dc.EXPECT().GetDomain(testDomainName).Return(nil, errors.New("cassandra unavailable"))
-
-	domainFn, adminFn := env.modeFns(t)
-	a, err := NewOIDCAuthorizer(env.defaultConfig(), testlogger.New(t), dc, domainFn, adminFn)
-	require.NoError(t, err)
-
-	res, err := a.Authorize(
-		ctxWithToken(t, env.signToken(t, nil)),
-		&Attributes{DomainName: testDomainName, Permission: PermissionRead},
-	)
-	assert.Error(t, err)
-	assert.Equal(t, DecisionDeny, res.Decision)
 }
 
 func TestOIDCAuthorizer_AdminCallUsesAdminMode(t *testing.T) {
@@ -360,7 +411,7 @@ func TestOIDCAuthorizer_AdminCallUsesAdminMode(t *testing.T) {
 	// Domain mode is "enabled" (default) — but since the call is admin, the admin DC wins.
 
 	domainFn, adminFn := env.modeFns(t)
-	a, err := NewOIDCAuthorizer(env.defaultConfig(), testlogger.New(t), nil, domainFn, adminFn)
+	a, err := NewOIDCAuthorizer(env.defaultConfig(), testlogger.New(t), domainFn, adminFn)
 	require.NoError(t, err)
 
 	res, err := a.Authorize(ctxWithToken(t, ""), &Attributes{Permission: PermissionAdmin})
@@ -372,16 +423,14 @@ func TestOIDCAuthorizer_GroupsClaimWrongType(t *testing.T) {
 	env := newOIDCTestEnv(t)
 	require.NoError(t, env.dcStore.UpdateValue(dynamicproperties.EnableAuthorizationV2, oidcModeEnabledStr))
 
-	ctrl := gomock.NewController(t)
-	dc := domainCacheWithGroups(t, ctrl, testGroupName, "")
 	cfg := env.defaultConfig()
 	cfg.GroupsAttributePath = "realm_access.roles" // returns []interface{}, not string
 	domainFn, adminFn := env.modeFns(t)
-	a, err := NewOIDCAuthorizer(cfg, testlogger.New(t), dc, domainFn, adminFn)
+	a, err := NewOIDCAuthorizer(cfg, testlogger.New(t), domainFn, adminFn)
 	require.NoError(t, err)
 
 	res, err := a.Authorize(
-		ctxWithToken(t, env.signToken(t, nil)),
+		ctxWithToken(t, env.signToken(t, []string{"cadence/read"}, nil)),
 		&Attributes{DomainName: testDomainName, Permission: PermissionRead},
 	)
 	assert.NoError(t, err)

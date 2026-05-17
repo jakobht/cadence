@@ -12,10 +12,16 @@
 
   "roles": {
     "realm": [
-      { "name": "cadence-read",    "description": "Read-only access to Cadence domains" },
-      { "name": "cadence-write",   "description": "Read+write access to Cadence domains" },
-      { "name": "cadence-process", "description": "Worker poll access to Cadence domains" },
-      { "name": "cadence-admin",   "description": "Bypass per-domain checks (admin claim)" }
+      { "name": "cadence/read",    "description": "Read on any domain" },
+      { "name": "cadence/write",   "description": "Write on any domain" },
+      { "name": "cadence/process", "description": "Worker poll on any domain" },
+      { "name": "cadence/admin",   "description": "Admin / bypass per-domain checks" },
+
+      { "name": "cadence/read/alice-domain",  "description": "Read alice-domain only" },
+      { "name": "cadence/write/alice-domain", "description": "Write alice-domain only" },
+      { "name": "cadence/read/bob-domain",    "description": "Read bob-domain only" },
+      { "name": "cadence/write/bob-domain",   "description": "Write bob-domain only" },
+      { "name": "cadence/process/bob-domain", "description": "Poll bob-domain only" }
     ]
   },
 
@@ -74,7 +80,7 @@
       "credentials": [
         { "type": "password", "value": "password", "temporary": false }
       ],
-      "realmRoles": ["cadence-read", "cadence-write"]
+      "realmRoles": ["cadence/read/alice-domain", "cadence/write/alice-domain"]
     },
     {
       "username": "bob-worker",
@@ -86,7 +92,7 @@
       "credentials": [
         { "type": "password", "value": "password", "temporary": false }
       ],
-      "realmRoles": ["cadence-process"]
+      "realmRoles": ["cadence/read/bob-domain", "cadence/write/bob-domain", "cadence/process/bob-domain"]
     },
     {
       "username": "admin-user",
@@ -101,7 +107,7 @@
       "credentials": [
         { "type": "password", "value": "password", "temporary": false }
       ],
-      "realmRoles": ["cadence-admin"]
+      "realmRoles": ["cadence/admin"]
     }
   ]
 }
