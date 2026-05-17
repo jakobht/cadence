@@ -325,6 +325,14 @@ authorization:
         jwtCredentials:
             algorithm: "RS256"
             publicKey: {{ default .Env.OAUTH_PUBLIC_KEY "" }}
+    oidcAuthorizer:
+        enable: {{ default .Env.ENABLE_OIDC "false" }}
+        issuerURL: {{ default .Env.OIDC_ISSUER_URL "" }}
+        clientID: {{ default .Env.OIDC_CLIENT_ID "" }}
+        groupsAttributePath: {{ default .Env.OIDC_GROUPS_ATTRIBUTE_PATH "" | quote }}
+        adminAttributePath: {{ default .Env.OIDC_ADMIN_ATTRIBUTE_PATH "" | quote }}
+        maxJwtTTL: {{ default .Env.OIDC_MAX_JWT_TTL "3600" }}
+        discoveryTimeoutSeconds: {{ default .Env.OIDC_DISCOVERY_TIMEOUT_SECONDS "10" }}
 
 {{- if .Env.ASYNC_WF_KAFKA_QUEUE_ENABLED }}
 asyncWorkflowQueues:

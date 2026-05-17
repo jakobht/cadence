@@ -1,0 +1,82 @@
+services:
+  cassandra:
+    image: cassandra:4.1.1
+    ports:
+      - "9042:9042"
+    healthcheck:
+      test: ["CMD", "cqlsh", "-e", "SHOW VERSION"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    command:
+      - start-dev
+      - --import-realm
+      - --hostname=http://keycloak:8080
+      - --hostname-strict=false
+      - --http-enabled=true
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+    volumes:
+      - ./keycloak/cadence-realm.json:/opt/keycloak/data/import/cadence-realm.json:ro
+    ports:
+      - "8080:8080"
+
+  # Tiny gate container: waits for Keycloak to actually serve the realm's discovery
+  # doc, then exits 0. Cadence depends on this so it doesn't try to fetch JWKS
+  # before Keycloak has finished importing the realm.
+  keycloak-ready:
+    image: curlimages/curl:8.10.1
+    command:
+      - sh
+      - -c
+      - 'until curl -fsS http://keycloak:8080/realms/cadence/.well-known/openid-configuration > /dev/null; do sleep 2; done'
+    depends_on:
+      - keycloak
+
+  cadence:
+    image: ubercadence/server:master-auto-setup
+    ports:
+      - "8000:8000"
+      - "8001:8001"
+      - "8002:8002"
+      - "8003:8003"
+      - "7933:7933"
+      - "7934:7934"
+      - "7935:7935"
+      - "7939:7939"
+      - "7833:7833"
+    environment:
+      - "CASSANDRA_SEEDS=cassandra"
+      - "PROMETHEUS_ENDPOINT_0=0.0.0.0:8000"
+      - "PROMETHEUS_ENDPOINT_1=0.0.0.0:8001"
+      - "PROMETHEUS_ENDPOINT_2=0.0.0.0:8002"
+      - "PROMETHEUS_ENDPOINT_3=0.0.0.0:8003"
+      - "DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development.yaml"
+      - "ENABLE_OIDC=true"
+      - "OIDC_ISSUER_URL=http://keycloak:8080/realms/cadence"
+      - "OIDC_CLIENT_ID=cadence-server"
+      - "OIDC_GROUPS_ATTRIBUTE_PATH=realm_access.roles | join(' ', @)"
+      - "OIDC_ADMIN_ATTRIBUTE_PATH=cadence_admin"
+      - "OIDC_MAX_JWT_TTL=3600"
+    depends_on:
+      cassandra:
+        condition: service_healthy
+      keycloak-ready:
+        condition: service_completed_successfully
+
+  cadence-web:
+    image: ubercadence/web:latest
+    environment:
+      - "CADENCE_GRPC_PEERS=cadence:7833"
+      - "CADENCE_HISTORY_PAGE_V2_ENABLED=OPT_OUT"
+      # Enables the "Login with JWT" menu item. Without this, cadence-web treats
+      # the user as fully authorized for UI purposes and never sends a token.
+      - "CADENCE_WEB_AUTH_STRATEGY=jwt"
+    ports:
+      - "8088:8088"
+    depends_on:
+      - cadence
