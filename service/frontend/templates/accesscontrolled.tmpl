@@ -2,8 +2,6 @@ import (
 	"context"
 
 	"github.com/uber/cadence/common/authorization"
-	"github.com/uber/cadence/common/config"
-	"github.com/uber/cadence/common/log/tag"
 	{{- if eq .Interface.Name "Handler"}}
 	"github.com/uber/cadence/common/metrics"
 	{{end}}
@@ -72,14 +70,7 @@ type {{$decorator}} struct {
 }
 
 // New{{$Decorator}} creates frontend handler with authentication support
-func New{{$Decorator}}(handler {{$.Interface.Type}}, resource resource.Resource, authorizer authorization.Authorizer, cfg config.Authorization) {{.Interface.Type}} {
-	if authorizer == nil {
-		var err error
-		authorizer, err = authorization.NewAuthorizer(cfg, resource.GetLogger(), resource.GetDomainCache())
-		if err != nil {
-			resource.GetLogger().Fatal("Error when initiating the Authorizer", tag.Error(err))
-		}
-	}
+func New{{$Decorator}}(handler {{$.Interface.Type}}, resource resource.Resource, authorizer authorization.Authorizer) {{.Interface.Type}} {
 	return &{{$decorator}}{
 		handler: handler,
 		authorizer: authorizer,

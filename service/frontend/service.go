@@ -164,7 +164,7 @@ func (s *Service) Start() {
 	if s.params.ClusterRedirectionPolicy != nil {
 		handler = clusterredirection.NewAPIHandler(handler, s, s.config, *s.params.ClusterRedirectionPolicy)
 	}
-	handler = accesscontrolled.NewAPIHandler(handler, s, s.params.Authorizer, s.params.AuthorizationConfig)
+	handler = accesscontrolled.NewAPIHandler(handler, s, s.params.Authorizer)
 
 	// Register the latest (most decorated) handler
 	thriftHandler := thrift.NewAPIHandler(handler)
@@ -174,7 +174,7 @@ func (s *Service) Start() {
 	grpcHandler.Register(s.GetDispatcher())
 
 	s.adminHandler = admin.NewHandler(s, s.params, s.config, dh)
-	s.adminHandler = accesscontrolled.NewAdminHandler(s.adminHandler, s, s.params.Authorizer, s.params.AuthorizationConfig)
+	s.adminHandler = accesscontrolled.NewAdminHandler(s.adminHandler, s, s.params.Authorizer)
 
 	adminThriftHandler := thrift.NewAdminHandler(s.adminHandler)
 	adminThriftHandler.Register(s.GetDispatcher())

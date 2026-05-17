@@ -44,7 +44,6 @@ import (
 	carchiver "github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
 	"github.com/uber/cadence/common/asyncworkflow/queue"
-	"github.com/uber/cadence/common/authorization"
 	"github.com/uber/cadence/common/cache"
 	cc "github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/clock"
@@ -688,12 +687,8 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]membership.HostInfo, star
 	params.PinotConfig = c.pinotConfig
 	params.PinotClient = c.pinotClient
 	params.GetIsolationGroups = getFromDynamicConfig(params)
+	params.AuthorizationConfig = c.authorizationConfig
 	var err error
-	authorizer, err := authorization.NewAuthorizer(c.authorizationConfig, params.Logger, nil)
-	if err != nil {
-		c.logger.Fatal("Unable to create authorizer", tag.Error(err))
-	}
-	params.Authorizer = authorizer
 	params.PersistenceConfig, err = copyPersistenceConfig(c.persistenceConfig)
 	if err != nil {
 		c.logger.Fatal("Failed to copy persistence config for frontend", tag.Error(err))
