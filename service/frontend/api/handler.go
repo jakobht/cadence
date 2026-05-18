@@ -36,6 +36,7 @@ import (
 	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
+	"github.com/uber/cadence/common/authorization"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/client"
@@ -87,6 +88,7 @@ type (
 		producerManager           ProducerManager
 		thriftrwEncoder           codec.BinaryEncoder
 		requestValidator          RequestValidator
+		authorizer                authorization.Authorizer
 	}
 
 	getHistoryContinuationToken struct {
@@ -151,6 +153,14 @@ func NewWorkflowHandler(
 		thriftrwEncoder:  codec.NewThriftRWEncoder(),
 		requestValidator: NewRequestValidator(resource.GetLogger(), resource.GetMetricsClient(), config),
 	}
+}
+
+// WithAuthorizer attaches an Authorizer so handlers that surface auth-related
+// metadata (currently only GetClusterInfo) can read it. Optional — when unset,
+// GetClusterInfo simply does not populate AuthConfig.
+func (wh *WorkflowHandler) WithAuthorizer(a authorization.Authorizer) *WorkflowHandler {
+	wh.authorizer = a
+	return wh
 }
 
 // Start starts the handler
@@ -3255,12 +3265,16 @@ func (wh *WorkflowHandler) isListRequestPageSizeTooLarge(pageSize int32, domain 
 func (wh *WorkflowHandler) GetClusterInfo(
 	ctx context.Context,
 ) (resp *types.ClusterInfo, err error) {
-	return &types.ClusterInfo{
+	info := &types.ClusterInfo{
 		SupportedClientVersions: &types.SupportedClientVersions{
 			GoSdk:   client.SupportedGoSDKVersion,
 			JavaSdk: client.SupportedJavaSDKVersion,
 		},
-	}, nil
+	}
+	if provider, ok := wh.authorizer.(authorization.AuthConfigProvider); ok {
+		info.AuthConfig = provider.AuthConfig()
+	}
+	return info, nil
 }
 
 type domainWrapper struct {

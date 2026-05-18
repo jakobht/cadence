@@ -801,6 +801,7 @@ func FromGetClusterInfoResponse(t *types.ClusterInfo) *shared.ClusterInfo {
 	}
 	return &shared.ClusterInfo{
 		SupportedClientVersions: FromSupportedClientVersions(t.SupportedClientVersions),
+		AuthConfig:              FromAuthConfig(t.AuthConfig),
 	}
 }
 
@@ -811,7 +812,57 @@ func ToGetClusterInfoResponse(t *shared.ClusterInfo) *types.ClusterInfo {
 	}
 	return &types.ClusterInfo{
 		SupportedClientVersions: ToSupportedClientVersions(t.SupportedClientVersions),
+		AuthConfig:              ToAuthConfig(t.AuthConfig),
 	}
+}
+
+// FromAuthConfig converts internal AuthConfig to thrift.
+func FromAuthConfig(t *types.AuthConfig) *shared.AuthConfig {
+	if t == nil {
+		return nil
+	}
+	return &shared.AuthConfig{
+		Type: &t.Type,
+		Oidc: FromOIDCAuthConfig(t.OIDC),
+	}
+}
+
+// ToAuthConfig converts thrift AuthConfig to internal.
+func ToAuthConfig(t *shared.AuthConfig) *types.AuthConfig {
+	if t == nil {
+		return nil
+	}
+	out := &types.AuthConfig{OIDC: ToOIDCAuthConfig(t.Oidc)}
+	if t.Type != nil {
+		out.Type = *t.Type
+	}
+	return out
+}
+
+// FromOIDCAuthConfig converts internal OIDCAuthConfig to thrift.
+func FromOIDCAuthConfig(t *types.OIDCAuthConfig) *shared.OIDCAuthConfig {
+	if t == nil {
+		return nil
+	}
+	return &shared.OIDCAuthConfig{
+		IssuerURL: &t.IssuerURL,
+		ClientID:  &t.ClientID,
+	}
+}
+
+// ToOIDCAuthConfig converts thrift OIDCAuthConfig to internal.
+func ToOIDCAuthConfig(t *shared.OIDCAuthConfig) *types.OIDCAuthConfig {
+	if t == nil {
+		return nil
+	}
+	out := &types.OIDCAuthConfig{}
+	if t.IssuerURL != nil {
+		out.IssuerURL = *t.IssuerURL
+	}
+	if t.ClientID != nil {
+		out.ClientID = *t.ClientID
+	}
+	return out
 }
 
 // FromClusterReplicationConfiguration converts internal ClusterReplicationConfiguration type to thrift

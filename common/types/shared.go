@@ -781,7 +781,35 @@ func (v *CloseShardRequest) GetShardID() (o int32) {
 // ClusterInfo is an internal type (TBD...)
 type ClusterInfo struct {
 	SupportedClientVersions *SupportedClientVersions `json:"supportedClientVersions,omitempty"`
+	AuthConfig              *AuthConfig              `json:"authConfig,omitempty"`
 }
+
+// AuthConfig advertises the auth strategy the server expects so clients can
+// obtain a token without prior configuration.
+type AuthConfig struct {
+	// Known values: AuthTypeNone, AuthTypeOIDC. Unknown values should be treated as none.
+	Type string          `json:"type,omitempty"`
+	OIDC *OIDCAuthConfig `json:"oidc,omitempty"`
+}
+
+// OIDCAuthConfig carries the minimum information a client needs to drive any
+// standard OIDC flow against the server's provider.
+type OIDCAuthConfig struct {
+	// IssuerURL is the OIDC provider issuer. Clients run standard discovery
+	// against <IssuerURL>/.well-known/openid-configuration to find the
+	// authorization, token, and device-authorization endpoints.
+	IssuerURL string `json:"issuerURL,omitempty"`
+	// ClientID is the public client clients use when initiating an OIDC flow.
+	// The same client is expected to support whichever flow the client picks
+	// (authorization code + PKCE for browsers, device authorization for CLIs).
+	ClientID string `json:"clientID,omitempty"`
+}
+
+// Known values of AuthConfig.Type.
+const (
+	AuthTypeNone = "none"
+	AuthTypeOIDC = "oidc"
+)
 
 // ClusterReplicationConfiguration is an internal type (TBD...)
 type ClusterReplicationConfiguration struct {

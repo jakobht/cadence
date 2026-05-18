@@ -144,7 +144,8 @@ func (s *Service) Start() {
 	)
 
 	// Base handler
-	s.handler = api.NewWorkflowHandler(s, s.config, client.NewVersionChecker(), dh)
+	s.handler = api.NewWorkflowHandler(s, s.config, client.NewVersionChecker(), dh).
+		WithAuthorizer(s.params.Authorizer)
 
 	collections, err := s.createGlobalQuotaCollections()
 	if err != nil {

@@ -287,6 +287,13 @@ var (
 	}
 	ClusterInfo = types.ClusterInfo{
 		SupportedClientVersions: &SupportedClientVersions,
+		AuthConfig: &types.AuthConfig{
+			Type: types.AuthTypeOIDC,
+			OIDC: &types.OIDCAuthConfig{
+				IssuerURL: "https://keycloak.example.com/realms/cadence",
+				ClientID:  "cadence-server",
+			},
+		},
 	}
 	MembershipInfo = types.MembershipInfo{
 		CurrentHost:      &HostInfo,

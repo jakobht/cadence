@@ -44,6 +44,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
+	"github.com/uber/cadence/common/authorization"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/cluster"
@@ -4099,6 +4100,61 @@ func TestRequestCancelWorkflowExecution(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
+		})
+	}
+}
+
+// stubAuthConfigProvider implements authorization.Authorizer + AuthConfigProvider
+// so GetClusterInfo can return the provided AuthConfig. Used only for testing.
+type stubAuthConfigProvider struct {
+	cfg *types.AuthConfig
+}
+
+func (s stubAuthConfigProvider) Authorize(_ context.Context, _ *authorization.Attributes) (authorization.Result, error) {
+	return authorization.Result{Decision: authorization.DecisionAllow}, nil
+}
+func (s stubAuthConfigProvider) AuthConfig() *types.AuthConfig { return s.cfg }
+
+// authorizerOnly implements authorization.Authorizer WITHOUT AuthConfigProvider,
+// to assert GetClusterInfo leaves AuthConfig nil for that case.
+type authorizerOnly struct{}
+
+func (authorizerOnly) Authorize(_ context.Context, _ *authorization.Attributes) (authorization.Result, error) {
+	return authorization.Result{Decision: authorization.DecisionAllow}, nil
+}
+
+func TestGetClusterInfo_AuthConfig(t *testing.T) {
+	oidcCfg := &types.AuthConfig{
+		Type: types.AuthTypeOIDC,
+		OIDC: &types.OIDCAuthConfig{
+			IssuerURL: "https://keycloak.example.com/realms/cadence",
+			ClientID:  "cadence-server",
+		},
+	}
+	tests := []struct {
+		name string
+		auth authorization.Authorizer
+		want *types.AuthConfig
+	}{
+		{name: "no authorizer attached", auth: nil, want: nil},
+		{name: "authorizer without provider interface", auth: authorizerOnly{}, want: nil},
+		{name: "authorizer with provider interface", auth: stubAuthConfigProvider{cfg: oidcCfg}, want: oidcCfg},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockResource := resource.NewTest(t, mockCtrl, metrics.Frontend)
+			cfg := frontendcfg.NewConfig(
+				dc.NewCollection(dc.NewInMemoryClient(), mockResource.GetLogger()),
+				numHistoryShards, false, "hostname", mockResource.GetLogger(),
+			)
+			wh := NewWorkflowHandler(mockResource, cfg, client.NewMockVersionChecker(mockCtrl), nil)
+			if tc.auth != nil {
+				wh.WithAuthorizer(tc.auth)
+			}
+			resp, err := wh.GetClusterInfo(context.Background())
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, resp.AuthConfig)
 		})
 	}
 }

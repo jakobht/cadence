@@ -1498,6 +1498,7 @@ func FromGetClusterInfoResponse(t *types.ClusterInfo) *apiv1.GetClusterInfoRespo
 	}
 	return &apiv1.GetClusterInfoResponse{
 		SupportedClientVersions: FromSupportedClientVersions(t.SupportedClientVersions),
+		AuthConfig:              FromAuthConfig(t.AuthConfig),
 	}
 }
 
@@ -1507,6 +1508,47 @@ func ToGetClusterInfoResponse(t *apiv1.GetClusterInfoResponse) *types.ClusterInf
 	}
 	return &types.ClusterInfo{
 		SupportedClientVersions: ToSupportedClientVersions(t.SupportedClientVersions),
+		AuthConfig:              ToAuthConfig(t.AuthConfig),
+	}
+}
+
+func FromAuthConfig(t *types.AuthConfig) *apiv1.AuthConfig {
+	if t == nil {
+		return nil
+	}
+	return &apiv1.AuthConfig{
+		Type: t.Type,
+		Oidc: FromOIDCAuthConfig(t.OIDC),
+	}
+}
+
+func ToAuthConfig(t *apiv1.AuthConfig) *types.AuthConfig {
+	if t == nil {
+		return nil
+	}
+	return &types.AuthConfig{
+		Type: t.Type,
+		OIDC: ToOIDCAuthConfig(t.Oidc),
+	}
+}
+
+func FromOIDCAuthConfig(t *types.OIDCAuthConfig) *apiv1.OIDCAuthConfig {
+	if t == nil {
+		return nil
+	}
+	return &apiv1.OIDCAuthConfig{
+		IssuerUrl: t.IssuerURL,
+		ClientId:  t.ClientID,
+	}
+}
+
+func ToOIDCAuthConfig(t *apiv1.OIDCAuthConfig) *types.OIDCAuthConfig {
+	if t == nil {
+		return nil
+	}
+	return &types.OIDCAuthConfig{
+		IssuerURL: t.IssuerUrl,
+		ClientID:  t.ClientId,
 	}
 }
 

@@ -238,6 +238,22 @@ func (a *oidcAuthority) modeFor(perm Permission, domain string) oidcMode {
 	return parseOIDCMode(a.domainModeFn(domain))
 }
 
+// AuthConfig implements AuthConfigProvider so clients can discover the OIDC
+// settings via GetClusterInfo. The returned ClientID is the same one configured
+// for token-audience verification — in single-client setups (the common case),
+// browser and CLI flows are both expected to authenticate against it. Operators
+// running per-flow clients should configure their OIDC provider so all clients
+// share audience.
+func (a *oidcAuthority) AuthConfig() *types.AuthConfig {
+	return &types.AuthConfig{
+		Type: types.AuthTypeOIDC,
+		OIDC: &types.OIDCAuthConfig{
+			IssuerURL: a.cfg.IssuerURL,
+			ClientID:  a.cfg.ClientID,
+		},
+	}
+}
+
 // verifyAndExtract runs the token-level pipeline: header extraction, signature/audience/
 // issuer/expiry verification via go-oidc, our MaxJwtTTL ceiling, and JMESPath claim
 // extraction. A non-nil error from here means the request failed authentication and is

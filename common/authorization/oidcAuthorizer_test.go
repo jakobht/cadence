@@ -437,6 +437,22 @@ func TestOIDCAuthorizer_GroupsClaimWrongType(t *testing.T) {
 	assert.Equal(t, DecisionDeny, res.Decision)
 }
 
+func TestOIDCAuthorizer_AuthConfig(t *testing.T) {
+	env := newOIDCTestEnv(t)
+	domainFn, adminFn := env.modeFns(t)
+	a, err := NewOIDCAuthorizer(env.defaultConfig(), testlogger.New(t), domainFn, adminFn)
+	require.NoError(t, err)
+
+	provider, ok := a.(AuthConfigProvider)
+	require.True(t, ok, "oidcAuthority must implement AuthConfigProvider")
+	cfg := provider.AuthConfig()
+	require.NotNil(t, cfg)
+	assert.Equal(t, types.AuthTypeOIDC, cfg.Type)
+	require.NotNil(t, cfg.OIDC)
+	assert.Equal(t, env.issuerURL(), cfg.OIDC.IssuerURL)
+	assert.Equal(t, testIssuerClientID, cfg.OIDC.ClientID)
+}
+
 func modes(adminMode, domainMode string) map[dynamicproperties.StringKey]string {
 	return map[dynamicproperties.StringKey]string{
 		dynamicproperties.EnableAdminAuthorization: adminMode,

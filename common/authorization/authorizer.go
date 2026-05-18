@@ -108,6 +108,14 @@ type Authorizer interface {
 	Authorize(ctx context.Context, attributes *Attributes) (Result, error)
 }
 
+// AuthConfigProvider is an optional interface an Authorizer may implement to
+// expose its public auth configuration to clients via GetClusterInfo. Clients
+// (the CLI, the web UI) use the returned config to discover how to obtain a
+// token without prior out-of-band knowledge of the OIDC provider.
+type AuthConfigProvider interface {
+	AuthConfig() *types.AuthConfig
+}
+
 func GetAuthProviderClient(privateKey string) (clientworker.AuthorizationProvider, error) {
 	pk, err := os.ReadFile(privateKey)
 	if err != nil {
