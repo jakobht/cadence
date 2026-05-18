@@ -21,6 +21,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"os"
 	"sort"
 
@@ -70,4 +71,32 @@ func GetSearchAttributes(c *cli.Context) error {
 	}
 	sort.Sort(table)
 	return RenderTable(os.Stdout, table, RenderOptions{Color: true, Border: true})
+}
+
+// GetClusterInfo prints the server's cluster info as JSON. The response
+// includes supported SDK versions and, when an OIDC authorizer is configured,
+// the auth config (issuer URL + client ID) a client needs to drive a flow.
+// JSON output is intended to be piped into `jq` for scripting.
+func GetClusterInfo(c *cli.Context) error {
+	wfClient, err := getWorkflowClient(c)
+	if err != nil {
+		return err
+	}
+	ctx, cancel, err := newContext(c)
+	defer cancel()
+	if err != nil {
+		return commoncli.Problem("Error in creating context:", err)
+	}
+
+	resp, err := wfClient.GetClusterInfo(ctx)
+	if err != nil {
+		return commoncli.Problem("Failed to get cluster info.", err)
+	}
+
+	out, err := json.MarshalIndent(resp, "", "  ")
+	if err != nil {
+		return commoncli.Problem("Failed to marshal cluster info.", err)
+	}
+	_, err = os.Stdout.Write(append(out, '\n'))
+	return err
 }

@@ -29,5 +29,10 @@ func newClusterCommands() []*cli.Command {
 			Usage:  "get list of legal search attributes that can be used in list workflow query.",
 			Action: GetSearchAttributes,
 		},
+		{
+			Name:   "info",
+			Usage:  "show server-advertised cluster info (supported SDK versions and, when configured, the OIDC auth config a client should use to obtain a token).",
+			Action: GetClusterInfo,
+		},
 	}
 }
