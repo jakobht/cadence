@@ -102,7 +102,9 @@ func authLogoutCurrent(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	issuer, clientID, ok := serverOIDCConfig(c.Context, wf)
+	ctx, cancel := context.WithTimeout(c.Context, 30*time.Second)
+	defer cancel()
+	issuer, clientID, ok := serverOIDCConfig(ctx, wf)
 	if !ok {
 		fmt.Fprintln(os.Stderr, "Server does not advertise OIDC; nothing to log out from.")
 		return nil
