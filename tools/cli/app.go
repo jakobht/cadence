@@ -114,6 +114,11 @@ func NewCliApp(cf ClientFactory, opts ...CLIAppOptions) *cli.App {
 			EnvVars: []string{"CADENCE_CLI_JWT_PRIVATE_KEY"},
 		},
 		&cli.StringFlag{
+			Name:    flagAuthProfile,
+			Usage:   "OIDC profile to use from ~/.cadence/auth.json (see `cadence auth info`). When unset, the CLI auto-discovers the right profile from the connected server's GetClusterInfo response.",
+			EnvVars: []string{"CADENCE_CLI_PROFILE"},
+		},
+		&cli.StringFlag{
 			Name:    FlagTransport,
 			Aliases: []string{"t"},
 			Usage:   "optional argument for transport protocol format, either 'grpc' or 'tchannel'. Defaults to tchannel if not provided",
@@ -246,6 +251,11 @@ func NewCliApp(cf ClientFactory, opts ...CLIAppOptions) *cli.App {
 			Aliases:     []string{"cl"},
 			Usage:       "Operate cadence cluster",
 			Subcommands: newClusterCommands(),
+		},
+		{
+			Name:        "auth",
+			Usage:       "Manage OIDC sign-in: login, logout, info",
+			Subcommands: newAuthCommands(),
 		},
 	}
 	app.CommandNotFound = func(context *cli.Context, command string) {

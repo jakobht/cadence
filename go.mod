@@ -58,6 +58,7 @@ require (
 	go.uber.org/zap v1.27.0
 	golang.org/x/exp v0.0.0-20231226003508-02704c960a9b
 	golang.org/x/net v0.43.0
+	golang.org/x/oauth2 v0.34.0
 	golang.org/x/sync v0.16.0
 	golang.org/x/time v0.5.0
 	golang.org/x/tools v0.36.0
@@ -94,7 +95,6 @@ require (
 	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	go.etcd.io/etcd/client/pkg/v3 v3.5.5 // indirect
-	golang.org/x/oauth2 v0.34.0 // indirect
 	golang.org/x/tools/go/expect v0.1.1-deprecated // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240814211410-ddb44dafa142 // indirect
 )

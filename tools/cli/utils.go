@@ -732,30 +732,55 @@ func getHostName() string {
 	return hostName
 }
 
-func processJWTFlags(ctx context.Context, cliCtx *cli.Context) (context.Context, error) {
-	path := getJWTPrivateKey(cliCtx)
-	t := getJWT(cliCtx)
-	var token string
-	var err error
-
-	if t != "" {
-		token = t
-	} else if path != "" {
-		token, err = createJWT(path, clock.NewRealTimeSource())
-		if err != nil {
-			return nil, fmt.Errorf("error creating JWT token: %w", err)
+func isClusterInfo(c *cli.Context) bool {
+	if c == nil || c.Command == nil || c.Command.Name != "info" {
+		return false
+	}
+	for _, anc := range c.Lineage() {
+		if anc.Command != nil && anc.Command.Name == "cluster" {
+			return true
 		}
 	}
+	return false
+}
 
-	return context.WithValue(ctx, CtxKeyJWT, token), nil
+// Priority order: --jwt > --jwt-private-key > cached OIDC token (with inline
+// device flow on miss). "" means run unauthenticated and let the server decide.
+func resolveAuthToken(ctx context.Context, cliCtx *cli.Context) (string, error) {
+	if t := getJWT(cliCtx); t != "" {
+		return t, nil
+	}
+	if path := getJWTPrivateKey(cliCtx); path != "" {
+		token, err := createJWT(path, clock.NewRealTimeSource())
+		if err != nil {
+			return "", fmt.Errorf("creating JWT from --jwt-private-key: %w", err)
+		}
+		return token, nil
+	}
+	return resolveOIDCToken(ctx, cliCtx), nil
+}
+
+// `cluster info` is the discovery endpoint clients use to find out about
+// auth, so signing in before it would be circular.
+func resolveOIDCToken(ctx context.Context, cliCtx *cli.Context) string {
+	if isClusterInfo(cliCtx) {
+		return ""
+	}
+	wf, err := getWorkflowClient(cliCtx)
+	if err != nil {
+		return ""
+	}
+	authCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+	defer cancel()
+	return ensureAuthTokenOnce(authCtx, wf, cliCtx.String(flagAuthProfile))
 }
 
 func populateContextFromCLIContext(ctx context.Context, cliCtx *cli.Context) (context.Context, error) {
-	ctx, err := processJWTFlags(ctx, cliCtx)
+	token, err := resolveAuthToken(ctx, cliCtx)
 	if err != nil {
 		return nil, fmt.Errorf("error while populating context from CLI: %w", err)
 	}
-	return ctx, nil
+	return context.WithValue(ctx, CtxKeyJWT, token), nil
 }
 
 func newContext(c *cli.Context) (context.Context, context.CancelFunc, error) {
