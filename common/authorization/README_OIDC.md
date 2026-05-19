@@ -44,31 +44,30 @@ The realm import (at `docker/keycloak/cadence-realm.json`) creates:
 
 ### Walkthrough — same token allowed on one domain, denied on another, then a live role change
 
+Auth enforcement is already on for every domain — the bundled compose appends
+`docker/oidc-dynamicconfig-extras.yaml` (`system.enableAuthorizationV2: enabled`)
+to the image's `development.yaml` on startup, so no manual dynamic-config setup
+is required.
+
 ```bash
 # 1. Register two demo domains (no ACL setup needed — auth lives in Keycloak roles).
 ./cadence --do alice-domain domain register --gd false
 ./cadence --do bob-domain   domain register --gd false
 
-# 2. Turn enforcement on for both via dynamic config.
-docker compose -f docker/docker-compose-oidc-dev.yml exec cadence sh -c \
-  'printf "\nsystem.enableAuthorizationV2:\n  - value: \"enabled\"\n    constraints:\n      domainName: \"alice-domain\"\n  - value: \"enabled\"\n    constraints:\n      domainName: \"bob-domain\"\n" >> /etc/cadence/config/dynamicconfig/development.yaml'
-docker compose -f docker/docker-compose-oidc-dev.yml restart cadence
-# wait ~30s for the frontend to come back
-
-# 3. Get alice's token.
+# 2. Get alice's token.
 TOKEN=$(curl -s -X POST http://localhost:8080/realms/cadence/protocol/openid-connect/token \
   -d grant_type=password -d client_id=cadence-server \
   -d username=alice -d password=password | jq -r .access_token)
 
-# 4. alice → alice-domain ✓  (token has cadence/{read,write}/alice-domain)
+# 3. alice → alice-domain ✓  (token has cadence/{read,write}/alice-domain)
 ./cadence --do alice-domain --jwt "$TOKEN" workflow list
 
-# 5. alice → bob-domain ✗  (no role for bob-domain in her token)
+# 4. alice → bob-domain ✗  (no role for bob-domain in her token)
 ./cadence --do bob-domain   --jwt "$TOKEN" workflow list
 
-# 6. 🪄 Grant alice cadence/write/bob-domain in Keycloak.
+# 5. 🪄 Grant alice cadence/read/bob-domain in Keycloak.
 #    UI: http://keycloak:8080/admin/  (admin / admin) → realm "cadence" → Users →
-#        alice → Role mapping → Assign role → cadence/write/bob-domain
+#        alice → Role mapping → Assign role → cadence/read/bob-domain
 #    REST equivalent:
 ADMIN=$(curl -s -X POST http://localhost:8080/realms/master/protocol/openid-connect/token \
   -d grant_type=password -d client_id=admin-cli \
@@ -76,16 +75,16 @@ ADMIN=$(curl -s -X POST http://localhost:8080/realms/master/protocol/openid-conn
 ALICE_ID=$(curl -s -H "Authorization: Bearer $ADMIN" \
   "http://localhost:8080/admin/realms/cadence/users?username=alice" | jq -r '.[0].id')
 ROLE=$(curl -s -H "Authorization: Bearer $ADMIN" \
-  "http://localhost:8080/admin/realms/cadence/roles/cadence%2Fwrite%2Fbob-domain")
+  "http://localhost:8080/admin/realms/cadence/roles/cadence%2Fread%2Fbob-domain")
 curl -s -X POST -H "Authorization: Bearer $ADMIN" \
   -H "Content-Type: application/json" -d "[$ROLE]" \
   "http://localhost:8080/admin/realms/cadence/users/$ALICE_ID/role-mappings/realm"
 
-# 7. Old token still fails — JWTs are signed snapshots, Keycloak changes don't
+# 6. Old token still fails — JWTs are signed snapshots, Keycloak changes don't
 #    retroactively rewrite tokens already in clients' hands.
 ./cadence --do bob-domain --jwt "$TOKEN" workflow list      # ✗
 
-# 8. New token works — re-auth picks up the new role.
+# 7. New token works — re-auth picks up the new role.
 NEW_TOKEN=$(curl -s -X POST http://localhost:8080/realms/cadence/protocol/openid-connect/token \
   -d grant_type=password -d client_id=cadence-server \
   -d username=alice -d password=password | jq -r .access_token)
