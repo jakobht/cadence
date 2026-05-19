@@ -103,7 +103,7 @@ func refreshAccessToken(ctx context.Context, entry *authEntry) (*authEntry, erro
 	cfg := &oauth2.Config{
 		ClientID: entry.ClientID,
 		Endpoint: oauth2.Endpoint{TokenURL: disc.TokenEndpoint},
-		Scopes:   []string{"openid"},
+		Scopes:   []string{"openid", "email"},
 	}
 	src := cfg.TokenSource(ctx, &oauth2.Token{
 		RefreshToken: entry.RefreshToken,
@@ -141,7 +141,7 @@ func runDeviceAuthFlow(ctx context.Context, issuer, clientID, profile string) (*
 			TokenURL:      disc.TokenEndpoint,
 			DeviceAuthURL: disc.DeviceAuthEndpoint,
 		},
-		Scopes: []string{"openid"},
+		Scopes: []string{"openid", "email"},
 	}
 	dResp, err := cfg.DeviceAuth(ctx)
 	if err != nil {

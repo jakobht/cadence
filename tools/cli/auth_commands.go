@@ -157,6 +157,7 @@ func printAuthEntry(entry *authEntry) {
 	if user == "" {
 		user, _ = claims["sub"].(string)
 	}
+	email, _ := claims["email"].(string)
 	refresh := "(no refresh token — next access expiry will re-prompt)"
 	if entry.RefreshToken != "" {
 		refresh = refreshTokenStatus(entry.RefreshToken)
@@ -165,6 +166,9 @@ func printAuthEntry(entry *authEntry) {
 	fmt.Printf("Issuer:         %s\n", entry.IssuerURL)
 	fmt.Printf("Client:         %s\n", entry.ClientID)
 	fmt.Printf("User:           %s\n", user)
+	if email != "" {
+		fmt.Printf("Email:          %s\n", email)
+	}
 	// Refresh first — it's what determines when the user gets re-prompted.
 	fmt.Printf("Refresh until:  %s\n", refresh)
 	fmt.Printf("Access until:   %s\n", formatRelativeTime(entry.ExpiresAt))
