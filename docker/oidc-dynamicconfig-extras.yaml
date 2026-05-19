@@ -1,0 +1,2 @@
+system.enableAuthorizationV2:
+  - value: "enabled"

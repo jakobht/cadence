@@ -71,6 +71,15 @@ services:
       - "OIDC_GROUPS_ATTRIBUTE_PATH=realm_access.roles | join(' ', @)"
       - "OIDC_ADMIN_ATTRIBUTE_PATH=cadence_admin"
       - "OIDC_MAX_JWT_TTL=3600"
+    volumes:
+      # Append OIDC-specific dynamic config (auth enforcement on for all domains)
+      # to the image's baked-in development.yaml so the demo doesn't need a
+      # separate `docker compose exec ... cat >> ...` step.
+      - ./oidc-dynamicconfig-extras.yaml:/etc/cadence/oidc-extras.yaml:ro
+    command:
+      - sh
+      - -c
+      - "cat /etc/cadence/oidc-extras.yaml >> /etc/cadence/config/dynamicconfig/development.yaml && exec /start-cadence.sh"
     depends_on:
       cassandra:
         condition: service_healthy

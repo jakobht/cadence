@@ -7,7 +7,7 @@
   "loginWithEmailAllowed": false,
   "duplicateEmailsAllowed": false,
   "accessTokenLifespan": 3600,
-  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionIdleTimeout": 36000,
   "ssoSessionMaxLifespan": 36000,
 
   "roles": {
@@ -37,7 +37,8 @@
       "redirectUris": ["*"],
       "webOrigins": ["*"],
       "attributes": {
-        "access.token.lifespan": "3600"
+        "access.token.lifespan": "3600",
+        "oauth2.device.authorization.grant.enabled": "true"
       },
       "protocolMappers": [
         {
